@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AeroPDF - Premium Local PDF Suite</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons Library -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body class="light-theme">
+    <div id="app">
+      <!-- Global Navigation Header -->
+      <header class="app-header">
+        <div class="header-logo" id="logo-btn">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          </svg>
+          <span class="logo-text">PDF <span class="highlight">Triangle</span></span>
+        </div>
+        <div class="header-actions">
+          <button id="back-to-dashboard" class="btn btn-secondary hidden">
+            <i data-lucide="layout-dashboard"></i> Dashboard
+          </button>
+          <button id="theme-toggle" class="btn-icon" aria-label="Toggle Theme">
+            <i data-lucide="sun" class="sun-icon"></i>
+            <i data-lucide="moon" class="moon-icon"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Content Area -->
+      <main class="app-content">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="dashboard-view" class="view-panel active">
+          <div class="hero-section">
+            <h1>All-In-One Local PDF Suite</h1>
+            <p>Edit, merge, split, organize, and convert files entirely in your browser. 100% private, free, and offline-ready.</p>
+          </div>
+
+          <div class="tools-grid">
+            <!-- Edit PDF -->
+            <div class="tool-card" data-tool="editor">
+              <div class="card-icon purple"><i data-lucide="file-edit"></i></div>
+              <h3>Edit PDF</h3>
+              <p>Add text, draw freehand, insert signatures, and extract scanned text using local OCR.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Merge PDF -->
+            <div class="tool-card" data-tool="merge">
+              <div class="card-icon blue"><i data-lucide="combine"></i></div>
+              <h3>Merge PDF</h3>
+              <p>Combine multiple PDF documents into a single file in any page order.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Split PDF -->
+            <div class="tool-card" data-tool="split">
+              <div class="card-icon red"><i data-lucide="scissors"></i></div>
+              <h3>Split PDF</h3>
+              <p>Extract specific pages or split a PDF into separate files by page range.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Organize PDF -->
+            <div class="tool-card" data-tool="organize">
+              <div class="card-icon amber"><i data-lucide="grid"></i></div>
+              <h3>Organize PDF</h3>
+              <p>Reorder, rotate, or delete pages in a PDF using an interactive visual grid.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- JPG to PDF -->
+            <div class="tool-card" data-tool="jpg-to-pdf">
+              <div class="card-icon green"><i data-lucide="image-play"></i></div>
+              <h3>Images to PDF</h3>
+              <p>Convert JPG, PNG, and WebP images into a single clean PDF document.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PDF to JPG -->
+            <div class="tool-card" data-tool="pdf-to-jpg">
+              <div class="card-icon teal"><i data-lucide="images"></i></div>
+              <h3>PDF to Images</h3>
+              <p>Extract all pages of a PDF as separate high-quality JPG or PNG images.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Word to PDF -->
+            <div class="tool-card" data-tool="word-to-pdf">
+              <div class="card-icon indigo"><i data-lucide="file-text"></i></div>
+              <h3>Word to PDF</h3>
+              <p>Convert Microsoft Word documents (.docx) into standard PDF documents.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Excel to PDF -->
+            <div class="tool-card" data-tool="excel-to-pdf">
+              <div class="card-icon emerald"><i data-lucide="sheet"></i></div>
+              <h3>Excel to PDF</h3>
+              <p>Convert Excel spreadsheets (.xlsx, .xls) tables into formatted PDFs.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. EDITOR WORKSPACE -->
+        <section id="editor-view" class="view-panel hidden">
+          <div class="workspace-layout">
+            <!-- Sidebar for PDF Page Thumbnails -->
+            <aside class="workspace-sidebar">
+              <div class="sidebar-header">
+                <h4>Pages</h4>
+              </div>
+              <div class="thumbnails-container" id="editor-thumbnails">
+                <div class="empty-state-text">No document loaded</div>
+              </div>
+            </aside>
+
+            <!-- Main Render Area -->
+            <div class="workspace-main">
+              <div class="workspace-toolbar">
+                <div class="toolbar-group">
+                  <button class="tool-btn active" data-action="pan" title="Select / Move">
+                    <i data-lucide="mouse-pointer"></i>
+                  </button>
+                  <button class="tool-btn" data-action="text" title="Add Text">
+                    <i data-lucide="type"></i>
+                  </button>
+                  <button class="tool-btn" data-action="signature" title="Insert Signature">
+                    <i data-lucide="signature"></i>
+                  </button>
+                  <button class="tool-btn" data-action="draw" title="Freehand Draw">
+                    <i data-lucide="pencil"></i>
+                  </button>
+                  <button class="tool-btn" id="ocr-page-btn" title="Extract Text (OCR)" disabled>
+                    <i data-lucide="scan-text"></i>
+                  </button>
+                </div>
+                <div class="toolbar-group file-actions">
+                  <button class="btn btn-secondary" id="editor-upload-btn">
+                    <i data-lucide="upload-cloud"></i> Upload
+                  </button>
+                  <input type="file" id="editor-file-input" accept=".pdf" class="hidden" />
+                  <button class="btn btn-success" id="editor-save-btn" disabled>
+                    <i data-lucide="download"></i> Download PDF
+                  </button>
+                </div>
+              </div>
+
+              <!-- Interactive Page Canvas Container -->
+              <div class="canvas-viewport" id="canvas-viewport">
+                <div class="empty-state-large" id="editor-empty-state">
+                  <i data-lucide="file-up" class="large-icon"></i>
+                  <h2>Upload a PDF to Start Editing</h2>
+                  <p>Click "Upload" above or drag your file here to draw, annotate, and sign.</p>
+                </div>
+                <div class="page-container hidden" id="active-page-container">
+                  <!-- The PDF Canvas & Annotation Layer will be dynamically generated here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Options Panel -->
+            <aside class="workspace-options">
+              <div class="options-header">
+                <h4>Tool Options</h4>
+              </div>
+              <div class="options-body" id="tool-options-container">
+                <!-- Text Tool Config -->
+                <div class="option-group" id="options-text-tool">
+                  <label for="text-size">Font Size</label>
+                  <input type="number" id="text-size" value="16" min="8" max="72" />
+                  <label for="text-color">Color</label>
+                  <input type="color" id="text-color" value="#000000" />
+                </div>
+                <!-- Drawing Tool Config -->
+                <div class="option-group hidden" id="options-draw-tool">
+                  <label for="draw-width">Brush Width</label>
+                  <input type="range" id="draw-width" min="1" max="20" value="3" />
+                  <label for="draw-color">Color</label>
+                  <input type="color" id="draw-color" value="#8b5cf6" />
+                </div>
+                <!-- No tool selected -->
+                <div class="empty-options" id="options-empty-state">
+                  Select a tool from the toolbar to adjust its properties.
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- 3. MERGE WORKSPACE -->
+        <section id="merge-view" class="view-panel hidden">
+          <div class="tool-container-large">
+            <div class="tool-header">
+              <h2>Merge PDF Documents</h2>
+              <p>Combine multiple files into one PDF. Drag pages to re-order or click delete to exclude them.</p>
+            </div>
+            
+            <div class="upload-area" id="merge-upload-zone">
+              <i data-lucide="file-plus-2" class="upload-icon"></i>
+              <p>Drag & drop multiple PDFs here, or <span class="highlight">browse files</span></p>
+              <input type="file" id="merge-file-input" accept=".pdf" multiple class="hidden" />
+            </div>
+
+            <div class="files-list-container hidden" id="merge-files-container">
+              <div class="file-info" id="merge-summary-text" style="margin-bottom: 1rem;">0 files loaded</div>
+              <div class="organize-grid" id="merge-grid" style="margin-bottom: 2rem;">
+                <!-- Page thumbnails for all uploaded PDFs will appear here dynamically, draggable -->
+              </div>
+              <div class="action-footer">
+                <button class="btn btn-secondary" id="merge-add-more-btn"><i data-lucide="plus"></i> Add Files</button>
+                <button class="btn btn-success" id="merge-submit-btn"><i data-lucide="combine"></i> Merge & Download</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. SPLIT WORKSPACE -->
+        <section id="split-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <h2>Split PDF</h2>
+              <p>Extract pages or split a PDF into separate files by page range.</p>
+            </div>
+
+            <div class="upload-area" id="split-upload-zone">
+              <i data-lucide="scissors" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="split-file-input" accept=".pdf" class="hidden" />
+            </div>
+
+            <div class="split-setup-container hidden" id="split-setup-container">
+              <div class="split-layout">
+                <div class="split-details">
+                  <div class="file-summary-card">
+                    <i data-lucide="file" class="file-card-icon"></i>
+                    <div>
+                      <h4 id="split-filename">document.pdf</h4>
+                      <p id="split-pagecount">Total Pages: 0</p>
+                    </div>
+                  </div>
+
+                  <div class="split-options-box">
+                    <h3>Split Settings</h3>
+                    
+                    <!-- Option 1: Extract Pages as Separate Files -->
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                      <label for="split-single-pages">Extract Pages (Separate Files)</label>
+                      <input type="text" id="split-single-pages" placeholder="e.g. 2 or 2, 3, 4" />
+                      <p class="field-hint">E.g. entering "2,3" will download two separate PDFs: one for Page 2 and one for Page 3.</p>
+                      <button class="btn btn-primary btn-full" id="split-single-btn" style="margin-top: 0.5rem;"><i data-lucide="scissors"></i> Extract as Separate PDFs</button>
+                    </div>
+                    
+                    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;" />
+                    
+                    <!-- Option 2: Extract Range as Single Merged File -->
+                    <div class="form-group">
+                      <label for="split-range-pages">Extract Range (Single Merged File)</label>
+                      <input type="text" id="split-range-pages" placeholder="e.g. 2-4" />
+                      <p class="field-hint">E.g. entering "2-4" will extract Pages 2, 3, and 4 and merge them into a single PDF.</p>
+                      <button class="btn btn-success btn-full" id="split-range-btn" style="margin-top: 0.5rem;"><i data-lucide="combine"></i> Extract & Merge Range</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="split-preview-sidebar" id="split-preview-sidebar">
+                  <!-- Thumbnail previews for reference -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. ORGANIZE WORKSPACE -->
+        <section id="organize-view" class="view-panel hidden">
+          <div class="tool-container-large">
+            <div class="tool-header">
+              <h2>Organize PDF Pages</h2>
+              <p>Drag pages to reorder them, rotate pages, or delete pages.</p>
+            </div>
+
+            <div class="upload-area" id="organize-upload-zone">
+              <i data-lucide="grid" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="organize-file-input" accept=".pdf" class="hidden" />
+            </div>
+
+            <div class="organize-workspace hidden" id="organize-workspace">
+              <div class="organize-controls">
+                <div class="file-info" id="organize-file-info">Loading...</div>
+                <button class="btn btn-success" id="organize-submit-btn"><i data-lucide="download"></i> Save & Download PDF</button>
+              </div>
+              <div class="organize-grid" id="organize-grid">
+                <!-- Pages are dynamically rendered here as draggable items -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. IMAGES TO PDF WORKSPACE -->
+        <section id="jpg-to-pdf-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <h2>Images to PDF Converter</h2>
+              <p>Convert JPG, PNG, and WebP images into a single styled PDF.</p>
+            </div>
+
+            <div class="upload-area" id="jpg-to-pdf-upload-zone">
+              <i data-lucide="image" class="upload-icon"></i>
+              <p>Drag & drop images here, or <span class="highlight">browse files</span></p>
+              <input type="file" id="jpg-to-pdf-file-input" accept="image/jpeg, image/png, image/webp" multiple class="hidden" />
+            </div>
+
+            <div class="images-list-container hidden" id="jpg-to-pdf-container">
+              <ul class="files-list" id="jpg-to-pdf-list"></ul>
+              <div class="conversion-settings">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="jpg-page-size">Page Size</label>
+                    <select id="jpg-page-size">
+                      <option value="a4">A4 (210 x 297 mm)</option>
+                      <option value="letter">Letter (8.5 x 11 in)</option>
+                      <option value="fit">Fit Image Size</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="jpg-orientation">Orientation</label>
+                    <select id="jpg-orientation">
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="jpg-margin">Margin</label>
+                    <select id="jpg-margin">
+                      <option value="none">No Margin</option>
+                      <option value="small">Small (10px)</option>
+                      <option value="large">Large (20px)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="action-footer">
+                <button class="btn btn-secondary" id="jpg-add-more-btn"><i data-lucide="plus"></i> Add Images</button>
+                <button class="btn btn-success" id="jpg-submit-btn"><i data-lucide="sparkles"></i> Convert & Download</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. PDF TO JPG WORKSPACE -->
+        <section id="pdf-to-jpg-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <h2>PDF to Images Converter</h2>
+              <p>Extract and download pages from a PDF as separate JPG/PNG images.</p>
+            </div>
+
+            <div class="upload-area" id="pdf-to-jpg-upload-zone">
+              <i data-lucide="images" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pdf-to-jpg-file-input" accept=".pdf" class="hidden" />
+            </div>
+
+            <div class="conversion-setup hidden" id="pdf-to-jpg-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="pdf-to-jpg-filename">document.pdf</h4>
+                  <p id="pdf-to-jpg-pagecount">Total Pages: 0</p>
+                </div>
+              </div>
+              
+              <div class="conversion-settings">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="pdf-to-jpg-format">Image Format</label>
+                    <select id="pdf-to-jpg-format">
+                      <option value="jpeg">JPG</option>
+                      <option value="png">PNG</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="pdf-to-jpg-scale">Resolution (Scale)</label>
+                    <select id="pdf-to-jpg-scale">
+                      <option value="1">Standard (1x)</option>
+                      <option value="1.5">Medium (1.5x)</option>
+                      <option value="2" selected>High Quality (2x)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn btn-success btn-full" id="pdf-to-jpg-submit-btn"><i data-lucide="zip"></i> Convert & Download ZIP</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. WORD TO PDF WORKSPACE -->
+        <section id="word-to-pdf-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <h2>Word to PDF Converter</h2>
+              <p>Convert Microsoft Word documents (.docx) into standard PDFs locally.</p>
+            </div>
+
+            <div class="upload-area" id="word-upload-zone">
+              <i data-lucide="file-text" class="upload-icon"></i>
+              <p>Drag & drop a Word (.docx) file here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="word-file-input" accept=".docx" class="hidden" />
+            </div>
+
+            <div class="conversion-setup hidden" id="word-setup-container">
+              <div class="file-summary-card">
+                <i data-lucide="file-text" class="file-card-icon word-blue"></i>
+                <div>
+                  <h4 id="word-filename">document.docx</h4>
+                  <p id="word-filesize">Size: -- KB</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="word-submit-btn"><i data-lucide="file-up"></i> Convert to PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. EXCEL TO PDF WORKSPACE -->
+        <section id="excel-to-pdf-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <h2>Excel to PDF Converter</h2>
+              <p>Convert Excel spreadsheets (.xlsx, .xls) tables into clean PDFs.</p>
+            </div>
+
+            <div class="upload-area" id="excel-upload-zone">
+              <i data-lucide="sheet" class="upload-icon"></i>
+              <p>Drag & drop an Excel (.xlsx, .xls) file here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="hidden" />
+            </div>
+
+            <div class="conversion-setup hidden" id="excel-setup-container">
+              <div class="file-summary-card">
+                <i data-lucide="sheet" class="file-card-icon excel-green"></i>
+                <div>
+                  <h4 id="excel-filename">spreadsheet.xlsx</h4>
+                  <p id="excel-filesize">Size: -- KB</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="excel-submit-btn"><i data-lucide="file-up"></i> Convert to PDF</button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- SIGNATURE CAPTURE MODAL -->
+      <div class="modal-overlay hidden" id="signature-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Draw Your Signature</h3>
+            <button class="modal-close" id="signature-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="signature-pad-container">
+              <canvas id="signature-canvas" width="500" height="250"></canvas>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="signature-clear-btn">Clear</button>
+            <button class="btn btn-success" id="signature-save-btn">Insert Signature</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- OCR OUTPUT MODAL -->
+      <div class="modal-overlay hidden" id="ocr-modal">
+        <div class="modal-content large">
+          <div class="modal-header">
+            <h3>Extracted Text (OCR)</h3>
+            <button class="modal-close" id="ocr-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <textarea class="ocr-text-output" id="ocr-text-output" readonly placeholder="OCR Text will appear here..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="ocr-copy-btn"><i data-lucide="copy"></i> Copy to Clipboard</button>
+            <button class="btn btn-primary" id="ocr-ok-btn">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Notifications -->
+      <div id="toast-container"></div>
+
+      <!-- Spinner Overlay -->
+      <div id="global-spinner" class="spinner-overlay hidden">
+        <div class="spinner-box">
+          <div class="spinner"></div>
+          <p id="spinner-text">Processing file...</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
