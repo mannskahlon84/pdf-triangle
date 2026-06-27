@@ -1394,25 +1394,160 @@ function setupSignatureModal() {
   const clearBtn = document.getElementById('signature-clear-btn');
   const saveBtn = document.getElementById('signature-save-btn');
   
+  // Tab Elements
+  const tabs = document.querySelectorAll('.sig-tab');
+  const contents = document.querySelectorAll('.sig-tab-content');
+  
+  // Type Elements
+  const typeInput = document.getElementById('sig-type-input');
+  const typeFont = document.getElementById('sig-type-font');
+  const typePreview = document.getElementById('sig-type-preview');
+  
+  // Upload Elements
+  const uploadZone = document.getElementById('sig-upload-zone');
+  const fileInput = document.getElementById('sig-file-input');
+  const imgPreviewContainer = document.getElementById('sig-image-preview-container');
+  const imgPreview = document.getElementById('sig-image-preview');
+  
   signaturePadInstance = new SignaturePad(canvas);
+  state.uploadedSignatureDataUrl = null;
+  
+  // Tab Switching
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        t.style.background = 'transparent';
+      });
+      tab.classList.add('active');
+      tab.style.background = 'var(--bg-tertiary)';
+      
+      const activeTab = tab.dataset.tab;
+      contents.forEach(content => {
+        if (content.id === `sig-content-${activeTab}`) {
+          content.classList.remove('hidden');
+        } else {
+          content.classList.add('hidden');
+        }
+      });
+    });
+  });
+  
+  // Type Tab Syncing
+  const syncTypePreview = () => {
+    const text = typeInput.value.trim() || 'Your Name';
+    const font = typeFont.value;
+    typePreview.textContent = text;
+    typePreview.style.fontFamily = font;
+  };
+  typeInput.addEventListener('input', syncTypePreview);
+  typeFont.addEventListener('change', syncTypePreview);
+  
+  // Upload Tab Binding
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleSignatureImageFile(file);
+  });
+  
+  // Clipboard Paste Support (Ctrl+V)
+  document.addEventListener('paste', (e) => {
+    if (modal.classList.contains('hidden')) return;
+    const activeTabEl = document.querySelector('.sig-tab.active');
+    if (!activeTabEl || activeTabEl.dataset.tab !== 'upload') return;
+    
+    const items = (e.clipboardData || window.clipboardData).items;
+    for (const item of items) {
+      if (item.type.indexOf('image') === 0) {
+        const file = item.getAsFile();
+        handleSignatureImageFile(file);
+        showToast('Image pasted from clipboard!', 'success');
+        break;
+      }
+    }
+  });
+  
+  // Handle image conversion to DataURL
+  function handleSignatureImageFile(file) {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      imgPreview.src = evt.target.result;
+      imgPreviewContainer.classList.remove('hidden');
+      state.uploadedSignatureDataUrl = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
   
   closeBtn.addEventListener('click', closeSignatureModal);
-  clearBtn.addEventListener('click', () => signaturePadInstance.clear());
+  
+  clearBtn.addEventListener('click', () => {
+    const activeTab = document.querySelector('.sig-tab.active').dataset.tab;
+    if (activeTab === 'draw') {
+      signaturePadInstance.clear();
+    } else if (activeTab === 'type') {
+      typeInput.value = '';
+      syncTypePreview();
+    } else if (activeTab === 'upload') {
+      imgPreview.src = '';
+      imgPreviewContainer.classList.add('hidden');
+      state.uploadedSignatureDataUrl = null;
+    }
+  });
   
   saveBtn.addEventListener('click', () => {
-    if (signaturePadInstance.isEmpty()) {
-      showToast('Signature is empty. Please draw a signature first.', 'danger');
-      return;
+    const activeTab = document.querySelector('.sig-tab.active').dataset.tab;
+    let signatureDataUrl = null;
+    
+    if (activeTab === 'draw') {
+      if (signaturePadInstance.isEmpty()) {
+        showToast('Please draw a signature first.', 'danger');
+        return;
+      }
+      signatureDataUrl = signaturePadInstance.getDataUrl();
+    } else if (activeTab === 'type') {
+      signatureDataUrl = getTypedSignatureDataUrl();
+    } else if (activeTab === 'upload') {
+      if (!state.uploadedSignatureDataUrl) {
+        showToast('Please upload or paste a signature image first.', 'danger');
+        return;
+      }
+      signatureDataUrl = state.uploadedSignatureDataUrl;
     }
     
-    state.editor.activeSignatureDataUrl = signaturePadInstance.getDataUrl();
+    state.editor.activeSignatureDataUrl = signatureDataUrl;
     closeSignatureModal();
     showToast('Signature saved. Click on the PDF page to place it.', 'success');
   });
 }
 
+function getTypedSignatureDataUrl() {
+  const name = document.getElementById('sig-type-input').value.trim() || 'Your Name';
+  const font = document.getElementById('sig-type-font').value;
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = 500;
+  tempCanvas.height = 150;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+  
+  // Render styled name text at center
+  tempCtx.font = `italic bold 48px ${font}`;
+  tempCtx.fillStyle = '#1e3a8a';
+  tempCtx.textAlign = 'center';
+  tempCtx.textBaseline = 'middle';
+  tempCtx.fillText(name, tempCanvas.width / 2, tempCanvas.height / 2);
+  
+  return tempCanvas.toDataURL('image/png');
+}
+
 function openSignatureModal() {
   document.getElementById('signature-modal').classList.remove('hidden');
+  
+  // Reset tabs to draw by default
+  const drawTab = document.querySelector('.sig-tab[data-tab="draw"]');
+  if (drawTab) drawTab.click();
+  
   signaturePadInstance.clear();
 }
 

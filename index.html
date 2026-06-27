@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AeroPDF - Premium Local PDF Suite</title>
-    <!-- Google Fonts: Inter & Outfit -->
+    <title>PDF Triangle - Premium Local PDF Suite</title>
+    <!-- Google Fonts: Inter, Outfit & Cursive Signature Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Caveat:wght@700&family=Dancing+Script:wght@700&family=Great+Vibes&family=Pacifico&display=swap" rel="stylesheet">
     <!-- Lucide Icons Library -->
     <script src="https://unpkg.com/lucide@latest"></script>
   </head>
@@ -667,17 +667,64 @@
 
       <!-- SIGNATURE CAPTURE MODAL -->
       <div class="modal-overlay hidden" id="signature-modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 550px;">
           <div class="modal-header">
-            <h3>Draw Your Signature</h3>
+            <h3>Create Digital Signature</h3>
             <button class="modal-close" id="signature-close-btn">&times;</button>
           </div>
-          <div class="modal-body">
-            <div class="signature-pad-container">
-              <canvas id="signature-canvas" width="500" height="250"></canvas>
+          <div class="modal-body" style="padding-top: 0.5rem;">
+            <!-- Tab Links -->
+            <div class="signature-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+              <button class="sig-tab active" data-tab="draw" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0.625rem; border-radius: var(--border-radius-sm); border: none; background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; font-weight: 600; font-size: 0.875rem;"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Draw</button>
+              <button class="sig-tab" data-tab="type" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0.625rem; border-radius: var(--border-radius-sm); border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 600; font-size: 0.875rem;"><i data-lucide="type" style="width: 16px; height: 16px;"></i> Type</button>
+              <button class="sig-tab" data-tab="upload" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0.625rem; border-radius: var(--border-radius-sm); border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 600; font-size: 0.875rem;"><i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i> Upload / Paste</button>
+            </div>
+
+            <!-- Tab Content 1: Draw -->
+            <div class="sig-tab-content" id="sig-content-draw">
+              <p class="field-hint" style="margin-bottom: 0.5rem;">Draw your signature using your mouse or touchscreen:</p>
+              <div class="signature-pad-container" style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: #ffffff; position: relative;">
+                <canvas id="signature-canvas" width="500" height="200" style="display: block; width: 100%; height: auto; cursor: crosshair;"></canvas>
+              </div>
+            </div>
+
+            <!-- Tab Content 2: Type -->
+            <div class="sig-tab-content hidden" id="sig-content-type">
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="sig-type-input">Type Your Name</label>
+                <input type="text" id="sig-type-input" value="Your Name" style="width: 100%;" />
+              </div>
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label for="sig-type-font">Signature Style</label>
+                <select id="sig-type-font" style="width: 100%;">
+                  <option value="'Caveat', cursive">Caveat (Elegant Cursive)</option>
+                  <option value="'Dancing Script', cursive">Dancing Script (Classic Flow)</option>
+                  <option value="'Pacifico', cursive">Pacifico (Bold Script)</option>
+                  <option value="'Great Vibes', cursive">Great Vibes (Formal Calligraphy)</option>
+                </select>
+              </div>
+              <p class="field-hint" style="margin-bottom: 0.5rem;">Signature Preview:</p>
+              <div id="sig-type-preview" style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); height: 120px; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 2.25rem; color: #1e3a8a; overflow: hidden; padding: 0.5rem; font-family: 'Caveat', cursive;">
+                Your Name
+              </div>
+            </div>
+
+            <!-- Tab Content 3: Upload / Paste -->
+            <div class="sig-tab-content hidden" id="sig-content-upload">
+              <p class="field-hint" style="margin-bottom: 0.5rem;">Upload a PNG/JPG signature, or copy an image and press Ctrl+V to paste:</p>
+              <div class="upload-area" id="sig-upload-zone" style="padding: 1.5rem; min-height: 120px; border: 2px dashed var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--border-radius-sm); cursor: pointer; transition: all var(--transition-fast);">
+                <i data-lucide="upload" style="width: 24px; height: 24px; color: var(--text-muted);"></i>
+                <span style="font-size: 0.875rem; text-align: center; color: var(--text-secondary);">Click to browse, drag image here, or paste clipboard</span>
+                <input type="file" id="sig-file-input" accept="image/png, image/jpeg" class="hidden" />
+              </div>
+              
+              <div class="hidden" id="sig-image-preview-container" style="text-align: center; margin-top: 1rem;">
+                <p class="field-hint" style="margin-bottom: 0.5rem;">Uploaded Signature Preview:</p>
+                <img id="sig-image-preview" src="" style="max-height: 100px; max-width: 100%; border: 1px dashed var(--border-color); border-radius: var(--border-radius-sm); padding: 0.25rem; background: #ffffff; display: inline-block;" />
+              </div>
             </div>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer" style="padding-top: 1rem; border-top: 1px solid var(--border-color); margin-top: 1.5rem;">
             <button class="btn btn-secondary" id="signature-clear-btn">Clear</button>
             <button class="btn btn-success" id="signature-save-btn">Insert Signature</button>
           </div>
