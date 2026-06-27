@@ -141,31 +141,58 @@
 
             <!-- Main Render Area -->
             <div class="workspace-main">
-              <div class="workspace-toolbar">
-                <div class="toolbar-group">
-                  <button class="tool-btn active" data-action="pan" title="Select / Move">
-                    <i data-lucide="mouse-pointer"></i>
+              <div class="workspace-toolbar" style="height: auto; padding: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div class="toolbar-group" style="gap: 0.5rem; flex-wrap: wrap; margin-right: auto;">
+                  <button class="tool-btn active" data-action="pan" title="Select / Move" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="mouse-pointer" style="width: 20px; height: 20px;"></i>
+                    <span>Select</span>
                   </button>
-                  <button class="tool-btn" data-action="text" title="Add Text">
-                    <i data-lucide="type"></i>
+                  <button class="tool-btn" data-action="text" title="Add Text" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="type" style="width: 20px; height: 20px;"></i>
+                    <span>Text</span>
                   </button>
-                  <button class="tool-btn" data-action="signature" title="Insert Signature">
-                    <i data-lucide="signature"></i>
+                  <button class="tool-btn" data-action="signature" title="Insert Signature" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="signature" style="width: 20px; height: 20px;"></i>
+                    <span>Sign</span>
                   </button>
-                  <button class="tool-btn" data-action="draw" title="Freehand Draw">
-                    <i data-lucide="pencil"></i>
+                  <button class="tool-btn" data-action="draw" title="Freehand Draw" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="pencil" style="width: 20px; height: 20px;"></i>
+                    <span>Draw</span>
                   </button>
-                  <button class="tool-btn" id="ocr-page-btn" title="Extract Text (OCR)" disabled>
-                    <i data-lucide="scan-text"></i>
+                  <button class="tool-btn" data-action="erase" title="Eraser" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="eraser" style="width: 20px; height: 20px;"></i>
+                    <span>Erase</span>
+                  </button>
+                  <button class="tool-btn" data-action="shape" title="Draw Shapes" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="shapes" style="width: 20px; height: 20px;"></i>
+                    <span>Shapes</span>
+                  </button>
+                  <button class="tool-btn" data-action="stamp" title="Check & Cross" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="check-square" style="width: 20px; height: 20px;"></i>
+                    <span>Stamps</span>
+                  </button>
+                  <button class="tool-btn" data-action="image" title="Insert Image" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="image" style="width: 20px; height: 20px;"></i>
+                    <span>Image</span>
+                  </button>
+                  <button class="tool-btn" id="ocr-page-btn" title="Extract Text (OCR)" disabled style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
+                    <i data-lucide="scan-text" style="width: 20px; height: 20px;"></i>
+                    <span>OCR</span>
                   </button>
                 </div>
-                <div class="toolbar-group file-actions">
-                  <button class="btn btn-secondary" id="editor-upload-btn">
-                    <i data-lucide="upload-cloud"></i> Upload
+                <div class="toolbar-group file-actions" style="gap: 0.5rem; flex-wrap: wrap;">
+                  <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="print" style="width: 16px; height: 16px;"></i> Print
+                  </button>
+                  <button class="btn btn-secondary" id="editor-rotate-btn" disabled title="Rotate Page" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="rotate-cw" style="width: 16px; height: 16px;"></i> Rotate
+                  </button>
+                  <button class="btn btn-secondary" id="editor-upload-btn" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i> Upload
                   </button>
                   <input type="file" id="editor-file-input" accept=".pdf" class="hidden" />
-                  <button class="btn btn-success" id="editor-save-btn" disabled>
-                    <i data-lucide="download"></i> Download PDF
+                  <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="download" style="width: 16px; height: 16px;"></i> Download PDF
                   </button>
                 </div>
               </div>
@@ -190,19 +217,112 @@
               </div>
               <div class="options-body" id="tool-options-container">
                 <!-- Text Tool Config -->
-                <div class="option-group" id="options-text-tool">
+                <div class="option-group hidden" id="options-text-tool">
+                  <label for="text-font">Font Family</label>
+                  <select id="text-font" style="width: 100%; margin-bottom: 0.75rem;">
+                    <option value="'Inter', sans-serif">Inter (Sans-Serif)</option>
+                    <option value="'Outfit', sans-serif">Outfit (Premium Sans)</option>
+                    <option value="Georgia, serif">Georgia (Serif)</option>
+                    <option value="'Courier New', monospace">Courier (Monospace)</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                    <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
+                    <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                    <option value="'Caveat', cursive">Caveat (Cursive)</option>
+                    <option value="'Dancing Script', cursive">Dancing Script</option>
+                    <option value="'Pacifico', cursive">Pacifico (Bold Script)</option>
+                  </select>
+
+                  <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <button class="btn btn-secondary" id="text-bold-btn" style="flex: 1; font-weight: bold; border: 1px solid var(--border-color); height: 36px; padding: 0;">B</button>
+                    <button class="btn btn-secondary" id="text-italic-btn" style="flex: 1; font-style: italic; border: 1px solid var(--border-color); height: 36px; padding: 0;">I</button>
+                  </div>
+
                   <label for="text-size">Font Size</label>
-                  <input type="number" id="text-size" value="16" min="8" max="72" />
+                  <input type="number" id="text-size" value="18" min="8" max="120" style="margin-bottom: 0.75rem;" />
+
                   <label for="text-color">Color</label>
                   <input type="color" id="text-color" value="#000000" />
                 </div>
+
                 <!-- Drawing Tool Config -->
                 <div class="option-group hidden" id="options-draw-tool">
                   <label for="draw-width">Brush Width</label>
-                  <input type="range" id="draw-width" min="1" max="20" value="3" />
+                  <input type="range" id="draw-width" min="1" max="50" value="4" style="margin-bottom: 0.75rem;" />
+                  
+                  <label for="draw-opacity">Opacity</label>
+                  <input type="range" id="draw-opacity" min="10" max="100" value="100" style="margin-bottom: 0.75rem;" />
+
                   <label for="draw-color">Color</label>
                   <input type="color" id="draw-color" value="#8b5cf6" />
                 </div>
+
+                <!-- Eraser Config -->
+                <div class="option-group hidden" id="options-erase-tool">
+                  <label for="erase-width">Eraser Size</label>
+                  <input type="range" id="erase-width" min="5" max="100" value="20" />
+                </div>
+
+                <!-- Shapes Config -->
+                <div class="option-group hidden" id="options-shape-tool">
+                  <label for="shape-type">Shape Type</label>
+                  <select id="shape-type" style="width: 100%; margin-bottom: 0.75rem;">
+                    <option value="rect" selected>Rectangle</option>
+                    <option value="circle">Circle</option>
+                    <option value="line">Line</option>
+                    <option value="arrow">Arrow</option>
+                  </select>
+
+                  <label for="shape-stroke-width">Stroke Width</label>
+                  <input type="range" id="shape-stroke-width" min="1" max="20" value="3" style="margin-bottom: 0.75rem;" />
+
+                  <label for="shape-opacity">Opacity</label>
+                  <input type="range" id="shape-opacity" min="10" max="100" value="100" style="margin-bottom: 0.75rem;" />
+
+                  <label for="shape-stroke-color">Stroke Color</label>
+                  <input type="color" id="shape-stroke-color" value="#ef4444" style="margin-bottom: 0.75rem;" />
+
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <input type="checkbox" id="shape-fill-enable" />
+                    <label for="shape-fill-enable" style="margin: 0;">Fill Shape</label>
+                  </div>
+
+                  <div id="shape-fill-color-group" class="hidden">
+                    <label for="shape-fill-color">Fill Color</label>
+                    <input type="color" id="shape-fill-color" value="#fca5a5" />
+                  </div>
+                </div>
+
+                <!-- Stamps Config -->
+                <div class="option-group hidden" id="options-stamp-tool">
+                  <label for="stamp-type">Stamp Type</label>
+                  <select id="stamp-type" style="width: 100%; margin-bottom: 0.75rem;">
+                    <option value="check" selected>Checkmark (✓)</option>
+                    <option value="cross">Cross (✗)</option>
+                    <option value="star">Star (★)</option>
+                    <option value="arrow">Arrow (➔)</option>
+                  </select>
+
+                  <label for="stamp-size">Size</label>
+                  <input type="range" id="stamp-size" min="15" max="100" value="35" style="margin-bottom: 0.75rem;" />
+
+                  <label for="stamp-opacity">Opacity</label>
+                  <input type="range" id="stamp-opacity" min="10" max="100" value="100" style="margin-bottom: 0.75rem;" />
+
+                  <label for="stamp-color">Color</label>
+                  <input type="color" id="stamp-color" value="#10b981" />
+                </div>
+
+                <!-- Image Insertion Config -->
+                <div class="option-group hidden" id="options-image-tool">
+                  <button class="btn btn-secondary btn-full" id="image-upload-btn" style="margin-bottom: 0.75rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;">
+                    <i data-lucide="upload"></i> Select Image File
+                  </button>
+                  <input type="file" id="editor-image-file-input" accept="image/png, image/jpeg, image/webp" class="hidden" />
+
+                  <label for="image-opacity">Opacity</label>
+                  <input type="range" id="image-opacity" min="10" max="100" value="100" />
+                </div>
+
                 <!-- No tool selected -->
                 <div class="empty-options" id="options-empty-state">
                   Select a tool from the toolbar to adjust its properties.

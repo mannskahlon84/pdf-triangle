@@ -125,11 +125,24 @@ export class PdfManager {
     el.style.top = `${txtObj.percentY * 100}%`;
     el.style.fontSize = `${txtObj.size}px`;
     el.style.color = txtObj.color;
+    el.style.fontFamily = txtObj.fontFamily || "'Inter', sans-serif";
+    el.style.fontWeight = txtObj.isBold ? 'bold' : 'normal';
+    el.style.fontStyle = txtObj.isItalic ? 'italic' : 'normal';
     el.innerText = txtObj.text;
+    
+    // Save overlay dimensions
+    if (!txtObj.overlayWidth) {
+      const overlayRect = overlay.getBoundingClientRect();
+      txtObj.overlayWidth = overlayRect.width;
+      txtObj.overlayHeight = overlayRect.height;
+    }
     
     // Handle positioning and deletion
     el.addEventListener('focus', () => {
       window.activeTextElement = { el, txtObj, pageIndex };
+      if (window.updateTextInspector) {
+        window.updateTextInspector(txtObj);
+      }
     });
     
     el.addEventListener('blur', () => {
@@ -263,25 +276,55 @@ export class PdfManager {
         });
       }
       
-      // 2. Add text annotations
+      // 2. Add text annotations as transparent high-res PNG images (supports custom fonts, bold, and italic perfectly)
       for (const txtObj of pageAdditions.text) {
         if (!txtObj.text) continue;
         
-        const fontSizePoints = (txtObj.size / 1.5) * (pageHeight / (pageHeight * 1.5)); // correct scaling
-        const scaledFontSize = txtObj.size * (pageWidth / (pageWidth * 1.5)); // translate size
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // Render at 3x scale for crisp print quality
+        const scale = 3;
+        const fontSize = txtObj.size * scale;
+        const fontStyle = `${txtObj.isItalic ? 'italic' : ''} ${txtObj.isBold ? 'bold' : ''} ${fontSize}px ${txtObj.fontFamily || 'sans-serif'}`;
+        
+        tempCtx.font = fontStyle;
+        const lines = txtObj.text.split('\n');
+        let maxWidth = 0;
+        for (const line of lines) {
+          maxWidth = Math.max(maxWidth, tempCtx.measureText(line).width);
+        }
+        
+        const lineHeight = fontSize * 1.35;
+        const totalHeight = lineHeight * lines.length;
+        
+        tempCanvas.width = maxWidth + 40;
+        tempCanvas.height = totalHeight + 40;
+        
+        // Draw text on resized canvas
+        tempCtx.font = fontStyle;
+        tempCtx.fillStyle = txtObj.color || '#000000';
+        tempCtx.textBaseline = 'top';
+        
+        lines.forEach((line, idx) => {
+          tempCtx.fillText(line, 20, 20 + idx * lineHeight);
+        });
+        
+        const textDataUrl = tempCanvas.toDataURL('image/png');
+        const textBytes = await fetch(textDataUrl).then(res => res.arrayBuffer());
+        const embeddedTextImg = await outPdf.embedPng(textBytes);
+        
+        const pdfWidth = (tempCanvas.width / scale) * (pageWidth / (txtObj.overlayWidth || pageWidth));
+        const pdfHeight = (tempCanvas.height / scale) * (pageHeight / (txtObj.overlayHeight || pageHeight));
         
         const x = txtObj.percentX * pageWidth;
-        // HTML Y is top-down, PDF Y is bottom-up
-        const y = pageHeight - (txtObj.percentY * pageHeight) - (scaledFontSize * 0.8);
+        const y = pageHeight - (txtObj.percentY * pageHeight) - pdfHeight;
         
-        const rgbColor = this.hexToRgb(txtObj.color);
-        
-        page.drawText(txtObj.text, {
+        page.drawImage(embeddedTextImg, {
           x,
           y,
-          size: scaledFontSize,
-          font: helveticaFont,
-          color: rgbColor,
+          width: pdfWidth,
+          height: pdfHeight
         });
       }
       

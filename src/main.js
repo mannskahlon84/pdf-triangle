@@ -5,6 +5,7 @@ import { runOcrOnCanvas } from './ocrManager';
 import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf } from './tools/manipulator';
 import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf } from './tools/converters';
 import * as pdfjsLib from 'pdfjs-dist';
+import { PDFDocument, degrees } from 'pdf-lib';
 
 // Configure pdf.js worker globally from the local public folder (prevents CORS and CDN loading issues)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -204,6 +205,8 @@ function setupEditorWorkspace() {
   const fileInput = document.getElementById('editor-file-input');
   const uploadBtn = document.getElementById('editor-upload-btn');
   const saveBtn = document.getElementById('editor-save-btn');
+  const printBtn = document.getElementById('editor-print-btn');
+  const rotateBtn = document.getElementById('editor-rotate-btn');
   const viewport = document.getElementById('canvas-viewport');
   
   uploadBtn.addEventListener('click', () => fileInput.click());
@@ -219,6 +222,8 @@ function setupEditorWorkspace() {
       document.getElementById('editor-empty-state').classList.add('hidden');
       document.getElementById('active-page-container').classList.remove('hidden');
       saveBtn.disabled = false;
+      printBtn.disabled = false;
+      rotateBtn.disabled = false;
       document.getElementById('ocr-page-btn').disabled = false;
       
       await loadEditorPage(0);
@@ -244,11 +249,157 @@ function setupEditorWorkspace() {
     }
   });
 
+  // Text Tool Inspector Syncing
+  const textFontSelect = document.getElementById('text-font');
+  const textSizeInput = document.getElementById('text-size');
+  const textColorInput = document.getElementById('text-color');
+  const boldBtn = document.getElementById('text-bold-btn');
+  const italicBtn = document.getElementById('text-italic-btn');
+  
+  textFontSelect.addEventListener('change', (e) => {
+    if (window.activeTextElement) {
+      const { el, txtObj } = window.activeTextElement;
+      txtObj.fontFamily = e.target.value;
+      el.style.fontFamily = e.target.value;
+    }
+  });
+  
+  textSizeInput.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value, 10) || 18;
+    if (window.activeTextElement) {
+      const { el, txtObj } = window.activeTextElement;
+      txtObj.size = val;
+      el.style.fontSize = `${val}px`;
+    }
+  });
+  
+  textColorInput.addEventListener('input', (e) => {
+    if (window.activeTextElement) {
+      const { el, txtObj } = window.activeTextElement;
+      txtObj.color = e.target.value;
+      el.style.color = e.target.value;
+    }
+  });
+  
+  boldBtn.addEventListener('click', () => {
+    boldBtn.classList.toggle('active');
+    const isBold = boldBtn.classList.contains('active');
+    boldBtn.style.background = isBold ? 'var(--bg-tertiary)' : 'transparent';
+    boldBtn.style.borderColor = isBold ? 'var(--accent-purple)' : 'var(--border-color)';
+    if (window.activeTextElement) {
+      const { el, txtObj } = window.activeTextElement;
+      txtObj.isBold = isBold;
+      el.style.fontWeight = isBold ? 'bold' : 'normal';
+    }
+  });
+  
+  italicBtn.addEventListener('click', () => {
+    italicBtn.classList.toggle('active');
+    const isItalic = italicBtn.classList.contains('active');
+    italicBtn.style.background = isItalic ? 'var(--bg-tertiary)' : 'transparent';
+    italicBtn.style.borderColor = isItalic ? 'var(--accent-purple)' : 'var(--border-color)';
+    if (window.activeTextElement) {
+      const { el, txtObj } = window.activeTextElement;
+      txtObj.isItalic = isItalic;
+      el.style.fontStyle = isItalic ? 'italic' : 'normal';
+    }
+  });
+
+  // Shape Fill Color Toggle Binds
+  document.getElementById('shape-fill-enable').addEventListener('change', (e) => {
+    const fillGroup = document.getElementById('shape-fill-color-group');
+    if (e.target.checked) {
+      fillGroup.classList.remove('hidden');
+    } else {
+      fillGroup.classList.add('hidden');
+    }
+  });
+
+  // Image Upload Integration Binds
+  const imgFileInput = document.getElementById('editor-image-file-input');
+  const imgUploadBtn = document.getElementById('image-upload-btn');
+  if (imgUploadBtn && imgFileInput) {
+    imgUploadBtn.addEventListener('click', () => imgFileInput.click());
+    imgFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        state.editor.activeSignatureDataUrl = evt.target.result;
+        state.editor.activeTool = 'signature';
+        
+        document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+        const sigBtn = document.querySelector('[data-action="signature"]');
+        if (sigBtn) sigBtn.classList.add('active');
+        
+        showToast('Image loaded! Click on the PDF page to place and resize it.', 'success');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Print PDF Click
+  printBtn.addEventListener('click', async () => {
+    commitDrawingCanvas();
+    showLoader('Preparing PDF for printing...');
+    try {
+      const pdfBytes = await state.editor.pdfManager.saveDocument();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+      };
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to open printing dialog.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+
+  // Rotate Page Click
+  rotateBtn.addEventListener('click', async () => {
+    const pageIdx = state.editor.pdfManager.currentPageIndex;
+    commitDrawingCanvas();
+    showLoader('Rotating page 90°...');
+    
+    try {
+      const pdfBytes = await state.editor.pdfManager.saveDocument();
+      const outPdf = await PDFDocument.load(pdfBytes);
+      const page = outPdf.getPage(pageIdx);
+      const currentRotation = page.getRotation().angle;
+      page.setRotation(degrees((currentRotation + 90) % 360));
+      
+      const rotatedBytes = await outPdf.save();
+      
+      // Reload updated PDF directly into state manager
+      await state.editor.pdfManager.loadPdf(rotatedBytes);
+      await loadEditorPage(pageIdx);
+      await generateEditorThumbnails();
+      showToast('Page rotated 90° clockwise.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to rotate page.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+
   // Save changes
   saveBtn.addEventListener('click', async () => {
-    // Commit drawing if active
     commitDrawingCanvas();
-    
     showLoader('Compiling and saving your PDF...');
     try {
       const pdfBytes = await state.editor.pdfManager.saveDocument();
@@ -264,23 +415,64 @@ function setupEditorWorkspace() {
   });
 }
 
+window.updateTextInspector = (txtObj) => {
+  document.getElementById('text-font').value = txtObj.fontFamily || "'Inter', sans-serif";
+  document.getElementById('text-size').value = txtObj.size || 18;
+  document.getElementById('text-color').value = txtObj.color || '#000000';
+  
+  const boldBtn = document.getElementById('text-bold-btn');
+  const italicBtn = document.getElementById('text-italic-btn');
+  
+  if (txtObj.isBold) {
+    boldBtn.classList.add('active');
+    boldBtn.style.background = 'var(--bg-tertiary)';
+    boldBtn.style.borderColor = 'var(--accent-purple)';
+  } else {
+    boldBtn.classList.remove('active');
+    boldBtn.style.background = 'transparent';
+    boldBtn.style.borderColor = 'var(--border-color)';
+  }
+  
+  if (txtObj.isItalic) {
+    italicBtn.classList.add('active');
+    italicBtn.style.background = 'var(--bg-tertiary)';
+    italicBtn.style.borderColor = 'var(--accent-purple)';
+  } else {
+    italicBtn.classList.remove('active');
+    italicBtn.style.background = 'transparent';
+    italicBtn.style.borderColor = 'var(--border-color)';
+  }
+};
+
 function setEditorTool(tool) {
   state.editor.activeTool = tool;
   
   // Toggle Sidebars options panels
   document.getElementById('options-text-tool').classList.add('hidden');
   document.getElementById('options-draw-tool').classList.add('hidden');
+  document.getElementById('options-erase-tool').classList.add('hidden');
+  document.getElementById('options-shape-tool').classList.add('hidden');
+  document.getElementById('options-stamp-tool').classList.add('hidden');
+  document.getElementById('options-image-tool').classList.add('hidden');
   document.getElementById('options-empty-state').classList.add('hidden');
   
   if (tool === 'text') {
     document.getElementById('options-text-tool').classList.remove('hidden');
   } else if (tool === 'draw') {
     document.getElementById('options-draw-tool').classList.remove('hidden');
+  } else if (tool === 'erase') {
+    document.getElementById('options-erase-tool').classList.remove('hidden');
+  } else if (tool === 'shape') {
+    document.getElementById('options-shape-tool').classList.remove('hidden');
+  } else if (tool === 'stamp') {
+    document.getElementById('options-stamp-tool').classList.remove('hidden');
+  } else if (tool === 'image') {
+    document.getElementById('options-image-tool').classList.remove('hidden');
   } else if (tool === 'signature') {
     if (!state.editor.activeSignatureDataUrl) {
       openSignatureModal();
     } else {
-      showToast('Signature loaded. Click on the document to place it.', 'info');
+      showToast('Signature/Image loaded. Click on the document to place it.', 'info');
     }
   } else {
     document.getElementById('options-empty-state').classList.remove('hidden');
@@ -314,13 +506,21 @@ async function loadEditorPage(pageIndex) {
     if (state.editor.activeTool === 'text') {
       const sizeInput = document.getElementById('text-size');
       const colorInput = document.getElementById('text-color');
+      const fontSelect = document.getElementById('text-font');
+      const boldBtn = document.getElementById('text-bold-btn');
+      const italicBtn = document.getElementById('text-italic-btn');
       
       const txtObj = {
         percentX,
         percentY,
         text: 'Click to edit text',
         size: parseInt(sizeInput.value, 10),
-        color: colorInput.value
+        color: colorInput.value,
+        fontFamily: fontSelect.value,
+        isBold: boldBtn.classList.contains('active'),
+        isItalic: italicBtn.classList.contains('active'),
+        overlayWidth: rect.width,
+        overlayHeight: rect.height
       };
       
       state.editor.pdfManager.additions[pageIndex].text.push(txtObj);
@@ -361,6 +561,11 @@ function setupDrawingLayer(canvas) {
   const ctx = canvas.getContext('2d');
   state.editor.drawingCanvasCtx = ctx;
   
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  let savedImageData = null;
+
   const getPos = (e) => {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -372,37 +577,145 @@ function setupDrawingLayer(canvas) {
   };
 
   const start = (e) => {
-    if (state.editor.activeTool !== 'draw') return;
-    state.editor.isDrawing = true;
+    const tool = state.editor.activeTool;
+    if (tool !== 'draw' && tool !== 'erase' && tool !== 'shape' && tool !== 'stamp') return;
+    
+    isDragging = true;
     const pos = getPos(e);
+    startX = pos.x;
+    startY = pos.y;
     state.editor.lastDrawX = pos.x;
     state.editor.lastDrawY = pos.y;
+    
+    if (tool === 'shape') {
+      savedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    } else if (tool === 'stamp') {
+      drawStampOnCanvas(ctx, pos.x, pos.y);
+      isDragging = false;
+    }
   };
 
   const draw = (e) => {
-    if (!state.editor.isDrawing || state.editor.activeTool !== 'draw') return;
+    if (!isDragging) return;
+    const tool = state.editor.activeTool;
     const pos = getPos(e);
     
-    ctx.beginPath();
-    ctx.moveTo(state.editor.lastDrawX, state.editor.lastDrawY);
-    ctx.lineTo(pos.x, pos.y);
+    ctx.save();
     
-    const color = document.getElementById('draw-color').value;
-    const width = document.getElementById('draw-width').value;
+    if (tool === 'draw') {
+      ctx.globalCompositeOperation = 'source-over';
+      const color = document.getElementById('draw-color').value;
+      const width = document.getElementById('draw-width').value;
+      const opacity = parseFloat(document.getElementById('draw-opacity').value) / 100;
+      
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.globalAlpha = opacity;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      ctx.beginPath();
+      ctx.moveTo(state.editor.lastDrawX, state.editor.lastDrawY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      
+      state.editor.lastDrawX = pos.x;
+      state.editor.lastDrawY = pos.y;
+      
+    } else if (tool === 'erase') {
+      ctx.globalCompositeOperation = 'destination-out';
+      const width = document.getElementById('erase-width').value;
+      
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      ctx.beginPath();
+      ctx.moveTo(state.editor.lastDrawX, state.editor.lastDrawY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      
+      state.editor.lastDrawX = pos.x;
+      state.editor.lastDrawY = pos.y;
+      
+    } else if (tool === 'shape') {
+      if (savedImageData) {
+        ctx.putImageData(savedImageData, 0, 0);
+      }
+      
+      const shapeType = document.getElementById('shape-type').value;
+      const strokeWidth = document.getElementById('shape-stroke-width').value;
+      const opacity = parseFloat(document.getElementById('shape-opacity').value) / 100;
+      const strokeColor = document.getElementById('shape-stroke-color').value;
+      const fillEnable = document.getElementById('shape-fill-enable').checked;
+      const fillColor = document.getElementById('shape-fill-color').value;
+      
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeWidth;
+      ctx.globalAlpha = opacity;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      if (shapeType === 'rect') {
+        const w = pos.x - startX;
+        const h = pos.y - startY;
+        if (fillEnable) {
+          ctx.fillStyle = fillColor;
+          ctx.fillRect(startX, startY, w, h);
+        }
+        ctx.strokeRect(startX, startY, w, h);
+        
+      } else if (shapeType === 'circle') {
+        const dx = pos.x - startX;
+        const dy = pos.y - startY;
+        const radius = Math.sqrt(dx * dx + dy * dy);
+        
+        ctx.beginPath();
+        ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+        if (fillEnable) {
+          ctx.fillStyle = fillColor;
+          ctx.fill();
+        }
+        ctx.stroke();
+        
+      } else if (shapeType === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        
+      } else if (shapeType === 'arrow') {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        
+        const angle = Math.atan2(pos.y - startY, pos.x - startX);
+        const headLength = 15 + parseFloat(strokeWidth) * 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        ctx.lineTo(
+          pos.x - headLength * Math.cos(angle - Math.PI / 6),
+          pos.y - headLength * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(pos.x, pos.y);
+        ctx.lineTo(
+          pos.x - headLength * Math.cos(angle + Math.PI / 6),
+          pos.y - headLength * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
+    }
     
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-    
-    state.editor.lastDrawX = pos.x;
-    state.editor.lastDrawY = pos.y;
+    ctx.restore();
     e.preventDefault();
   };
 
   const stop = () => {
-    state.editor.isDrawing = false;
+    isDragging = false;
+    savedImageData = null;
   };
 
   canvas.addEventListener('mousedown', start);
@@ -412,6 +725,65 @@ function setupDrawingLayer(canvas) {
   canvas.addEventListener('touchstart', start, { passive: false });
   canvas.addEventListener('touchmove', draw, { passive: false });
   document.addEventListener('touchend', stop);
+}
+
+function drawStampOnCanvas(ctx, x, y) {
+  const stampType = document.getElementById('stamp-type').value;
+  const size = parseFloat(document.getElementById('stamp-size').value);
+  const opacity = parseFloat(document.getElementById('stamp-opacity').value) / 100;
+  const color = document.getElementById('stamp-color').value;
+  
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(3, size / 8);
+  ctx.globalAlpha = opacity;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  
+  if (stampType === 'check') {
+    ctx.beginPath();
+    ctx.moveTo(x - size / 2, y + size / 10);
+    ctx.lineTo(x - size / 10, y + size / 2);
+    ctx.lineTo(x + size / 2, y - size / 2);
+    ctx.stroke();
+    
+  } else if (stampType === 'cross') {
+    ctx.beginPath();
+    ctx.moveTo(x - size / 2, y - size / 2);
+    ctx.lineTo(x + size / 2, y + size / 2);
+    ctx.moveTo(x + size / 2, y - size / 2);
+    ctx.lineTo(x - size / 2, y + size / 2);
+    ctx.stroke();
+    
+  } else if (stampType === 'star') {
+    ctx.beginPath();
+    ctx.translate(x, y);
+    ctx.rotate((180 * Math.PI) / 180);
+    
+    for (let i = 0; i < 5; i++) {
+      ctx.lineTo(Math.sin((i * 72 * Math.PI) / 180) * (size / 2), Math.cos((i * 72 * Math.PI) / 180) * (size / 2));
+      ctx.lineTo(Math.sin(((i * 72 + 36) * Math.PI) / 180) * (size / 4), Math.cos(((i * 72 + 36) * Math.PI) / 180) * (size / 4));
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+  } else if (stampType === 'arrow') {
+    ctx.beginPath();
+    ctx.moveTo(x - size / 2, y);
+    ctx.lineTo(x + size / 2, y);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(x + size / 2, y);
+    ctx.lineTo(x + size / 2 - size / 3, y - size / 4);
+    ctx.moveTo(x + size / 2, y);
+    ctx.lineTo(x + size / 2 - size / 3, y + size / 4);
+    ctx.stroke();
+  }
+  
+  ctx.restore();
 }
 
 // Commits the canvas drawing layers to base64 Data URLs so they persist when swapping pages
