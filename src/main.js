@@ -62,14 +62,26 @@ document.addEventListener('DOMContentLoaded', () => {
   themeToggle.addEventListener('click', toggleTheme);
   
   // Setup Sidebar back button
-  document.getElementById('back-to-dashboard').addEventListener('click', () => switchView('dashboard'));
-  document.getElementById('logo-btn').addEventListener('click', () => switchView('dashboard'));
+  document.getElementById('back-to-dashboard').addEventListener('click', () => {
+    window.location.hash = '#/dashboard';
+  });
+  document.getElementById('logo-btn').addEventListener('click', () => {
+    window.location.hash = '#/dashboard';
+  });
 
   // Bind Dashboard tool cards
   document.querySelectorAll('.tool-card').forEach(card => {
     const toolName = card.dataset.tool;
-    card.querySelector('button').addEventListener('click', () => switchView(toolName));
+    card.querySelector('button').addEventListener('click', () => {
+      window.location.hash = `#/${toolName}`;
+    });
   });
+
+  // Listen for Hash Routing Changes (Browser Back/Forward support)
+  window.addEventListener('hashchange', handleRouting);
+  
+  // Handle initial route on page load
+  handleRouting();
 
   setupEditorWorkspace();
   setupMergeWorkspace();
@@ -84,6 +96,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // View Routing System
+function handleRouting() {
+  const hash = window.location.hash;
+  let viewName = 'dashboard';
+  
+  if (hash && hash.startsWith('#/')) {
+    viewName = hash.substring(2);
+  }
+  
+  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf'];
+  if (!validRoutes.includes(viewName)) {
+    viewName = 'dashboard';
+    window.location.hash = '#/dashboard';
+  }
+  
+  switchView(viewName);
+}
+
 function switchView(viewName) {
   state.activeTool = viewName;
   
@@ -107,8 +136,6 @@ function switchView(viewName) {
   } else {
     backBtn.classList.remove('hidden');
   }
-  
-  showToast(`Switched to ${viewName.toUpperCase()} tool`, 'info');
 }
 
 // Global UI Loaders & Feedback
