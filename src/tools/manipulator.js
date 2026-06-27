@@ -220,3 +220,43 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
   
   return await pdfDoc.save();
 }
+
+/**
+ * Compresses a PDF by rendering pages as JPEG images with configured quality/scale and embedding them back
+ * @param {ArrayBuffer} pdfBuffer Original PDF file buffer
+ * @param {Object} pdfJsDoc Loaded pdfjs document (passed in to avoid circular dependency)
+ * @param {Object} options Compression options { scale: number, quality: number }
+ * @returns {Promise<Uint8Array>}
+ */
+export async function compressPdf(pdfBuffer, pdfJsDoc, options) {
+  const { scale, quality } = options;
+  const compressedPdf = await PDFDocument.create();
+  
+  for (let i = 1; i <= pdfJsDoc.numPages; i++) {
+    const page = await pdfJsDoc.getPage(i);
+    const viewport = page.getViewport({ scale });
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    
+    // Convert canvas to compressed JPEG
+    const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+    const imgBytes = await fetch(imgDataUrl).then(r => r.arrayBuffer());
+    
+    // Embed compressed image back into a new page
+    const embeddedImg = await compressedPdf.embedJpg(imgBytes);
+    const newPage = compressedPdf.addPage([viewport.width, viewport.height]);
+    newPage.drawImage(embeddedImg, {
+      x: 0,
+      y: 0,
+      width: viewport.width,
+      height: viewport.height
+    });
+  }
+  
+  return await compressedPdf.save();
+}

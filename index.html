@@ -115,6 +115,14 @@
               <p>Add custom text or image watermarks to all pages of a PDF document.</p>
               <button class="btn btn-primary">Open Tool</button>
             </div>
+
+            <!-- Compress PDF -->
+            <div class="tool-card" data-tool="compress">
+              <div class="card-icon indigo"><i data-lucide="shrink"></i></div>
+              <h3>Compress PDF</h3>
+              <p>Reduce PDF file size by compressing images and adjusting resolution scales.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
           </div>
         </section>
 
@@ -568,6 +576,89 @@
                   <canvas id="watermark-canvas"></canvas>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11. COMPRESS WORKSPACE -->
+        <section id="compress-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Compress PDF</h2>
+              <p>Optimize your PDF document size to hit target KB/MB limits or choose presets.</p>
+            </div>
+
+            <div class="upload-area" id="compress-upload-zone">
+              <i data-lucide="shrink" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="compress-file-input" accept=".pdf" class="hidden" />
+            </div>
+
+            <div class="compress-setup hidden" id="compress-setup-container">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="compress-filename">document.pdf</h4>
+                  <p id="compress-filesize">Original Size: -- KB</p>
+                </div>
+              </div>
+
+              <div class="compression-settings" style="margin-top: 1.5rem;">
+                <!-- Mode Toggle -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <label for="compress-mode">Compression Mode</label>
+                  <select id="compress-mode">
+                    <option value="target" selected>Target File Size</option>
+                    <option value="preset">Preset Quality Level</option>
+                  </select>
+                </div>
+
+                <!-- Mode A: Target Size -->
+                <div id="compress-target-group">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="compress-target-value">Target Size Limit</label>
+                      <input type="number" id="compress-target-value" value="250" min="10" />
+                    </div>
+                    <div class="form-group">
+                      <label for="compress-target-unit">Unit</label>
+                      <select id="compress-target-unit">
+                        <option value="kb" selected>KB</option>
+                        <option value="mb">MB</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mode B: Quality Preset -->
+                <div id="compress-preset-group" class="hidden">
+                  <div class="form-group">
+                    <label for="compress-preset-value">Quality Preset</label>
+                    <select id="compress-preset-value">
+                      <option value="low">Low Quality (Max Compression, ~70% smaller)</option>
+                      <option value="med" selected>Medium Quality (Standard, ~40% smaller)</option>
+                      <option value="high">High Quality (Min Compression, ~15% smaller)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Status Feedback Info Card -->
+                <div class="info-feedback-box" style="margin-top: 1.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--border-radius-sm); font-size: 0.875rem;">
+                  <h4 style="margin-bottom: 0.5rem; font-weight: 600;">Size Estimation & Limits:</h4>
+                  <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
+                    <li>• Current Size: <strong id="compress-info-current">-- KB</strong></li>
+                    <li>• Est. Compressible Range: <strong id="compress-info-min">-- KB</strong> (lowest) to <strong id="compress-info-max">-- KB</strong> (highest quality)</li>
+                    <li style="margin-top: 0.25rem; font-size: 0.75rem; color: var(--text-secondary);" id="compress-info-warning">
+                      Note: Realized size depends on the proportion of images in the PDF.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <button class="btn btn-success btn-full" id="compress-submit-btn" style="margin-top: 1.5rem;">
+                <i data-lucide="shrink"></i> Compress & Download PDF
+              </button>
             </div>
           </div>
         </section>

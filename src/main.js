@@ -2,7 +2,7 @@ import './style.css';
 import { PdfManager } from './pdfManager';
 import { SignaturePad } from './signatureManager';
 import { runOcrOnCanvas } from './ocrManager';
-import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf } from './tools/manipulator';
+import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf } from './tools/manipulator';
 import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf } from './tools/converters';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -53,6 +53,13 @@ const state = {
     imageBuffer: null,
     imageMime: null,
     pageCount: 0
+  },
+  compress: {
+    file: null,
+    pageCount: 0,
+    lowKb: 0,
+    medKb: 0,
+    highKb: 0
   }
 };
 
@@ -99,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupWordToPdfWorkspace();
   setupExcelToPdfWorkspace();
   setupWatermarkWorkspace();
+  setupCompressWorkspace();
   setupSignatureModal();
   setupOcrModal();
 });
@@ -112,7 +120,7 @@ function handleRouting() {
     viewName = hash.substring(2);
   }
   
-  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark'];
+  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress'];
   if (!validRoutes.includes(viewName)) {
     viewName = 'dashboard';
     window.location.hash = '#/dashboard';
@@ -1761,5 +1769,193 @@ async function updateWatermarkPreview() {
     ctx.restore();
   } catch (err) {
     console.error('Preview error:', err);
+  }
+}
+
+// -------------------------------------------------------------
+// 11. COMPRESS PDF COMPONENT
+// -------------------------------------------------------------
+function setupCompressWorkspace() {
+  const uploadZone = document.getElementById('compress-upload-zone');
+  const fileInput = document.getElementById('compress-file-input');
+  
+  const modeSelect = document.getElementById('compress-mode');
+  const targetGroup = document.getElementById('compress-target-group');
+  const presetGroup = document.getElementById('compress-preset-group');
+  
+  const targetValueInput = document.getElementById('compress-target-value');
+  const targetUnitSelect = document.getElementById('compress-target-unit');
+  const presetValueSelect = document.getElementById('compress-preset-value');
+  
+  const submitBtn = document.getElementById('compress-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) handleCompressFile(file);
+  });
+  setupDragAndDrop(uploadZone, handleCompressFile);
+  
+  modeSelect.addEventListener('change', (e) => {
+    if (e.target.value === 'target') {
+      targetGroup.classList.remove('hidden');
+      presetGroup.classList.add('hidden');
+    } else {
+      targetGroup.classList.add('hidden');
+      presetGroup.classList.remove('hidden');
+    }
+  });
+  
+  submitBtn.addEventListener('click', async () => {
+    if (!state.compress.file) {
+      showToast('Please upload a PDF file first.', 'danger');
+      return;
+    }
+    
+    showLoader('Compressing PDF document...');
+    try {
+      const buffer = await state.compress.file.arrayBuffer();
+      const pdfJsDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+      
+      let scale = 1.0;
+      let quality = 0.5;
+      
+      const mode = modeSelect.value;
+      const originalSizeKb = state.compress.file.size / 1024;
+      
+      if (mode === 'target') {
+        let targetLimitKb = parseFloat(targetValueInput.value);
+        if (targetUnitSelect.value === 'mb') {
+          targetLimitKb = targetLimitKb * 1024;
+        }
+        
+        // Auto-resolve scale & quality based on target and heuristic bounds
+        const settings = getCompressionSettings(targetLimitKb, originalSizeKb, state.compress.pageCount, state.compress.lowKb, state.compress.medKb, state.compress.highKb);
+        scale = settings.scale;
+        quality = settings.quality;
+        showToast(`Target configured. Compressing at: ${settings.label}`, 'info');
+      } else {
+        const preset = presetValueSelect.value;
+        if (preset === 'low') {
+          scale = 0.8;
+          quality = 0.3;
+        } else if (preset === 'med') {
+          scale = 1.2;
+          quality = 0.6;
+        } else if (preset === 'high') {
+          scale = 1.5;
+          quality = 0.85;
+        }
+      }
+      
+      const compressedBytes = await compressPdf(buffer, pdfJsDoc, { scale, quality });
+      const blob = new Blob([compressedBytes], { type: 'application/pdf' });
+      downloadBlob(blob, `compressed_${state.compress.file.name}`);
+      
+      // Calculate output size
+      const finalSizeKb = blob.size / 1024;
+      showToast(`Compression finished! Reduced from ${(originalSizeKb).toFixed(1)} KB to ${(finalSizeKb).toFixed(1)} KB.`);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to compress PDF.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+// Map target to optimal quality and scale
+function getCompressionSettings(targetKb, originalSizeKb, numPages, lowKb, medKb, highKb) {
+  if (targetKb <= lowKb) {
+    return { scale: 0.8, quality: 0.25, label: 'Low Quality (Max Compression)' };
+  } else if (targetKb >= originalSizeKb) {
+    return { scale: 1.5, quality: 0.85, label: 'High Quality (Min Compression)' };
+  }
+  
+  if (targetKb < medKb) {
+    const ratio = (targetKb - lowKb) / (medKb - lowKb || 1);
+    const scale = 0.8 + ratio * 0.4; // 0.8 to 1.2
+    const quality = 0.25 + ratio * 0.35; // 0.25 to 0.6
+    return { scale, quality, label: `Custom (Estimated ~${(targetKb).toFixed(0)} KB)` };
+  } else {
+    const ratio = (targetKb - medKb) / (highKb - medKb || 1);
+    const scale = 1.2 + ratio * 0.3; // 1.2 to 1.5
+    const quality = 0.6 + ratio * 0.25; // 0.6 to 0.85
+    return { scale, quality, label: `Custom (Estimated ~${(targetKb).toFixed(0)} KB)` };
+  }
+}
+
+async function handleCompressFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  
+  state.compress.file = file;
+  
+  showLoader('Analyzing PDF contents...');
+  try {
+    const originalSizeKb = file.size / 1024;
+    document.getElementById('compress-filename').textContent = file.name;
+    document.getElementById('compress-filesize').textContent = `Original Size: ${(originalSizeKb).toFixed(1)} KB`;
+    document.getElementById('compress-info-current').textContent = `${(originalSizeKb).toFixed(1)} KB`;
+    
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.compress.pageCount = pdfJs.numPages;
+    
+    // Estimate limits using page 1 heuristic rendering
+    const page = await pdfJs.getPage(1);
+    
+    // Low Quality rendering estimate (scale=0.8, quality=0.3)
+    const viewLow = page.getViewport({ scale: 0.8 });
+    const canvasLow = document.createElement('canvas');
+    canvasLow.width = viewLow.width;
+    canvasLow.height = viewLow.height;
+    const ctxLow = canvasLow.getContext('2d');
+    await page.render({ canvasContext: ctxLow, viewport: viewLow }).promise;
+    const dataLow = canvasLow.toDataURL('image/jpeg', 0.25);
+    const lowPageSize = (dataLow.length * 0.75) / 1024; // approximate size in KB
+    
+    // Med Quality rendering estimate (scale=1.2, quality=0.6)
+    const viewMed = page.getViewport({ scale: 1.2 });
+    const canvasMed = document.createElement('canvas');
+    canvasMed.width = viewMed.width;
+    canvasMed.height = viewMed.height;
+    const ctxMed = canvasMed.getContext('2d');
+    await page.render({ canvasContext: ctxMed, viewport: viewMed }).promise;
+    const dataMed = canvasMed.toDataURL('image/jpeg', 0.55);
+    const medPageSize = (dataMed.length * 0.75) / 1024;
+    
+    // High Quality rendering estimate (scale=1.5, quality=0.85)
+    const viewHigh = page.getViewport({ scale: 1.5 });
+    const canvasHigh = document.createElement('canvas');
+    canvasHigh.width = viewHigh.width;
+    canvasHigh.height = viewHigh.height;
+    const ctxHigh = canvasHigh.getContext('2d');
+    await page.render({ canvasContext: ctxHigh, viewport: viewHigh }).promise;
+    const dataHigh = canvasHigh.toDataURL('image/jpeg', 0.85);
+    const highPageSize = (dataHigh.length * 0.75) / 1024;
+    
+    // Scale estimates to all pages
+    state.compress.lowKb = Math.min(originalSizeKb * 0.8, lowPageSize * pdfJs.numPages);
+    state.compress.medKb = Math.min(originalSizeKb * 0.9, medPageSize * pdfJs.numPages);
+    state.compress.highKb = Math.min(originalSizeKb * 0.95, highPageSize * pdfJs.numPages);
+    
+    // Make sure bounds are logical
+    if (state.compress.lowKb > originalSizeKb) state.compress.lowKb = originalSizeKb * 0.4;
+    if (state.compress.medKb > originalSizeKb) state.compress.medKb = originalSizeKb * 0.7;
+    if (state.compress.highKb > originalSizeKb) state.compress.highKb = originalSizeKb * 0.9;
+    
+    document.getElementById('compress-info-min').textContent = `${(state.compress.lowKb).toFixed(0)} KB`;
+    document.getElementById('compress-info-max').textContent = `${(state.compress.highKb).toFixed(0)} KB`;
+    
+    document.getElementById('compress-upload-zone').classList.add('hidden');
+    document.getElementById('compress-setup-container').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to analyze PDF file.', 'danger');
+  } finally {
+    hideLoader();
   }
 }
