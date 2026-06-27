@@ -1,4 +1,4 @@
-import { PDFDocument, degrees } from 'pdf-lib';
+import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
 
 /**
  * Merges multiple PDF files (as ArrayBuffers) into a single PDF
@@ -110,4 +110,113 @@ export async function organizePdfPages(pdfBuffer, pageActions) {
   }
   
   return await organizedPdf.save();
+}
+
+/**
+ * Applies a text or image watermark to all pages of a PDF document
+ * @param {ArrayBuffer} pdfBuffer Original PDF file buffer
+ * @param {Object} options Watermark settings
+ * @returns {Promise<Uint8Array>}
+ */
+export async function addWatermarkToPdf(pdfBuffer, options) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const pages = pdfDoc.getPages();
+  
+  const {
+    type,
+    text = 'CONFIDENTIAL',
+    fontSize = 60,
+    color = '#ff0000',
+    rotation = -45,
+    opacity = 0.3,
+    position = 'center',
+    imageBuffer = null,
+    imageMime = 'image/png',
+    imageScale = 0.5
+  } = options;
+  
+  let embeddedImage = null;
+  if (type === 'image' && imageBuffer) {
+    if (imageMime === 'image/png') {
+      embeddedImage = await pdfDoc.embedPng(imageBuffer);
+    } else {
+      embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+    }
+  }
+  
+  // Embed Font for text watermark
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+    let x = 0;
+    let y = 0;
+    
+    if (type === 'text') {
+      const textWidth = font.widthOfTextAtSize(text, fontSize);
+      const textHeight = font.heightAtSize(fontSize);
+      
+      if (position === 'center') {
+        x = (width - textWidth) / 2;
+        y = (height - textHeight) / 2;
+      } else if (position === 'top-left') {
+        x = 40;
+        y = height - textHeight - 40;
+      } else if (position === 'top-right') {
+        x = width - textWidth - 40;
+        y = height - textHeight - 40;
+      } else if (position === 'bottom-left') {
+        x = 40;
+        y = 40;
+      } else if (position === 'bottom-right') {
+        x = width - textWidth - 40;
+        y = 40;
+      }
+      
+      // Parse Color Hex (#ff0000 -> rgb)
+      const hex = color.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16) / 255;
+      const g = parseInt(hex.substring(2, 4), 16) / 255;
+      const b = parseInt(hex.substring(4, 6), 16) / 255;
+      
+      page.drawText(text, {
+        x,
+        y,
+        size: fontSize,
+        font,
+        color: rgb(r, g, b),
+        opacity,
+        rotate: degrees(rotation)
+      });
+    } else if (type === 'image' && embeddedImage) {
+      const dims = embeddedImage.scale(imageScale);
+      
+      if (position === 'center') {
+        x = (width - dims.width) / 2;
+        y = (height - dims.height) / 2;
+      } else if (position === 'top-left') {
+        x = 40;
+        y = height - dims.height - 40;
+      } else if (position === 'top-right') {
+        x = width - dims.width - 40;
+        y = height - dims.height - 40;
+      } else if (position === 'bottom-left') {
+        x = 40;
+        y = 40;
+      } else if (position === 'bottom-right') {
+        x = width - dims.width - 40;
+        y = 40;
+      }
+      
+      page.drawImage(embeddedImage, {
+        x,
+        y,
+        width: dims.width,
+        height: dims.height,
+        opacity
+      });
+    }
+  }
+  
+  return await pdfDoc.save();
 }
