@@ -32,6 +32,16 @@ export class PdfManager {
     this.pageHeights = [];
     this.additions = {};
     
+    this.metadata = {
+      title: this.pdfDoc.getTitle() || '',
+      author: this.pdfDoc.getAuthor() || '',
+      subject: this.pdfDoc.getSubject() || '',
+      creator: this.pdfDoc.getCreator() || '',
+      producer: this.pdfDoc.getProducer() || '',
+      creationDate: this.pdfDoc.getCreationDate() || null,
+      modificationDate: this.pdfDoc.getModificationDate() || null
+    };
+    
     for (let i = 0; i < this.numPages; i++) {
       const page = this.pdfDoc.getPage(i);
       const { width, height } = page.getSize();
@@ -346,6 +356,15 @@ export class PdfManager {
           height,
         });
       }
+    }
+    
+    if (this.metadata) {
+      outPdf.setTitle(this.metadata.title || '');
+      outPdf.setAuthor(this.metadata.author || '');
+      outPdf.setSubject(this.metadata.subject || '');
+      outPdf.setCreator(this.metadata.creator || '');
+      outPdf.setProducer(this.metadata.producer || '');
+      outPdf.setModificationDate(new Date());
     }
     
     return await outPdf.save();

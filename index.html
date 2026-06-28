@@ -358,9 +358,39 @@
                   <input type="range" id="image-opacity" min="10" max="100" value="100" />
                 </div>
 
-                <!-- No tool selected -->
-                <div class="empty-options" id="options-empty-state">
-                  Select a tool from the toolbar to adjust its properties.
+                <!-- Document Info & Metadata Panel (default active / select tool active) -->
+                <div class="option-group" id="options-metadata-panel">
+                  <h4 style="margin-bottom: 0.75rem; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem; font-size: 0.875rem;">Document Info</h4>
+                  <div style="font-size: 0.8125rem; line-height: 1.6; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div>Name: <strong id="meta-info-name">--</strong></div>
+                    <div>Pages: <strong id="meta-info-pages">--</strong></div>
+                    <div>Size: <strong id="meta-info-size">--</strong></div>
+                  </div>
+
+                  <h4 style="margin-bottom: 0.75rem; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem; font-size: 0.875rem;">PDF Metadata</h4>
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="meta-title-input">Title</label>
+                    <input type="text" id="meta-title-input" placeholder="e.g. Contract Amendment" style="width: 100%;" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="meta-author-input">Author</label>
+                    <input type="text" id="meta-author-input" placeholder="e.g. John Doe" style="width: 100%;" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="meta-subject-input">Subject</label>
+                    <input type="text" id="meta-subject-input" placeholder="e.g. Amendment Details" style="width: 100%;" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label for="meta-creator-input">Creator</label>
+                    <input type="text" id="meta-creator-input" placeholder="e.g. Microsoft Word" style="width: 100%;" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label for="meta-producer-input">Producer</label>
+                    <input type="text" id="meta-producer-input" placeholder="e.g. PDF-Lib" style="width: 100%;" />
+                  </div>
+                  <button class="btn btn-secondary btn-full" id="meta-save-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.375rem; font-size: 0.875rem;">
+                    <i data-lucide="save" style="width: 16px; height: 16px;"></i> Save Metadata
+                  </button>
                 </div>
               </div>
             </aside>
@@ -1050,8 +1080,25 @@
               </div>
 
               <!-- Diff Rendering Canvas -->
-              <div id="compare-diff-output" style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1.5rem; font-family: monospace; white-space: pre-wrap; font-size: 0.875rem; background: #ffffff; max-height: 400px; overflow-y: auto; line-height: 1.7;">
+              <div id="compare-diff-output" style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1.5rem; font-family: monospace; white-space: pre-wrap; font-size: 0.875rem; background: #ffffff; max-height: 300px; overflow-y: auto; line-height: 1.7; margin-bottom: 1.5rem;">
                 <!-- Word difference output will be displayed here -->
+              </div>
+
+              <!-- Metadata Comparison Table -->
+              <div id="compare-metadata-container" style="margin-top: 1.5rem;">
+                <h3 style="margin-bottom: 0.75rem;">Metadata Comparison</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); overflow: hidden;">
+                  <thead>
+                    <tr style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                      <th style="padding: 0.75rem 1rem; font-weight: 600;">Property</th>
+                      <th style="padding: 0.75rem 1rem; font-weight: 600;">Original File (A)</th>
+                      <th style="padding: 0.75rem 1rem; font-weight: 600;">Modified File (B)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="compare-metadata-table-body">
+                    <!-- Dynamic comparison rows -->
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

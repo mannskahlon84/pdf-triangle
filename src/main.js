@@ -237,6 +237,18 @@ function setupEditorWorkspace() {
     try {
       const buffer = await file.arrayBuffer();
       await state.editor.pdfManager.loadPdf(buffer);
+      state.editor.pdfManager.file = file;
+      
+      document.getElementById('meta-info-name').textContent = file.name;
+      document.getElementById('meta-info-pages').textContent = state.editor.pdfManager.numPages;
+      document.getElementById('meta-info-size').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      
+      const meta = state.editor.pdfManager.metadata;
+      document.getElementById('meta-title-input').value = meta.title || '';
+      document.getElementById('meta-author-input').value = meta.author || '';
+      document.getElementById('meta-subject-input').value = meta.subject || '';
+      document.getElementById('meta-creator-input').value = meta.creator || '';
+      document.getElementById('meta-producer-input').value = meta.producer || '';
       
       document.getElementById('editor-empty-state').classList.add('hidden');
       document.getElementById('active-page-container').classList.remove('hidden');
@@ -432,6 +444,22 @@ function setupEditorWorkspace() {
       hideLoader();
     }
   });
+
+  // Metadata Save Button Click
+  document.getElementById('meta-save-btn').addEventListener('click', () => {
+    if (!state.editor.pdfManager || !state.editor.pdfManager.metadata) {
+      showToast('No PDF document loaded.', 'danger');
+      return;
+    }
+    
+    state.editor.pdfManager.metadata.title = document.getElementById('meta-title-input').value.trim();
+    state.editor.pdfManager.metadata.author = document.getElementById('meta-author-input').value.trim();
+    state.editor.pdfManager.metadata.subject = document.getElementById('meta-subject-input').value.trim();
+    state.editor.pdfManager.metadata.creator = document.getElementById('meta-creator-input').value.trim();
+    state.editor.pdfManager.metadata.producer = document.getElementById('meta-producer-input').value.trim();
+    
+    showToast('Metadata updated locally! Download the PDF to save changes permanently.', 'success');
+  });
 }
 
 window.updateTextInspector = (txtObj) => {
@@ -473,7 +501,7 @@ function setEditorTool(tool) {
   document.getElementById('options-shape-tool').classList.add('hidden');
   document.getElementById('options-stamp-tool').classList.add('hidden');
   document.getElementById('options-image-tool').classList.add('hidden');
-  document.getElementById('options-empty-state').classList.add('hidden');
+  document.getElementById('options-metadata-panel').classList.add('hidden');
   
   if (tool === 'text') {
     document.getElementById('options-text-tool').classList.remove('hidden');
@@ -494,7 +522,7 @@ function setEditorTool(tool) {
       showToast('Signature/Image loaded. Click on the document to place it.', 'info');
     }
   } else {
-    document.getElementById('options-empty-state').classList.remove('hidden');
+    document.getElementById('options-metadata-panel').classList.remove('hidden');
   }
 }
 
@@ -2868,6 +2896,39 @@ function setupCompareWorkspace() {
       });
       
       diffOutput.innerHTML = htmlOutput;
+      
+      // Extract and compare PDF Metadata
+      const docA = await PDFDocument.load(await state.compare.fileA.arrayBuffer());
+      const docB = await PDFDocument.load(await state.compare.fileB.arrayBuffer());
+      
+      const rows = [
+        { label: 'File Name', valA: state.compare.fileA.name, valB: state.compare.fileB.name },
+        { label: 'File Size', valA: `${(state.compare.fileA.size / 1024).toFixed(1)} KB`, valB: `${(state.compare.fileB.size / 1024).toFixed(1)} KB` },
+        { label: 'Page Count', valA: docA.getPageCount(), valB: docB.getPageCount() },
+        { label: 'Title', valA: docA.getTitle() || '---', valB: docB.getTitle() || '---' },
+        { label: 'Author', valA: docA.getAuthor() || '---', valB: docB.getAuthor() || '---' },
+        { label: 'Subject', valA: docA.getSubject() || '---', valB: docB.getSubject() || '---' },
+        { label: 'Creator', valA: docA.getCreator() || '---', valB: docB.getCreator() || '---' },
+        { label: 'Producer', valA: docA.getProducer() || '---', valB: docB.getProducer() || '---' },
+        { label: 'Creation Date', valA: docA.getCreationDate() ? docA.getCreationDate().toLocaleString() : '---', valB: docB.getCreationDate() ? docB.getCreationDate().toLocaleString() : '---' },
+        { label: 'Modification Date', valA: docA.getModificationDate() ? docA.getModificationDate().toLocaleString() : '---', valB: docB.getModificationDate() ? docB.getModificationDate().toLocaleString() : '---' }
+      ];
+      
+      let tableHtml = '';
+      rows.forEach(row => {
+        const hasChanged = String(row.valA) !== String(row.valB);
+        const rowStyle = hasChanged ? 'background: #fef08a; border-bottom: 1px solid var(--border-color); color: #1e293b;' : 'border-bottom: 1px solid var(--border-color);';
+        
+        tableHtml += `
+          <tr style="${rowStyle}">
+            <td style="padding: 0.75rem 1rem; font-weight: 600; width: 25%;">${row.label}</td>
+            <td style="padding: 0.75rem 1rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 37.5%;">${escapeHtml(String(row.valA))}</td>
+            <td style="padding: 0.75rem 1rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 37.5%;">${escapeHtml(String(row.valB))}</td>
+          </tr>
+        `;
+      });
+      document.getElementById('compare-metadata-table-body').innerHTML = tableHtml;
+      
       resultsContainer.classList.remove('hidden');
       showToast('Comparison completed! View differences below.', 'success');
     } catch (err) {
