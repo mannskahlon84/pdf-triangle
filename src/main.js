@@ -2628,7 +2628,7 @@ function setupNumberingWorkspace() {
     showLoader('Loading PDF...');
     try {
       const buffer = await file.arrayBuffer();
-      const pdfJs = await pdfjsLib.getDocument(new Uint8Array(buffer)).promise;
+      const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
       
       state.numbering.file = file;
       state.numbering.buffer = buffer;
@@ -2775,7 +2775,7 @@ function setupBatchWorkspace() {
             });
             outBytes = await doc.save();
           } else if (action === 'compress-med' || action === 'compress-low') {
-            const pdfJs = await pdfjsLib.getDocument(new Uint8Array(buffer)).promise;
+            const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
             const quality = action === 'compress-low' ? 0.35 : 0.65;
             outBytes = await compressPdf(buffer, pdfJs, { scale: 0.85, quality });
           } else if (action === 'encrypt') {
@@ -2881,7 +2881,7 @@ function setupCompareWorkspace() {
 
 async function extractTextFromPdf(file) {
   const buffer = await file.arrayBuffer();
-  const pdfJs = await pdfjsLib.getDocument(new Uint8Array(buffer)).promise;
+  const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
   let fullText = '';
   
   for (let i = 1; i <= pdfJs.numPages; i++) {
