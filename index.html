@@ -11,6 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Caveat:wght@700&family=Dancing+Script:wght@700&family=Great+Vibes&family=Pacifico&display=swap" rel="stylesheet">
     <!-- Lucide Icons Library -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- JSZip for batch downloads & Diff for differential text comparison -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
   </head>
   <body class="light-theme">
     <div id="app">
@@ -121,6 +124,38 @@
               <div class="card-icon indigo"><i data-lucide="shrink"></i></div>
               <h3>Compress PDF</h3>
               <p>Reduce PDF file size by compressing images and adjusting resolution scales.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Lock/Unlock PDF -->
+            <div class="tool-card" data-tool="security">
+              <div class="card-icon red"><i data-lucide="lock"></i></div>
+              <h3>Lock/Unlock PDF</h3>
+              <p>Encrypt PDF files with a password or decrypt and remove security protection.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Page Numbering -->
+            <div class="tool-card" data-tool="numbering">
+              <div class="card-icon blue"><i data-lucide="binary"></i></div>
+              <h3>Page Numbering</h3>
+              <p>Add dynamic headers, footers, or Bates numbering automatically to all pages.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Batch Actions -->
+            <div class="tool-card" data-tool="batch">
+              <div class="card-icon orange"><i data-lucide="layers"></i></div>
+              <h3>Batch Actions</h3>
+              <p>Process up to 50 PDFs in parallel (compress, rotate, lock/unlock) and download as ZIP.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Compare PDFs -->
+            <div class="tool-card" data-tool="compare">
+              <div class="card-icon teal"><i data-lucide="columns-2"></i></div>
+              <h3>Compare PDFs</h3>
+              <p>Compare two versions of a document side-by-side using local client-side diffing.</p>
               <button class="btn btn-primary">Open Tool</button>
             </div>
           </div>
@@ -779,6 +814,245 @@
               <button class="btn btn-success btn-full" id="compress-submit-btn" style="margin-top: 1.5rem;">
                 <i data-lucide="shrink"></i> Compress & Download PDF
               </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 12. LOCK/UNLOCK (SECURITY) WORKSPACE -->
+        <section id="security-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Lock/Unlock PDF</h2>
+              <p>Secure your PDF files with password encryption, or remove known passwords from protected documents.</p>
+            </div>
+
+            <div class="upload-area" id="security-upload-zone">
+              <i data-lucide="lock" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="security-file-input" accept=".pdf" class="hidden" />
+            </div>
+
+            <div class="security-setup hidden" id="security-setup-container">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="security-filename">document.pdf</h4>
+                  <p id="security-status-text">Status: Unprotected</p>
+                </div>
+              </div>
+
+              <div class="security-actions" style="margin-top: 1.5rem;">
+                <!-- Password Decryption Section (if file is encrypted) -->
+                <div id="security-decrypt-group" class="hidden" style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: var(--bg-secondary);">
+                  <h4 style="margin-bottom: 0.5rem;"><i data-lucide="unlock" style="vertical-align: middle; width: 18px; margin-right: 0.25rem;"></i> File is Password-Protected</h4>
+                  <p class="field-hint" style="margin-bottom: 0.75rem;">Enter the password to unlock this file for editing or saving:</p>
+                  <div class="form-group">
+                    <label for="security-decrypt-password">Decryption Password</label>
+                    <input type="password" id="security-decrypt-password" placeholder="Enter password to unlock" style="width: 100%;" />
+                  </div>
+                  <button class="btn btn-secondary btn-full" id="security-decrypt-btn" style="margin-top: 0.75rem;">
+                    Unlock File
+                  </button>
+                </div>
+
+                <!-- Password Encryption Section -->
+                <div id="security-encrypt-group" class="form-group">
+                  <label for="security-encrypt-password">Encrypt with Password (Optional)</label>
+                  <input type="password" id="security-encrypt-password" placeholder="Enter new user password" style="width: 100%; margin-bottom: 0.75rem;" />
+                  
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="security-remove-pass-enable" />
+                    <label for="security-remove-pass-enable" style="margin: 0;">Decrypt & remove password permanently</label>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn btn-success btn-full" id="security-submit-btn" style="margin-top: 1.5rem;">
+                <i data-lucide="save"></i> Process & Download PDF
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 13. PAGE NUMBERING WORKSPACE -->
+        <section id="numbering-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Page Numbering</h2>
+              <p>Add dynamic headers, footers, or custom Bates numbering to every page of your PDF.</p>
+            </div>
+
+            <div class="upload-area" id="numbering-upload-zone">
+              <i data-lucide="binary" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="numbering-file-input" accept=".pdf" class="hidden" />
+            </div>
+
+            <div class="numbering-setup hidden" id="numbering-setup-container">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="numbering-filename">document.pdf</h4>
+                  <p id="numbering-pagecount">Pages: --</p>
+                </div>
+              </div>
+
+              <div class="numbering-settings" style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label for="num-format">Format Pattern</label>
+                  <select id="num-format" style="width: 100%;">
+                    <option value="Page {n} of {total}" selected>Page X of Y</option>
+                    <option value="Page {n}">Page X</option>
+                    <option value="{n}">Simple Number (X)</option>
+                    <option value="BATES-{n}">Bates Style (BATES-0000X)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="num-position">Placement Position</label>
+                  <select id="num-position" style="width: 100%;">
+                    <option value="bottom-center" selected>Bottom Center</option>
+                    <option value="bottom-left">Bottom Left</option>
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="top-center">Top Center</option>
+                    <option value="top-left">Top Left</option>
+                    <option value="top-right">Top Right</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="num-start">Starting Page Number</label>
+                  <input type="number" id="num-start" value="1" min="1" style="width: 100%;" />
+                </div>
+
+                <div class="form-group">
+                  <label for="num-size">Font Size</label>
+                  <input type="number" id="num-size" value="10" min="6" max="32" style="width: 100%;" />
+                </div>
+
+                <div class="form-group">
+                  <label for="num-color">Font Color</label>
+                  <input type="color" id="num-color" value="#4b5563" style="width: 100%; height: 38px; padding: 0.25rem;" />
+                </div>
+
+                <div class="form-group">
+                  <label for="num-margin">Margin Offset (px)</label>
+                  <input type="number" id="num-margin" value="25" min="5" max="150" style="width: 100%;" />
+                </div>
+              </div>
+
+              <button class="btn btn-success btn-full" id="numbering-submit-btn" style="margin-top: 1.5rem;">
+                <i data-lucide="binary"></i> Add Page Numbers & Download
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 14. BATCH ACTIONS WORKSPACE -->
+        <section id="batch-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Batch Actions</h2>
+              <p>Process up to 50 PDF files simultaneously (compress, rotate, lock/unlock) and download them in a single ZIP archive.</p>
+            </div>
+
+            <div class="upload-area" id="batch-upload-zone">
+              <i data-lucide="layers" class="upload-icon"></i>
+              <p>Drag & drop up to 50 PDF files here, or <span class="highlight">browse files</span></p>
+              <input type="file" id="batch-file-input" accept=".pdf" multiple class="hidden" />
+            </div>
+
+            <div class="batch-setup hidden" id="batch-setup-container">
+              <div class="batch-options-card" style="background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: var(--border-radius-sm); margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 0.75rem;"><i data-lucide="sliders" style="vertical-align: middle; width: 18px; margin-right: 0.25rem;"></i> Batch Operation Settings</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div class="form-group">
+                    <label for="batch-action-select">Choose Action</label>
+                    <select id="batch-action-select" style="width: 100%;">
+                      <option value="rotate-cw" selected>Rotate Clockwise (90°)</option>
+                      <option value="rotate-ccw">Rotate Counter-Clockwise (-90°)</option>
+                      <option value="compress-med">Compress: Medium Quality (~40% smaller)</option>
+                      <option value="compress-low">Compress: Low Quality (~70% smaller)</option>
+                      <option value="encrypt">Encrypt (Lock) with Password</option>
+                      <option value="decrypt">Decrypt (Unlock) & Remove Security</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group hidden" id="batch-password-group">
+                    <label for="batch-password-input">User Password</label>
+                    <input type="password" id="batch-password-input" placeholder="Password to apply/remove" style="width: 100%;" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="batch-files-list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h4 id="batch-files-count">Uploaded Files (0 / 50)</h4>
+                <button class="btn btn-secondary" id="batch-clear-btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Clear All</button>
+              </div>
+
+              <!-- File List Grid -->
+              <div id="batch-files-grid" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 0.5rem; background: #ffffff;">
+                <!-- Dynamically populated rows -->
+              </div>
+
+              <button class="btn btn-success btn-full" id="batch-submit-btn" style="margin-top: 1.5rem;">
+                <i data-lucide="play"></i> Run Batch & Download ZIP
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 15. COMPARE WORKSPACE -->
+        <section id="compare-view" class="view-panel hidden">
+          <div class="tool-container" style="max-width: 1000px;">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Compare PDFs</h2>
+              <p>Compare two versions of a document side-by-side using secure client-side text diffing. No data is sent to any server.</p>
+            </div>
+
+            <!-- Upload Grid (Side-by-side) -->
+            <div class="compare-upload-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+              <div>
+                <h4 style="margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary);">Original File (Version A)</h4>
+                <div class="upload-area" id="compare-a-upload-zone" style="min-height: 150px;">
+                  <i data-lucide="file" class="upload-icon"></i>
+                  <p id="compare-a-status">Drag file here or <span class="highlight">browse</span></p>
+                  <input type="file" id="compare-a-file-input" accept=".pdf" class="hidden" />
+                </div>
+              </div>
+
+              <div>
+                <h4 style="margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary);">Modified File (Version B)</h4>
+                <div class="upload-area" id="compare-b-upload-zone" style="min-height: 150px;">
+                  <i data-lucide="file-check" class="upload-icon"></i>
+                  <p id="compare-b-status">Drag file here or <span class="highlight">browse</span></p>
+                  <input type="file" id="compare-b-file-input" accept=".pdf" class="hidden" />
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-full hidden" id="compare-submit-btn" style="margin-top: 1.5rem;">
+              <i data-lucide="columns-2"></i> Compare Documents
+            </button>
+
+            <!-- Results Panel -->
+            <div class="compare-results hidden" id="compare-results-container" style="margin-top: 2.0rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Comparison Diff Results</h3>
+                <div style="font-size: 0.875rem; display: flex; gap: 1rem;">
+                  <span><span style="display:inline-block; width:12px; height:12px; background:#fee2e2; border:1px solid #fca5a5; margin-right:4px; vertical-align:middle;"></span> Deletion</span>
+                  <span><span style="display:inline-block; width:12px; height:12px; background:#dcfce7; border:1px solid #86efac; margin-right:4px; vertical-align:middle;"></span> Addition</span>
+                </div>
+              </div>
+
+              <!-- Diff Rendering Canvas -->
+              <div id="compare-diff-output" style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1.5rem; font-family: monospace; white-space: pre-wrap; font-size: 0.875rem; background: #ffffff; max-height: 400px; overflow-y: auto; line-height: 1.7;">
+                <!-- Word difference output will be displayed here -->
+              </div>
             </div>
           </div>
         </section>

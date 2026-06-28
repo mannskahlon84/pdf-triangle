@@ -2,7 +2,7 @@ import './style.css';
 import { PdfManager } from './pdfManager';
 import { SignaturePad } from './signatureManager';
 import { runOcrOnCanvas } from './ocrManager';
-import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf } from './tools/manipulator';
+import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf, encryptPdf, decryptPdf, addPageNumbersToPdf } from './tools/manipulator';
 import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf } from './tools/converters';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees } from 'pdf-lib';
@@ -61,6 +61,21 @@ const state = {
     lowKb: 0,
     medKb: 0,
     highKb: 0
+  },
+  security: {
+    file: null,
+    isLocked: false
+  },
+  numbering: {
+    file: null,
+    pageCount: 0
+  },
+  batch: {
+    files: []
+  },
+  compare: {
+    fileA: null,
+    fileB: null
   }
 };
 
@@ -108,6 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setupExcelToPdfWorkspace();
   setupWatermarkWorkspace();
   setupCompressWorkspace();
+  setupSecurityWorkspace();
+  setupNumberingWorkspace();
+  setupBatchWorkspace();
+  setupCompareWorkspace();
   setupSignatureModal();
   setupOcrModal();
 });
@@ -121,7 +140,7 @@ function handleRouting() {
     viewName = hash.substring(2);
   }
   
-  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress'];
+  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 'batch', 'compare'];
   if (!validRoutes.includes(viewName)) {
     viewName = 'dashboard';
     window.location.hash = '#/dashboard';
@@ -2465,4 +2484,420 @@ async function handleCompressFile(file) {
   } finally {
     hideLoader();
   }
+}
+
+// -------------------------------------------------------------
+// 12. LOCK/UNLOCK (SECURITY) WORKSPACE
+// -------------------------------------------------------------
+function setupSecurityWorkspace() {
+  const uploadZone = document.getElementById('security-upload-zone');
+  const fileInput = document.getElementById('security-file-input');
+  const setupContainer = document.getElementById('security-setup-container');
+  const decryptGroup = document.getElementById('security-decrypt-group');
+  const encryptGroup = document.getElementById('security-encrypt-group');
+  const decryptPassInput = document.getElementById('security-decrypt-password');
+  const decryptBtn = document.getElementById('security-decrypt-btn');
+  const encryptPassInput = document.getElementById('security-encrypt-password');
+  const removePassCheck = document.getElementById('security-remove-pass-enable');
+  const submitBtn = document.getElementById('security-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) handleSecurityFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleSecurityFile);
+  
+  async function handleSecurityFile(file) {
+    showLoader('Parsing PDF security details...');
+    try {
+      const buffer = await file.arrayBuffer();
+      state.security.file = file;
+      state.security.buffer = buffer;
+      state.security.password = '';
+      state.security.isLocked = false;
+      
+      document.getElementById('security-filename').textContent = file.name;
+      
+      try {
+        // Try loading bare
+        await PDFDocument.load(buffer);
+        
+        // Not locked
+        document.getElementById('security-status-text').textContent = 'Status: Unprotected (Ready to encrypt)';
+        decryptGroup.classList.add('hidden');
+        encryptGroup.classList.remove('hidden');
+        removePassCheck.checked = false;
+        removePassCheck.disabled = true;
+      } catch (err) {
+        // Encrypted
+        state.security.isLocked = true;
+        document.getElementById('security-status-text').textContent = 'Status: Password-Protected (Locked)';
+        decryptGroup.classList.remove('hidden');
+        encryptGroup.classList.add('hidden');
+        removePassCheck.disabled = false;
+      }
+      
+      uploadZone.classList.add('hidden');
+      setupContainer.classList.remove('hidden');
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to read PDF file.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  }
+  
+  decryptBtn.addEventListener('click', async () => {
+    const password = decryptPassInput.value;
+    if (!password) {
+      showToast('Please enter the password.', 'danger');
+      return;
+    }
+    
+    showLoader('Unlocking PDF document...');
+    try {
+      await PDFDocument.load(state.security.buffer, { password });
+      state.security.password = password;
+      state.security.isLocked = false;
+      
+      document.getElementById('security-status-text').textContent = 'Status: Unlocked & Decrypted';
+      decryptGroup.classList.add('hidden');
+      encryptGroup.classList.remove('hidden');
+      removePassCheck.checked = true;
+      removePassCheck.disabled = false;
+      showToast('PDF successfully unlocked!', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('Incorrect password. Please try again.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Processing PDF security options...');
+    try {
+      let currentBuffer = state.security.buffer;
+      
+      // Decrypt if it was encrypted
+      if (state.security.password) {
+        currentBuffer = await decryptPdf(state.security.buffer, state.security.password);
+      }
+      
+      const newPassword = encryptPassInput.value;
+      const removePass = removePassCheck.checked;
+      
+      if (newPassword && !removePass) {
+        currentBuffer = await encryptPdf(currentBuffer, newPassword);
+        showToast('PDF encrypted successfully!');
+      } else if (removePass) {
+        showToast('PDF decrypted successfully!');
+      }
+      
+      const blob = new Blob([currentBuffer], { type: 'application/pdf' });
+      downloadBlob(blob, state.security.file.name.replace(/\.pdf$/i, '_secured.pdf'));
+    } catch (err) {
+      console.error(err);
+      showToast('Processing security failed.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// 13. PAGE NUMBERING WORKSPACE
+// -------------------------------------------------------------
+function setupNumberingWorkspace() {
+  const uploadZone = document.getElementById('numbering-upload-zone');
+  const fileInput = document.getElementById('numbering-file-input');
+  const setupContainer = document.getElementById('numbering-setup-container');
+  const submitBtn = document.getElementById('numbering-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) handleNumberingFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleNumberingFile);
+  
+  async function handleNumberingFile(file) {
+    showLoader('Loading PDF...');
+    try {
+      const buffer = await file.arrayBuffer();
+      const pdfJs = await pdfjsLib.getDocument(new Uint8Array(buffer)).promise;
+      
+      state.numbering.file = file;
+      state.numbering.buffer = buffer;
+      state.numbering.pageCount = pdfJs.numPages;
+      
+      document.getElementById('numbering-filename').textContent = file.name;
+      document.getElementById('numbering-pagecount').textContent = `Pages: ${pdfJs.numPages}`;
+      
+      uploadZone.classList.add('hidden');
+      setupContainer.classList.remove('hidden');
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to load PDF file.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  }
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Adding page numbers...');
+    try {
+      const format = document.getElementById('num-format').value;
+      const position = document.getElementById('num-position').value;
+      const startNumber = parseInt(document.getElementById('num-start').value, 10) || 1;
+      const fontSize = parseInt(document.getElementById('num-size').value, 10) || 10;
+      const color = document.getElementById('num-color').value;
+      const margin = parseInt(document.getElementById('num-margin').value, 10) || 25;
+      
+      const numberedBytes = await addPageNumbersToPdf(state.numbering.buffer, {
+        format,
+        position,
+        startNumber,
+        fontSize,
+        color,
+        margin
+      });
+      
+      const blob = new Blob([numberedBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.numbering.file.name.replace(/\.pdf$/i, '_numbered.pdf'));
+      showToast('Page numbers added successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to add page numbers.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// 14. BATCH ACTIONS WORKSPACE
+// -------------------------------------------------------------
+function setupBatchWorkspace() {
+  const uploadZone = document.getElementById('batch-upload-zone');
+  const fileInput = document.getElementById('batch-file-input');
+  const setupContainer = document.getElementById('batch-setup-container');
+  const actionSelect = document.getElementById('batch-action-select');
+  const passwordGroup = document.getElementById('batch-password-group');
+  const clearBtn = document.getElementById('batch-clear-btn');
+  const submitBtn = document.getElementById('batch-submit-btn');
+  const filesGrid = document.getElementById('batch-files-grid');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) handleBatchFiles(files);
+  });
+  
+  actionSelect.addEventListener('change', () => {
+    const val = actionSelect.value;
+    if (val === 'encrypt' || val === 'decrypt') {
+      passwordGroup.classList.remove('hidden');
+    } else {
+      passwordGroup.classList.add('hidden');
+    }
+  });
+  
+  clearBtn.addEventListener('click', () => {
+    state.batch.files = [];
+    filesGrid.innerHTML = '';
+    setupContainer.classList.add('hidden');
+    uploadZone.classList.remove('hidden');
+    fileInput.value = '';
+  });
+  
+  function handleBatchFiles(files) {
+    const validPdfs = files.filter(f => f.name.endsWith('.pdf')).slice(0, 50);
+    if (validPdfs.length === 0) {
+      showToast('Please upload valid PDF files.', 'danger');
+      return;
+    }
+    
+    state.batch.files = validPdfs;
+    document.getElementById('batch-files-count').textContent = `Uploaded Files (${validPdfs.length} / 50)`;
+    
+    filesGrid.innerHTML = '';
+    validPdfs.forEach((file) => {
+      const row = document.createElement('div');
+      row.className = 'batch-file-row';
+      row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.875rem;';
+      row.innerHTML = `
+        <span style="font-weight: 500;">${file.name} (${(file.size / 1024).toFixed(0)} KB)</span>
+        <span class="batch-row-status" style="color: var(--text-secondary); font-weight: 600;">Ready</span>
+      `;
+      filesGrid.appendChild(row);
+    });
+    
+    uploadZone.classList.add('hidden');
+    setupContainer.classList.remove('hidden');
+  }
+  
+  submitBtn.addEventListener('click', async () => {
+    if (state.batch.files.length === 0) return;
+    
+    showLoader('Running batch processing...');
+    const action = actionSelect.value;
+    const password = document.getElementById('batch-password-input').value;
+    const zip = new JSZip();
+    const rows = document.querySelectorAll('.batch-file-row');
+    
+    try {
+      for (let i = 0; i < state.batch.files.length; i++) {
+        const file = state.batch.files[i];
+        const rowStatus = rows[i].querySelector('.batch-row-status');
+        rowStatus.textContent = 'Processing...';
+        rowStatus.style.color = 'var(--accent-purple)';
+        
+        try {
+          const buffer = await file.arrayBuffer();
+          let outBytes;
+          
+          if (action === 'rotate-cw') {
+            const doc = await PDFDocument.load(buffer);
+            doc.getPages().forEach(page => {
+              const rot = page.getRotation().angle;
+              page.setRotation(degrees((rot + 90) % 360));
+            });
+            outBytes = await doc.save();
+          } else if (action === 'rotate-ccw') {
+            const doc = await PDFDocument.load(buffer);
+            doc.getPages().forEach(page => {
+              const rot = page.getRotation().angle;
+              page.setRotation(degrees((rot + 270) % 360));
+            });
+            outBytes = await doc.save();
+          } else if (action === 'compress-med' || action === 'compress-low') {
+            const pdfJs = await pdfjsLib.getDocument(new Uint8Array(buffer)).promise;
+            const quality = action === 'compress-low' ? 0.35 : 0.65;
+            outBytes = await compressPdf(buffer, pdfJs, { scale: 0.85, quality });
+          } else if (action === 'encrypt') {
+            if (!password) throw new Error('Password required');
+            outBytes = await encryptPdf(buffer, password);
+          } else if (action === 'decrypt') {
+            if (!password) throw new Error('Password required');
+            outBytes = await decryptPdf(buffer, password);
+          }
+          
+          zip.file(file.name.replace(/\.pdf$/i, '_processed.pdf'), outBytes);
+          rowStatus.textContent = 'Completed';
+          rowStatus.style.color = 'var(--text-success)';
+        } catch (e) {
+          console.error(e);
+          rowStatus.textContent = 'Failed';
+          rowStatus.style.color = 'var(--text-danger)';
+        }
+      }
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      downloadBlob(zipBlob, 'batch_processed_documents.zip');
+      showToast('Batch processing complete! ZIP downloaded.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Batch processing failed.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+// -------------------------------------------------------------
+// 15. COMPARE WORKSPACE
+// -------------------------------------------------------------
+function setupCompareWorkspace() {
+  const uploadZoneA = document.getElementById('compare-a-upload-zone');
+  const fileInputA = document.getElementById('compare-a-file-input');
+  const uploadZoneB = document.getElementById('compare-b-upload-zone');
+  const fileInputB = document.getElementById('compare-b-file-input');
+  const submitBtn = document.getElementById('compare-submit-btn');
+  const resultsContainer = document.getElementById('compare-results-container');
+  const diffOutput = document.getElementById('compare-diff-output');
+  
+  uploadZoneA.addEventListener('click', () => fileInputA.click());
+  fileInputA.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      state.compare.fileA = file;
+      document.getElementById('compare-a-status').textContent = `Loaded: ${file.name}`;
+      checkCompareTrigger();
+    }
+  });
+  
+  uploadZoneB.addEventListener('click', () => fileInputB.click());
+  fileInputB.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      state.compare.fileB = file;
+      document.getElementById('compare-b-status').textContent = `Loaded: ${file.name}`;
+      checkCompareTrigger();
+    }
+  });
+  
+  function checkCompareTrigger() {
+    if (state.compare.fileA && state.compare.fileB) {
+      submitBtn.classList.remove('hidden');
+    }
+  }
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Extracting text and running comparison...');
+    try {
+      const textA = await extractTextFromPdf(state.compare.fileA);
+      const textB = await extractTextFromPdf(state.compare.fileB);
+      
+      // Perform Diff using jsdiff
+      const diff = Diff.diffWords(textA, textB);
+      
+      let htmlOutput = '';
+      diff.forEach((part) => {
+        const value = escapeHtml(part.value);
+        if (part.added) {
+          htmlOutput += `<span style="background-color: #dcfce7; border: 1px solid #86efac; color: #14532d; padding: 1px 3px; border-radius: 2px; font-weight: bold;">${value}</span>`;
+        } else if (part.removed) {
+          htmlOutput += `<span style="background-color: #fee2e2; border: 1px solid #fca5a5; color: #7f1d1d; text-decoration: line-through; padding: 1px 3px; border-radius: 2px;">${value}</span>`;
+        } else {
+          htmlOutput += value;
+        }
+      });
+      
+      diffOutput.innerHTML = htmlOutput;
+      resultsContainer.classList.remove('hidden');
+      showToast('Comparison completed! View differences below.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Comparison failed. Ensure PDFs have extractable text.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function extractTextFromPdf(file) {
+  const buffer = await file.arrayBuffer();
+  const pdfJs = await pdfjsLib.getDocument(new Uint8Array(buffer)).promise;
+  let fullText = '';
+  
+  for (let i = 1; i <= pdfJs.numPages; i++) {
+    const page = await pdfJs.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map(item => item.str).join(' ');
+    fullText += `[Page ${i}]\n` + pageText + '\n\n';
+  }
+  return fullText;
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

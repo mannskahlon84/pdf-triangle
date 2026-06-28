@@ -260,3 +260,101 @@ export async function compressPdf(pdfBuffer, pdfJsDoc, options) {
   
   return await compressedPdf.save();
 }
+
+/**
+ * Encrypts a PDF with user and owner passwords
+ * @param {ArrayBuffer} pdfBuffer 
+ * @param {string} userPassword 
+ * @returns {Promise<Uint8Array>}
+ */
+export async function encryptPdf(pdfBuffer, userPassword) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  pdfDoc.encrypt({
+    userPassword,
+    ownerPassword: '', // optional owner password
+    permissions: {
+      printing: 'highResolution',
+      modifying: true,
+      copying: true,
+      annotating: true,
+      fillingForms: true,
+      contentAccessibility: true,
+      documentAssembly: true
+    }
+  });
+  return await pdfDoc.save();
+}
+
+/**
+ * Decrypts a password-protected PDF by loading it with credentials and saving it bare
+ * @param {ArrayBuffer} pdfBuffer 
+ * @param {string} password 
+ * @returns {Promise<Uint8Array>}
+ */
+export async function decryptPdf(pdfBuffer, password) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer, { password });
+  return await pdfDoc.save();
+}
+
+/**
+ * Draws dynamic page numbers or Bates numbering stamps on each page of a PDF
+ * @param {ArrayBuffer} pdfBuffer 
+ * @param {Object} options 
+ * @returns {Promise<Uint8Array>}
+ */
+export async function addPageNumbersToPdf(pdfBuffer, options) {
+  const { format, position, startNumber, fontSize, color, margin } = options;
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const pages = pdfDoc.getPages();
+  const total = pages.length;
+  
+  const r = parseInt(color.substring(1, 3), 16) / 255;
+  const g = parseInt(color.substring(3, 5), 16) / 255;
+  const b = parseInt(color.substring(5, 7), 16) / 255;
+  const rgbColor = rgb(r, g, b);
+  
+  for (let i = 0; i < total; i++) {
+    const page = pages[i];
+    const { width, height } = page.getSize();
+    const currentNum = startNumber + i;
+    
+    let text = format
+      .replace('{n}', currentNum)
+      .replace('{total}', total);
+    
+    if (format.includes('BATES-')) {
+      const paddedNum = String(currentNum).padStart(6, '0');
+      text = `BATES-${paddedNum}`;
+    }
+    
+    const textWidth = font.widthOfTextAtSize(text, fontSize);
+    const textHeight = font.heightAtSize(fontSize);
+    
+    let x, y;
+    
+    if (position.startsWith('top')) {
+      y = height - margin - textHeight;
+    } else {
+      y = margin;
+    }
+    
+    if (position.endsWith('left')) {
+      x = margin;
+    } else if (position.endsWith('right')) {
+      x = width - margin - textWidth;
+    } else {
+      x = (width - textWidth) / 2;
+    }
+    
+    page.drawText(text, {
+      x,
+      y,
+      size: fontSize,
+      font,
+      color: rgbColor
+    });
+  }
+  
+  return await pdfDoc.save();
+}
