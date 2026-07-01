@@ -3010,17 +3010,21 @@ function setupScannerWorkspace() {
     } else {
       thresholdGroup.classList.add('hidden');
     }
+    renderScannerCanvas();
   });
   
   // Update labels dynamically
   thresholdInput.addEventListener('input', (e) => {
     document.getElementById('scan-threshold-val').textContent = e.target.value;
+    renderScannerCanvas();
   });
   brightnessInput.addEventListener('input', (e) => {
     document.getElementById('scan-brightness-val').textContent = e.target.value;
+    renderScannerCanvas();
   });
   contrastInput.addEventListener('input', (e) => {
     document.getElementById('scan-contrast-val').textContent = e.target.value;
+    renderScannerCanvas();
   });
   
   async function handleScannerFile(file) {
@@ -3067,9 +3071,16 @@ function setupScannerWorkspace() {
   function initScanner(img) {
     state.scanner.originalImg = img;
     
-    // Fit canvas bounds to container (max 650px wide)
-    const maxWidth = Math.min(650, window.innerWidth - 60);
-    const scale = maxWidth / img.width;
+    // Fit canvas bounds to container width and height (max 550x500 viewport to avoid clipping)
+    const maxW = 550;
+    const maxH = 500;
+    
+    let scale = 1;
+    if (img.width / img.height > maxW / maxH) {
+      scale = maxW / img.width;
+    } else {
+      scale = maxH / img.height;
+    }
     
     canvas.width = img.width * scale;
     canvas.height = img.height * scale;
@@ -3158,6 +3169,42 @@ function setupScannerWorkspace() {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+    // Apply B&W, Grayscale, Contrast, and Brightness adjustments live on preview!
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const mode = modeSelect.value;
+    const threshold = parseInt(thresholdInput.value, 10);
+    const brightness = parseInt(brightnessInput.value, 10) / 100;
+    const contrast = parseInt(contrastInput.value, 10) / 100;
+    
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      let r = imgData.data[i];
+      let g = imgData.data[i+1];
+      let b = imgData.data[i+2];
+      
+      // Apply Brightness & Contrast
+      r = (r - 128) * contrast + 128 + (brightness - 1) * 128;
+      g = (g - 128) * contrast + 128 + (brightness - 1) * 128;
+      b = (b - 128) * contrast + 128 + (brightness - 1) * 128;
+      
+      if (mode === 'bw') {
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        const val = gray > threshold ? 255 : 0;
+        r = g = b = val;
+      } else if (mode === 'grayscale') {
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = g = b = Math.min(255, Math.max(0, gray));
+      } else if (mode === 'color') {
+        r = Math.min(255, Math.max(0, r * 1.15));
+        g = Math.min(255, Math.max(0, g * 1.15));
+        b = Math.min(255, Math.max(0, b * 1.15));
+      }
+      
+      imgData.data[i] = Math.min(255, Math.max(0, r));
+      imgData.data[i+1] = Math.min(255, Math.max(0, g));
+      imgData.data[i+2] = Math.min(255, Math.max(0, b));
+    }
+    ctx.putImageData(imgData, 0, 0);
     
     const corners = state.scanner.corners;
     
