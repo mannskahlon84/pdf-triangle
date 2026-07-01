@@ -76,6 +76,12 @@ const state = {
   compare: {
     fileA: null,
     fileB: null
+  },
+  scanner: {
+    file: null,
+    originalImg: null,
+    corners: [],
+    activeHandleIndex: -1
   }
 };
 
@@ -127,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupNumberingWorkspace();
   setupBatchWorkspace();
   setupCompareWorkspace();
+  setupScannerWorkspace();
   setupSignatureModal();
   setupOcrModal();
 });
@@ -140,7 +147,7 @@ function handleRouting() {
     viewName = hash.substring(2);
   }
   
-  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 'batch', 'compare'];
+  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 'batch', 'compare', 'scanner'];
   if (!validRoutes.includes(viewName)) {
     viewName = 'dashboard';
     window.location.hash = '#/dashboard';
@@ -2961,4 +2968,391 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// -------------------------------------------------------------
+// 16. DOCUMENT SCANNER WORKSPACE
+// -------------------------------------------------------------
+function setupScannerWorkspace() {
+  const uploadZone = document.getElementById('scan-upload-zone');
+  const fileInput = document.getElementById('scan-file-input');
+  const editorContainer = document.getElementById('scan-editor-container');
+  const backBtn = document.getElementById('scanner-back-btn');
+  const submitBtn = document.getElementById('scan-submit-btn');
+  const canvas = document.getElementById('scan-canvas');
+  
+  const modeSelect = document.getElementById('scan-mode');
+  const thresholdGroup = document.getElementById('scan-threshold-group');
+  const thresholdInput = document.getElementById('scan-threshold');
+  const brightnessInput = document.getElementById('scan-brightness');
+  const contrastInput = document.getElementById('scan-contrast');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) handleScannerFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleScannerFile);
+  
+  backBtn.addEventListener('click', () => {
+    state.scanner.originalImg = null;
+    state.scanner.file = null;
+    editorContainer.classList.add('hidden');
+    uploadZone.classList.remove('hidden');
+    fileInput.value = '';
+    window.location.hash = '#/dashboard';
+  });
+  
+  modeSelect.addEventListener('change', (e) => {
+    if (e.target.value === 'bw') {
+      thresholdGroup.classList.remove('hidden');
+    } else {
+      thresholdGroup.classList.add('hidden');
+    }
+  });
+  
+  // Update labels dynamically
+  thresholdInput.addEventListener('input', (e) => {
+    document.getElementById('scan-threshold-val').textContent = e.target.value;
+  });
+  brightnessInput.addEventListener('input', (e) => {
+    document.getElementById('scan-brightness-val').textContent = e.target.value;
+  });
+  contrastInput.addEventListener('input', (e) => {
+    document.getElementById('scan-contrast-val').textContent = e.target.value;
+  });
+  
+  async function handleScannerFile(file) {
+    showLoader('Loading file...');
+    try {
+      state.scanner.file = file;
+      if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+        const buffer = await file.arrayBuffer();
+        const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+        const page = await pdfJs.getPage(1);
+        
+        const viewport = page.getViewport({ scale: 2.0 }); // Render at 2x for sharp scanner warping!
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = viewport.width;
+        tempCanvas.height = viewport.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        await page.render({ canvasContext: tempCtx, viewport }).promise;
+        
+        const img = new Image();
+        img.onload = () => {
+          hideLoader();
+          initScanner(img);
+        };
+        img.src = tempCanvas.toDataURL('image/jpeg', 0.9);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            hideLoader();
+            initScanner(img);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (e) {
+      console.error(e);
+      hideLoader();
+      showToast('Failed to load document.', 'danger');
+    }
+  }
+  
+  function initScanner(img) {
+    state.scanner.originalImg = img;
+    
+    // Fit canvas bounds to container (max 650px wide)
+    const maxWidth = Math.min(650, window.innerWidth - 60);
+    const scale = maxWidth / img.width;
+    
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    
+    // Place handles close to the image border boundaries (with 35px padding)
+    const padding = 35;
+    state.scanner.corners = [
+      { x: padding, y: padding },
+      { x: img.width - padding, y: padding },
+      { x: img.width - padding, y: img.height - padding },
+      { x: padding, y: img.height - padding }
+    ];
+    
+    uploadZone.classList.add('hidden');
+    editorContainer.classList.remove('hidden');
+    renderScannerCanvas();
+  }
+  
+  let activeIndex = -1;
+  
+  function getMousePos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  }
+  
+  function handleDown(e) {
+    if (!state.scanner.originalImg) return;
+    const pos = getMousePos(e);
+    const scale = canvas.width / state.scanner.originalImg.width;
+    
+    let nearest = -1;
+    let minDist = 30; // pixels active hit radius
+    
+    state.scanner.corners.forEach((pt, idx) => {
+      const dist = Math.hypot(pt.x * scale - pos.x, pt.y * scale - pos.y);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = idx;
+      }
+    });
+    
+    activeIndex = nearest;
+    if (activeIndex !== -1) {
+      e.preventDefault();
+    }
+  }
+  
+  function handleMove(e) {
+    if (activeIndex === -1 || !state.scanner.originalImg) return;
+    const pos = getMousePos(e);
+    const scale = state.scanner.originalImg.width / canvas.width;
+    
+    let imgX = Math.max(0, Math.min(state.scanner.originalImg.width, pos.x * scale));
+    let imgY = Math.max(0, Math.min(state.scanner.originalImg.height, pos.y * scale));
+    
+    state.scanner.corners[activeIndex] = { x: imgX, y: imgY };
+    renderScannerCanvas();
+    e.preventDefault();
+  }
+  
+  function handleUp() {
+    activeIndex = -1;
+  }
+  
+  canvas.addEventListener('mousedown', handleDown);
+  canvas.addEventListener('mousemove', handleMove);
+  window.addEventListener('mouseup', handleUp);
+  
+  canvas.addEventListener('touchstart', handleDown, { passive: false });
+  canvas.addEventListener('touchmove', handleMove, { passive: false });
+  window.addEventListener('touchend', handleUp);
+  
+  function renderScannerCanvas() {
+    const img = state.scanner.originalImg;
+    const ctx = canvas.getContext('2d');
+    const scale = canvas.width / img.width;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+    const corners = state.scanner.corners;
+    
+    // Draw quad bounds
+    ctx.beginPath();
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.moveTo(corners[0].x * scale, corners[0].y * scale);
+    for (let i = 1; i < 4; i++) {
+      ctx.lineTo(corners[i].x * scale, corners[i].y * scale);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    
+    // Translucent crop preview highlight
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.12)';
+    ctx.fill();
+    
+    // Draw handle circles
+    corners.forEach((pt, idx) => {
+      ctx.beginPath();
+      ctx.arc(pt.x * scale, pt.y * scale, 9, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ef4444';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    });
+  }
+  
+  submitBtn.addEventListener('click', async () => {
+    if (!state.scanner.originalImg) return;
+    
+    showLoader('Processing document scan...');
+    try {
+      const img = state.scanner.originalImg;
+      const corners = state.scanner.corners;
+      
+      const w1 = Math.hypot(corners[1].x - corners[0].x, corners[1].y - corners[0].y);
+      const w2 = Math.hypot(corners[2].x - corners[3].x, corners[2].y - corners[3].y);
+      const h1 = Math.hypot(corners[3].x - corners[0].x, corners[3].y - corners[0].y);
+      const h2 = Math.hypot(corners[2].x - corners[1].x, corners[2].y - corners[1].y);
+      
+      const outWidth = Math.min(1600, Math.round((w1 + w2) / 2));
+      const outHeight = Math.min(1600, Math.round((h1 + h2) / 2));
+      
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = outWidth;
+      outCanvas.height = outHeight;
+      const outCtx = outCanvas.getContext('2d');
+      
+      const dst = [
+        { x: 0, y: 0 },
+        { x: outWidth, y: 0 },
+        { x: outWidth, y: outHeight },
+        { x: 0, y: outHeight }
+      ];
+      
+      const M = solveHomography(dst, corners);
+      
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(img, 0, 0);
+      const srcData = tempCtx.getImageData(0, 0, img.width, img.height);
+      
+      const destData = outCtx.createImageData(outWidth, outHeight);
+      
+      const srcW = img.width;
+      const srcH = img.height;
+      
+      for (let y = 0; y < outHeight; y++) {
+        for (let x = 0; x < outWidth; x++) {
+          const denom = M[6] * x + M[7] * y + 1;
+          const sx = Math.round((M[0] * x + M[1] * y + M[2]) / denom);
+          const sy = Math.round((M[3] * x + M[4] * y + M[5]) / denom);
+          
+          if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH) {
+            const srcIdx = (sy * srcW + sx) * 4;
+            const destIdx = (y * outWidth + x) * 4;
+            
+            destData.data[destIdx] = srcData.data[srcIdx];
+            destData.data[destIdx+1] = srcData.data[srcIdx+1];
+            destData.data[destIdx+2] = srcData.data[srcIdx+2];
+            destData.data[destIdx+3] = srcData.data[srcIdx+3];
+          }
+        }
+      }
+      
+      // Apply scanner filters
+      const mode = modeSelect.value;
+      const threshold = parseInt(thresholdInput.value, 10);
+      const brightness = parseInt(brightnessInput.value, 10) / 100;
+      const contrast = parseInt(contrastInput.value, 10) / 100;
+      
+      for (let i = 0; i < destData.data.length; i += 4) {
+        let r = destData.data[i];
+        let g = destData.data[i+1];
+        let b = destData.data[i+2];
+        
+        r = (r - 128) * contrast + 128 + (brightness - 1) * 128;
+        g = (g - 128) * contrast + 128 + (brightness - 1) * 128;
+        b = (b - 128) * contrast + 128 + (brightness - 1) * 128;
+        
+        if (mode === 'bw') {
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          const val = gray > threshold ? 255 : 0;
+          r = g = b = val;
+        } else if (mode === 'grayscale') {
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          r = g = b = Math.min(255, Math.max(0, gray));
+        } else if (mode === 'color') {
+          r = Math.min(255, Math.max(0, r * 1.15));
+          g = Math.min(255, Math.max(0, g * 1.15));
+          b = Math.min(255, Math.max(0, b * 1.15));
+        }
+        
+        destData.data[i] = Math.min(255, Math.max(0, r));
+        destData.data[i+1] = Math.min(255, Math.max(0, g));
+        destData.data[i+2] = Math.min(255, Math.max(0, b));
+      }
+      
+      outCtx.putImageData(destData, 0, 0);
+      
+      // Save canvas as PDF page
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([outWidth, outHeight]);
+      const imgUrl = outCanvas.toDataURL('image/jpeg', 0.85);
+      const imgBytes = await fetch(imgUrl).then(res => res.arrayBuffer());
+      const embeddedImg = await pdfDoc.embedJpg(imgBytes);
+      
+      page.drawImage(embeddedImg, {
+        x: 0,
+        y: 0,
+        width: outWidth,
+        height: outHeight
+      });
+      
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.scanner.file.name.replace(/\.[a-z0-9]+$/i, '_scanned.pdf'));
+      showToast('Document scanned successfully!');
+    } catch (e) {
+      console.error(e);
+      showToast('Processing scan failed.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+function solveHomography(src, dst) {
+  const A = [];
+  for (let i = 0; i < 4; i++) {
+    const sx = src[i].x, sy = src[i].y;
+    const dx = dst[i].x, dy = dst[i].y;
+    A.push([sx, sy, 1, 0, 0, 0, -dx * sx, -dx * sy, dx]);
+    A.push([0, 0, 0, sx, sy, 1, -dy * sx, -dy * sy, dy]);
+  }
+  const h = gaussElimination(A);
+  return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+}
+
+function gaussElimination(A) {
+  const n = 8;
+  for (let i = 0; i < n; i++) {
+    let maxEl = Math.abs(A[i][i]);
+    let maxRow = i;
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(A[k][i]) > maxEl) {
+        maxEl = Math.abs(A[k][i]);
+        maxRow = k;
+      }
+    }
+    for (let k = i; k < n + 1; k++) {
+      const tmp = A[maxRow][k];
+      A[maxRow][k] = A[i][k];
+      A[i][k] = tmp;
+    }
+    for (let k = i + 1; k < n; k++) {
+      const c = -A[k][i] / A[i][i];
+      for (let j = i; j < n + 1; j++) {
+        if (i === j) A[k][j] = 0;
+        else A[k][j] += c * A[i][j];
+      }
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = A[i][n] / A[i][i];
+    for (let k = i - 1; k >= 0; k--) {
+      A[k][n] -= A[k][i] * x[i];
+    }
+  }
+  return x;
 }

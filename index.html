@@ -26,6 +26,9 @@
           <span class="logo-text">PDF <span class="highlight">Triangle</span></span>
         </div>
         <div class="header-actions">
+          <a href="/pdf-triangle.apk" download class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.375rem; text-decoration: none; font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); border: 1px solid var(--border-color); background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--border-radius-sm);">
+            <i data-lucide="smartphone" style="width: 16px; height: 16px; margin-right: 2px;"></i> Download APK (Android)
+          </a>
           <button id="back-to-dashboard" class="btn btn-secondary hidden">
             <i data-lucide="layout-dashboard"></i> Dashboard
           </button>
@@ -156,6 +159,14 @@
               <div class="card-icon teal"><i data-lucide="columns-2"></i></div>
               <h3>Compare PDFs</h3>
               <p>Compare two versions of a document side-by-side using local client-side diffing.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Scan Document -->
+            <div class="tool-card" data-tool="scanner">
+              <div class="card-icon purple"><i data-lucide="scan"></i></div>
+              <h3>Scan Document</h3>
+              <p>Crop, adjust corners, and apply high-contrast filters to turn photos into scanned PDFs.</p>
               <button class="btn btn-primary">Open Tool</button>
             </div>
           </div>
@@ -1101,6 +1112,61 @@
                 </table>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- 16. SCANNER WORKSPACE -->
+        <section id="scanner-view" class="workspace-view hidden">
+          <div class="workspace-layout">
+            <aside class="workspace-sidebar">
+              <div class="sidebar-header" style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-icon-only" id="scanner-back-btn" style="padding: 0.375rem; min-height: unset; height: 32px; width: 32px;">
+                  <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                </button>
+                <h4 style="margin: 0; font-size: 0.875rem;">Scan options</h4>
+              </div>
+              <div class="option-group">
+                <label for="scan-mode">Scan Effect Mode</label>
+                <select id="scan-mode" style="width: 100%; margin-bottom: 1rem;">
+                  <option value="bw" selected>Black & White (High Contrast)</option>
+                  <option value="grayscale">Grayscale Scan</option>
+                  <option value="color">Color Scan (Vibrant)</option>
+                  <option value="original">Original (No Filter)</option>
+                </select>
+
+                <div id="scan-threshold-group">
+                  <label for="scan-threshold">B&W Threshold (<span id="scan-threshold-val">128</span>)</label>
+                  <input type="range" id="scan-threshold" min="0" max="255" value="128" style="margin-bottom: 1rem; width: 100%;" />
+                </div>
+
+                <label for="scan-brightness">Brightness (<span id="scan-brightness-val">100</span>%)</label>
+                <input type="range" id="scan-brightness" min="50" max="200" value="100" style="margin-bottom: 1rem; width: 100%;" />
+
+                <label for="scan-contrast">Contrast (<span id="scan-contrast-val">100</span>%)</label>
+                <input type="range" id="scan-contrast" min="50" max="200" value="100" style="margin-bottom: 1.5rem; width: 100%;" />
+
+                <button class="btn btn-success btn-full" id="scan-submit-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.375rem;">
+                  <i data-lucide="file-down"></i> Save as Scanned PDF
+                </button>
+              </div>
+            </aside>
+            <main class="workspace-main">
+              <!-- Upload zone -->
+              <div class="upload-area" id="scan-upload-zone" style="min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; border: 2px dashed var(--border-color); border-radius: var(--border-radius-lg); padding: 2rem; cursor: pointer; transition: all var(--transition-fast);">
+                <i data-lucide="scan" style="width: 48px; height: 48px; color: var(--accent-purple); margin-bottom: 0.5rem;"></i>
+                <p style="font-weight: 500; font-size: 1rem; color: var(--text-primary); margin: 0;">Drag document image here or <span class="highlight" style="color: var(--accent-purple); text-decoration: underline;">browse</span></p>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Supports JPG, PNG, WebP or PDFs</p>
+                <input type="file" id="scan-file-input" accept="image/png, image/jpeg, image/webp, .pdf" class="hidden" />
+              </div>
+
+              <!-- Interactive Corner Canvas -->
+              <div class="hidden" id="scan-editor-container" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-secondary); border-radius: var(--border-radius-lg); border: 1px solid var(--border-color); padding: 1.5rem; overflow: auto; min-height: 450px; width: 100%;">
+                <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 0.75rem; text-align: center; font-weight: 500;">Drag the red circular handles to align with the corners of the document page.</p>
+                <div style="position: relative; display: inline-block;" id="scan-canvas-wrapper">
+                  <canvas id="scan-canvas" style="display: block; max-width: 100%; border: 1px dashed var(--border-color); background: #ffffff; border-radius: var(--border-radius-sm);"></canvas>
+                </div>
+              </div>
+            </main>
           </div>
         </section>
 
