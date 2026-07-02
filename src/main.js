@@ -233,6 +233,7 @@ function setupEditorWorkspace() {
   const saveBtn = document.getElementById('editor-save-btn');
   const printBtn = document.getElementById('editor-print-btn');
   const rotateBtn = document.getElementById('editor-rotate-btn');
+  const closeBtn = document.getElementById('editor-close-btn');
   const viewport = document.getElementById('canvas-viewport');
   
   uploadBtn.addEventListener('click', () => fileInput.click());
@@ -262,6 +263,7 @@ function setupEditorWorkspace() {
       saveBtn.disabled = false;
       printBtn.disabled = false;
       rotateBtn.disabled = false;
+      closeBtn.disabled = false;
       document.getElementById('ocr-page-btn').disabled = false;
       
       await loadEditorPage(0);
@@ -543,6 +545,60 @@ function setupEditorWorkspace() {
       showToast('Form field removed.', 'info');
     }
   });
+
+  closeBtn.addEventListener('click', resetEditor);
+}
+
+function resetEditor() {
+  if (state.editor.pdfManager) {
+    state.editor.pdfManager.pdfDoc = null;
+    state.editor.pdfManager.pdfBuffer = null;
+    state.editor.pdfManager.file = null;
+    state.editor.pdfManager.additions = {};
+  }
+  
+  const fileInput = document.getElementById('editor-file-input');
+  if (fileInput) fileInput.value = '';
+  
+  document.getElementById('editor-empty-state').classList.remove('hidden');
+  document.getElementById('active-page-container').classList.add('hidden');
+  document.getElementById('active-page-container').innerHTML = '';
+  
+  document.getElementById('editor-thumbnails').innerHTML = '<div class="empty-state-text">No document loaded</div>';
+  
+  document.getElementById('meta-info-name').textContent = '--';
+  document.getElementById('meta-info-pages').textContent = '--';
+  document.getElementById('meta-info-size').textContent = '--';
+  
+  document.getElementById('meta-title-input').value = '';
+  document.getElementById('meta-author-input').value = '';
+  document.getElementById('meta-subject-input').value = '';
+  document.getElementById('meta-creator-input').value = '';
+  document.getElementById('meta-producer-input').value = '';
+  
+  document.getElementById('editor-save-btn').disabled = true;
+  document.getElementById('editor-print-btn').disabled = true;
+  document.getElementById('editor-rotate-btn').disabled = true;
+  document.getElementById('editor-close-btn').disabled = true;
+  document.getElementById('ocr-page-btn').disabled = true;
+  
+  document.getElementById('form-field-editor-properties').classList.add('hidden');
+  document.getElementById('options-form-field-tool').classList.add('hidden');
+  document.getElementById('options-text-tool').classList.add('hidden');
+  document.getElementById('options-draw-tool').classList.add('hidden');
+  document.getElementById('options-erase-tool').classList.add('hidden');
+  document.getElementById('options-shape-tool').classList.add('hidden');
+  document.getElementById('options-stamp-tool').classList.add('hidden');
+  document.getElementById('options-image-tool').classList.add('hidden');
+  
+  document.getElementById('options-metadata-panel').classList.remove('hidden');
+  
+  document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+  const panBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="pan"]');
+  if (panBtn) panBtn.classList.add('active');
+  state.editor.activeTool = 'pan';
+  
+  showToast('Document cleared.', 'info');
 }
 
 window.updateTextInspector = (txtObj) => {
