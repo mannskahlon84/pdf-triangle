@@ -467,6 +467,82 @@ function setupEditorWorkspace() {
     
     showToast('Metadata updated locally! Download the PDF to save changes permanently.', 'success');
   });
+
+  // Form Fields Creation Buttons
+  const addTextFieldBtn = document.getElementById('form-add-text-btn');
+  const addCheckboxFieldBtn = document.getElementById('form-add-checkbox-btn');
+  const addSigFieldBtn = document.getElementById('form-add-sig-btn');
+  
+  const createField = (type) => {
+    if (!state.editor.pdfManager || !state.editor.pdfManager.pdfDoc) {
+      showToast('No PDF document loaded.', 'danger');
+      return;
+    }
+    
+    const pageIndex = state.editor.pdfManager.currentPageIndex;
+    const overlay = document.querySelector('.annotation-overlay');
+    if (!overlay) return;
+    
+    const fieldObj = {
+      id: 'field_' + Date.now() + '_' + Math.round(Math.random() * 1000),
+      type,
+      percentX: 0.35,
+      percentY: 0.35,
+      percentW: type === 'checkbox' ? 0.06 : 0.28,
+      percentH: type === 'checkbox' ? 0.04 : 0.05,
+      name: type + '_' + Math.round(Math.random() * 1000),
+      placeholder: type === 'text' ? 'Type text here...' : ''
+    };
+    
+    state.editor.pdfManager.additions[pageIndex].formFields.push(fieldObj);
+    state.editor.pdfManager.renderFormFieldElement(fieldObj, overlay, pageIndex);
+    
+    const newlyCreatedEl = overlay.querySelector('.form-field-element:last-child');
+    if (newlyCreatedEl) {
+      window.selectFormField(fieldObj, newlyCreatedEl);
+    }
+    showToast(`Added fillable ${type} field! Drag and resize it to fit.`, 'success');
+  };
+  
+  addTextFieldBtn.addEventListener('click', () => createField('text'));
+  addCheckboxFieldBtn.addEventListener('click', () => createField('checkbox'));
+  addSigFieldBtn.addEventListener('click', () => createField('signature'));
+
+  // Form Field Inputs Change Listeners
+  const fieldNameInput = document.getElementById('form-field-name-input');
+  const fieldPlaceholderInput = document.getElementById('form-field-placeholder-input');
+  
+  fieldNameInput.addEventListener('input', (e) => {
+    if (state.editor.selectedField) {
+      const { fieldObj } = state.editor.selectedField;
+      const sanitized = e.target.value.replace(/[^a-zA-Z0-9_-]/g, '');
+      fieldObj.name = sanitized;
+      e.target.value = sanitized;
+      if (fieldObj.updateUI) fieldObj.updateUI();
+    }
+  });
+  
+  fieldPlaceholderInput.addEventListener('input', (e) => {
+    if (state.editor.selectedField) {
+      const { fieldObj } = state.editor.selectedField;
+      fieldObj.placeholder = e.target.value;
+    }
+  });
+  
+  document.getElementById('form-field-delete-btn').addEventListener('click', () => {
+    if (state.editor.selectedField) {
+      const { fieldObj, el } = state.editor.selectedField;
+      el.remove();
+      
+      const pageIndex = state.editor.pdfManager.currentPageIndex;
+      state.editor.pdfManager.additions[pageIndex].formFields = 
+        state.editor.pdfManager.additions[pageIndex].formFields.filter(f => f !== fieldObj);
+        
+      state.editor.selectedField = null;
+      document.getElementById('form-field-editor-properties').classList.add('hidden');
+      showToast('Form field removed.', 'info');
+    }
+  });
 }
 
 window.updateTextInspector = (txtObj) => {
@@ -498,6 +574,39 @@ window.updateTextInspector = (txtObj) => {
   }
 };
 
+window.selectFormField = (fieldObj, el) => {
+  state.editor.selectedField = { fieldObj, el };
+  
+  // Highlight selected element, reset others
+  document.querySelectorAll('.form-field-element').forEach(item => {
+    item.style.borderColor = '#2563eb';
+    item.style.background = 'rgba(59, 130, 246, 0.22)';
+  });
+  el.style.borderColor = '#10b981';
+  el.style.background = 'rgba(16, 185, 129, 0.2)';
+  
+  // Populate properties input
+  document.getElementById('form-field-name-input').value = fieldObj.name;
+  
+  const placeholderGroup = document.getElementById('form-field-placeholder-group');
+  if (fieldObj.type === 'text') {
+    placeholderGroup.classList.remove('hidden');
+    document.getElementById('form-field-placeholder-input').value = fieldObj.placeholder || '';
+  } else {
+    placeholderGroup.classList.add('hidden');
+  }
+  
+  document.getElementById('form-field-editor-properties').classList.remove('hidden');
+};
+
+window.onFormFieldDeleted = (fieldObj) => {
+  if (state.editor.selectedField && state.editor.selectedField.fieldObj === fieldObj) {
+    state.editor.selectedField = null;
+    document.getElementById('form-field-editor-properties').classList.add('hidden');
+  }
+};
+
+
 function setEditorTool(tool) {
   state.editor.activeTool = tool;
   
@@ -509,6 +618,7 @@ function setEditorTool(tool) {
   document.getElementById('options-stamp-tool').classList.add('hidden');
   document.getElementById('options-image-tool').classList.add('hidden');
   document.getElementById('options-metadata-panel').classList.add('hidden');
+  document.getElementById('options-form-field-tool').classList.add('hidden');
   
   if (tool === 'text') {
     document.getElementById('options-text-tool').classList.remove('hidden');
@@ -522,6 +632,8 @@ function setEditorTool(tool) {
     document.getElementById('options-stamp-tool').classList.remove('hidden');
   } else if (tool === 'image') {
     document.getElementById('options-image-tool').classList.remove('hidden');
+  } else if (tool === 'formfield') {
+    document.getElementById('options-form-field-tool').classList.remove('hidden');
   } else if (tool === 'signature') {
     if (!state.editor.activeSignatureDataUrl) {
       openSignatureModal();

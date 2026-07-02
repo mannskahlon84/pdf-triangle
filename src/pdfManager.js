@@ -51,6 +51,7 @@ export class PdfManager {
       this.additions[i] = {
         text: [],
         signatures: [],
+        formFields: [],
         drawingBlob: null // Drawing canvas stored as PNG blob URL
       };
     }
@@ -120,6 +121,13 @@ export class PdfManager {
     this.additions[pageIndex].signatures.forEach(sigObj => {
       this.renderSignatureElement(sigObj, annotationOverlay, pageIndex);
     });
+
+    // Restore previous form fields
+    if (this.additions[pageIndex].formFields) {
+      this.additions[pageIndex].formFields.forEach(fieldObj => {
+        this.renderFormFieldElement(fieldObj, annotationOverlay, pageIndex);
+      });
+    }
 
     return { canvas, annotationOverlay, drawingCanvas, viewport };
   }
@@ -260,6 +268,140 @@ export class PdfManager {
   }
 
   /**
+   * Helper to draw form field element in the DOM
+   */
+  renderFormFieldElement(fieldObj, overlay, pageIndex) {
+    const el = document.createElement('div');
+    el.className = 'form-field-element';
+    
+    // Style coordinates
+    el.style.left = `${fieldObj.percentX * 100}%`;
+    el.style.top = `${fieldObj.percentY * 100}%`;
+    el.style.width = `${fieldObj.percentW * 100}%`;
+    el.style.height = `${fieldObj.percentH * 100}%`;
+    
+    // Standard style attributes
+    el.style.position = 'absolute';
+    el.style.background = 'rgba(59, 130, 246, 0.22)';
+    el.style.border = '1.5px dashed #2563eb';
+    el.style.color = '#1e3a8a';
+    el.style.fontSize = '0.75rem';
+    el.style.fontWeight = '600';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.boxSizing = 'border-box';
+    el.style.cursor = 'move';
+    el.style.resize = 'both';
+    el.style.overflow = 'hidden';
+    el.style.userSelect = 'none';
+    el.style.padding = '2px';
+    el.style.zIndex = '10';
+    
+    // Icon & text preview
+    const labelSpan = document.createElement('span');
+    labelSpan.style.pointerEvents = 'none';
+    labelSpan.style.textOverflow = 'ellipsis';
+    labelSpan.style.whiteSpace = 'nowrap';
+    labelSpan.style.overflow = 'hidden';
+    labelSpan.style.maxWidth = '85%';
+    
+    const updateLabel = () => {
+      const typeText = fieldObj.type === 'text' ? 'Text' : fieldObj.type === 'checkbox' ? 'Check' : 'Sign';
+      labelSpan.textContent = `[${typeText}] ${fieldObj.name}`;
+    };
+    updateLabel();
+    el.appendChild(labelSpan);
+    
+    // Delete button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'element-delete-btn';
+    delBtn.innerHTML = '&times;';
+    delBtn.style.position = 'absolute';
+    delBtn.style.top = '2px';
+    delBtn.style.right = '2px';
+    delBtn.style.background = '#ef4444';
+    delBtn.style.color = '#ffffff';
+    delBtn.style.border = 'none';
+    delBtn.style.borderRadius = '50%';
+    delBtn.style.width = '14px';
+    delBtn.style.height = '14px';
+    delBtn.style.fontSize = '10px';
+    delBtn.style.display = 'flex';
+    delBtn.style.alignItems = 'center';
+    delBtn.style.justifyContent = 'center';
+    delBtn.style.cursor = 'pointer';
+    
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      el.remove();
+      this.additions[pageIndex].formFields = this.additions[pageIndex].formFields.filter(f => f !== fieldObj);
+      if (window.onFormFieldDeleted) {
+        window.onFormFieldDeleted(fieldObj);
+      }
+    });
+    el.appendChild(delBtn);
+    
+    // Dragging logic
+    let isDragging = false;
+    let startX, startY;
+    
+    el.addEventListener('mousedown', (e) => {
+      if (e.target === delBtn) return;
+      
+      const rect = el.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      if (clickX > rect.width - 16 && clickY > rect.height - 16) {
+        return; // Native resize handle
+      }
+      
+      isDragging = true;
+      startX = e.clientX - el.offsetLeft;
+      startY = e.clientY - el.offsetTop;
+      e.preventDefault();
+      
+      if (window.selectFormField) {
+        window.selectFormField(fieldObj, el);
+      }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const overlayRect = overlay.getBoundingClientRect();
+      let x = e.clientX - startX;
+      let y = e.clientY - startY;
+      
+      x = Math.max(0, Math.min(x, overlayRect.width - el.offsetWidth));
+      y = Math.max(0, Math.min(y, overlayRect.height - el.offsetHeight));
+      
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      
+      fieldObj.percentX = x / overlayRect.width;
+      fieldObj.percentY = y / overlayRect.height;
+    });
+    
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+    
+    // Resize Observer to update width/height
+    const ro = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const overlayRect = overlay.getBoundingClientRect();
+        fieldObj.percentW = el.offsetWidth / overlayRect.width;
+        fieldObj.percentH = el.offsetHeight / overlayRect.height;
+      }
+    });
+    ro.observe(el);
+    
+    fieldObj.updateUI = updateLabel;
+    
+    overlay.appendChild(el);
+  }
+
+  /**
    * Save drawings, text and signatures back into the original PDF
    * @returns {Promise<Uint8Array>} modified PDF bytes
    */
@@ -355,6 +497,41 @@ export class PdfManager {
           width,
           height,
         });
+      }
+      
+      // 4. Add interactive Form Fields
+      if (pageAdditions.formFields && pageAdditions.formFields.length > 0) {
+        const form = outPdf.getForm();
+        for (const fieldObj of pageAdditions.formFields) {
+          const x = fieldObj.percentX * pageWidth;
+          const width = fieldObj.percentW * pageWidth;
+          const height = fieldObj.percentH * pageHeight;
+          const y = pageHeight - (fieldObj.percentY * pageHeight) - height;
+          
+          let uniqueName = fieldObj.name || 'field_' + Math.random().toString(36).substr(2, 5);
+          let counter = 1;
+          while (true) {
+            try {
+              form.getField(uniqueName);
+              uniqueName = (fieldObj.name || 'field') + '_' + counter;
+              counter++;
+            } catch (e) {
+              break;
+            }
+          }
+          
+          if (fieldObj.type === 'text') {
+            const field = form.createTextField(uniqueName);
+            field.setPlaceholder(fieldObj.placeholder || '');
+            field.addToPage(page, { x, y, width, height });
+          } else if (fieldObj.type === 'checkbox') {
+            const field = form.createCheckBox(uniqueName);
+            field.addToPage(page, { x, y, width, height });
+          } else if (fieldObj.type === 'signature') {
+            const field = form.createSignature(uniqueName);
+            field.addToPage(page, { x, y, width, height });
+          }
+        }
       }
     }
     
