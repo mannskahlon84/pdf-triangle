@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBatchWorkspace();
   setupCompareWorkspace();
   setupScannerWorkspace();
+  setupFormbuilderWorkspace();
   setupSignatureModal();
   setupOcrModal();
 });
@@ -147,7 +148,7 @@ function handleRouting() {
     viewName = hash.substring(2);
   }
   
-  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 'batch', 'compare', 'scanner'];
+  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 'batch', 'compare', 'scanner', 'formbuilder'];
   if (!validRoutes.includes(viewName)) {
     viewName = 'dashboard';
     window.location.hash = '#/dashboard';
@@ -3571,3 +3572,86 @@ function gaussElimination(A) {
   }
   return x;
 }
+
+function setupFormbuilderWorkspace() {
+  const uploadZone = document.getElementById('formbuilder-upload-zone');
+  const fileInput = document.getElementById('formbuilder-file-input');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) handleFormbuilderFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleFormbuilderFile);
+  
+  async function handleFormbuilderFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    showLoader('Converting and loading document...');
+    try {
+      let pdfBytes;
+      
+      if (ext === 'pdf') {
+        pdfBytes = await file.arrayBuffer();
+      } else if (ext === 'docx') {
+        pdfBytes = await convertWordToPdf(file);
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        pdfBytes = await convertExcelToPdf(file);
+      } else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+        pdfBytes = await convertImagesToPdf([file], { pageSize: 'fit' });
+      } else {
+        throw new Error('Unsupported file format. Please upload PDF, Word, Excel, or Image files.');
+      }
+      
+      // Load converted/uploaded PDF directly into Editor PdfManager
+      await state.editor.pdfManager.loadPdf(pdfBytes);
+      state.editor.pdfManager.file = file;
+      
+      // Populate metadata info in Editor sidebar
+      document.getElementById('meta-info-name').textContent = file.name;
+      document.getElementById('meta-info-pages').textContent = state.editor.pdfManager.numPages;
+      document.getElementById('meta-info-size').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      
+      const meta = state.editor.pdfManager.metadata;
+      document.getElementById('meta-title-input').value = meta.title || '';
+      document.getElementById('meta-author-input').value = meta.author || '';
+      document.getElementById('meta-subject-input').value = meta.subject || '';
+      document.getElementById('meta-creator-input').value = meta.creator || '';
+      document.getElementById('meta-producer-input').value = meta.producer || '';
+      
+      // Hide Empty State and show Active Page
+      document.getElementById('editor-empty-state').classList.add('hidden');
+      document.getElementById('active-page-container').classList.remove('hidden');
+      
+      // Enable main action buttons
+      document.getElementById('editor-save-btn').disabled = false;
+      document.getElementById('editor-print-btn').disabled = false;
+      document.getElementById('editor-rotate-btn').disabled = false;
+      document.getElementById('editor-close-btn').disabled = false;
+      document.getElementById('ocr-page-btn').disabled = false;
+      
+      // Render first page and thumbnails
+      await loadEditorPage(0);
+      await generateEditorThumbnails();
+      
+      // Switch view routing to editor
+      window.location.hash = '#/editor';
+      
+      // Set tool to formfield automatically and activate its button
+      document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+      const formfieldBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="formfield"]');
+      if (formfieldBtn) formfieldBtn.classList.add('active');
+      setEditorTool('formfield');
+      
+      showToast('Document loaded! Add interactive form fields in the sidebar.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Failed to convert document.', 'danger');
+    } finally {
+      hideLoader();
+      fileInput.value = ''; // clear input
+    }
+  }
+}
+

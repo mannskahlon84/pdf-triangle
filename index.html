@@ -169,6 +169,14 @@
               <p>Crop, adjust corners, and apply high-contrast filters to turn photos into scanned PDFs.</p>
               <button class="btn btn-primary">Open Tool</button>
             </div>
+
+            <!-- Make Editable Forms -->
+            <div class="tool-card" data-tool="formbuilder">
+              <div class="card-icon pink"><i data-lucide="file-signature"></i></div>
+              <h3>Make Editable Forms</h3>
+              <p>Upload PDF, Word, Excel, or images to create custom fillable interactive PDF forms.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
           </div>
         </section>
 
@@ -1207,6 +1215,24 @@
                 </div>
               </div>
             </main>
+          </div>
+        </section>
+
+        <!-- 17. MAKE EDITABLE FORMS WORKSPACE -->
+        <section id="formbuilder-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Make Editable Forms</h2>
+              <p>Upload a PDF, Word document (.docx), Excel sheet (.xlsx), or image file to start designing a fillable interactive PDF form.</p>
+            </div>
+
+            <div class="upload-area" id="formbuilder-upload-zone">
+              <i data-lucide="file-signature" class="upload-icon" style="color: var(--accent-pink);"></i>
+              <p>Drag & drop PDF, Word, Excel, or images here, or <span class="highlight" style="color: var(--accent-pink);">browse file</span></p>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Supports .pdf, .docx, .xlsx, .jpg, .png, .webp</p>
+              <input type="file" id="formbuilder-file-input" accept=".pdf, .docx, .xlsx, image/png, image/jpeg, image/webp" class="hidden" />
+            </div>
           </div>
         </section>
 

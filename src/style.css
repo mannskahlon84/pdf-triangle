@@ -310,6 +310,7 @@ body {
 .card-icon.teal { background-color: rgba(20, 184, 166, 0.15); color: #14b8a6; }
 .card-icon.indigo { background-color: rgba(99, 102, 241, 0.15); color: #6366f1; }
 .card-icon.emerald { background-color: rgba(52, 211, 153, 0.15); color: #34d399; }
+.card-icon.pink { background-color: rgba(236, 72, 153, 0.15); color: #ec4899; }
 
 .tool-card h3 {
   font-family: var(--font-display);
@@ -370,6 +371,11 @@ body {
 .light-theme .tool-card[data-tool="excel-to-pdf"] h3 { color: #065f46; }
 .light-theme .tool-card[data-tool="excel-to-pdf"] .btn-primary { background-color: #059669; border-color: #047857; }
 .light-theme .tool-card[data-tool="excel-to-pdf"] .btn-primary:hover { background-color: #047857; }
+
+.light-theme .tool-card[data-tool="formbuilder"] { background-color: #fdf2f8; border-color: #fbcfe8; }
+.light-theme .tool-card[data-tool="formbuilder"] h3 { color: #9d174d; }
+.light-theme .tool-card[data-tool="formbuilder"] .btn-primary { background-color: #db2777; border-color: #be185d; }
+.light-theme .tool-card[data-tool="formbuilder"] .btn-primary:hover { background-color: #be185d; }
 
 /* 2. Workspace View layout (PDF Editor) */
 .workspace-layout {
