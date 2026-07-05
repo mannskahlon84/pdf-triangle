@@ -1384,3 +1384,223 @@ body {
   max-height: 600px;
   height: auto;
 }
+
+/* Homepage Hero Sliding Carousel Styles */
+.hero-carousel {
+  position: relative;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 40%, #7e22ce 100%);
+  border-radius: var(--border-radius-lg);
+  padding: 3rem 4rem;
+  margin-bottom: 3.5rem;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), var(--shadow-glow);
+  height: 380px;
+}
+
+.carousel-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease-in-out, visibility 0.6s ease-in-out;
+  z-index: 1;
+}
+
+.carousel-slide.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
+}
+
+.slide-content {
+  flex: 1;
+  max-width: 55%;
+  color: #ffffff;
+  z-index: 3;
+}
+
+.slide-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.slide-badge.badge-pink {
+  background: rgba(236, 72, 153, 0.2);
+  border-color: rgba(236, 72, 153, 0.35);
+  color: #fbcfe8;
+}
+
+.slide-badge.badge-purple {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.35);
+  color: #e9d5ff;
+}
+
+.slide-title {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slide-description {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.88);
+  margin-bottom: 1.75rem;
+  font-weight: 400;
+}
+
+.slide-btn {
+  padding: 0.75rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #ffffff;
+  color: #1e3a8a;
+  border: none;
+  cursor: pointer;
+}
+
+.slide-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.25);
+}
+
+.slide-btn.btn-pink {
+  background: #ec4899;
+  color: #ffffff;
+}
+.slide-btn.btn-pink:hover {
+  background: #db2777;
+  box-shadow: 0 6px 16px rgba(236, 72, 153, 0.4);
+}
+
+.slide-btn.btn-purple {
+  background: #a855f7;
+  color: #ffffff;
+}
+.slide-btn.btn-purple:hover {
+  background: #9333ea;
+  box-shadow: 0 6px 16px rgba(168, 85, 247, 0.4);
+}
+
+.slide-image {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  max-width: 42%;
+  z-index: 3;
+}
+
+.slide-image img {
+  max-height: 290px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
+  animation: floatMockup 6s ease-in-out infinite;
+}
+
+@keyframes floatMockup {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.carousel-indicators {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 4;
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.indicator.active {
+  width: 24px;
+  border-radius: 9999px;
+  background: #ffffff;
+}
+
+/* Make it responsive for smaller screens */
+@media (max-width: 992px) {
+  .hero-carousel {
+    height: auto;
+    padding: 2.5rem 2rem;
+  }
+  .carousel-slide {
+    position: relative;
+    flex-direction: column;
+    height: auto;
+    align-items: flex-start;
+  }
+  .carousel-slide:not(.active) {
+    display: none;
+  }
+  .slide-content {
+    max-width: 100%;
+    margin-bottom: 2rem;
+  }
+  .slide-image {
+    max-width: 100%;
+    width: 100%;
+    justify-content: center;
+  }
+  .slide-image img {
+    max-height: 200px;
+  }
+  .carousel-indicators {
+    position: relative;
+    bottom: 0;
+    margin-top: 1.5rem;
+    left: 0;
+    transform: none;
+    justify-content: center;
+  }
+}
+

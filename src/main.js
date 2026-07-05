@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Handle initial route on page load
   handleRouting();
+  initHomepageCarousel();
 
   setupEditorWorkspace();
   setupMergeWorkspace();
@@ -3653,5 +3654,64 @@ function setupFormbuilderWorkspace() {
       fileInput.value = ''; // clear input
     }
   }
+}
+
+function initHomepageCarousel() {
+  const carousel = document.getElementById('homepage-carousel');
+  if (!carousel) return;
+  
+  const slides = carousel.querySelectorAll('.carousel-slide');
+  const indicators = carousel.querySelectorAll('.indicator');
+  let currentIndex = 0;
+  let timer = null;
+  
+  const showSlide = (index) => {
+    slides.forEach((slide, idx) => {
+      if (idx === index) {
+        slide.classList.add('active');
+      } else {
+        slide.classList.remove('active');
+      }
+    });
+    
+    indicators.forEach((indicator, idx) => {
+      if (idx === index) {
+        indicator.classList.add('active');
+      } else {
+        indicator.classList.remove('active');
+      }
+    });
+    
+    currentIndex = index;
+  };
+  
+  const nextSlide = () => {
+    const nextIdx = (currentIndex + 1) % slides.length;
+    showSlide(nextIdx);
+  };
+  
+  const startTimer = () => {
+    stopTimer();
+    timer = setInterval(nextSlide, 5000); // auto-transition every 5 seconds
+  };
+  
+  const stopTimer = () => {
+    if (timer) clearInterval(timer);
+  };
+  
+  // Bind click on indicators
+  indicators.forEach(indicator => {
+    indicator.addEventListener('click', (e) => {
+      const targetIndex = parseInt(e.target.dataset.index, 10);
+      showSlide(targetIndex);
+      startTimer(); // reset auto-slide timer upon click
+    });
+  });
+  
+  // Pause on hover
+  carousel.addEventListener('mouseenter', stopTimer);
+  carousel.addEventListener('mouseleave', startTimer);
+  
+  startTimer();
 }
 

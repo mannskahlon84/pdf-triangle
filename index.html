@@ -44,9 +44,61 @@
 
         <!-- 1. DASHBOARD VIEW -->
         <section id="dashboard-view" class="view-panel active">
-          <div class="hero-section">
-            <h1>All-In-One Local PDF Suite</h1>
-            <p>Edit, merge, split, organize, and convert files entirely in your browser. 100% private, free, and offline-ready.</p>
+          <!-- Sliding Hero Carousel -->
+          <div class="hero-carousel" id="homepage-carousel">
+            <div class="carousel-container">
+              <!-- Slide 1: Local Privacy -->
+              <div class="carousel-slide active" data-index="0">
+                <div class="slide-content">
+                  <span class="slide-badge"><i data-lucide="shield-check" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> 100% Local & Private</span>
+                  <h1 class="slide-title">100% Browser-Based</h1>
+                  <p class="slide-description">Your files never leave your computer. All edits, signatures, and scans are processed locally in your browser memory for absolute privacy and maximum speed.</p>
+                  <button class="btn btn-primary slide-btn" onclick="document.querySelector('.tools-grid').scrollIntoView({ behavior: 'smooth' })">
+                    Get Started <i data-lucide="arrow-down" style="width: 16px; height: 16px; margin-left: 6px;"></i>
+                  </button>
+                </div>
+                <div class="slide-image">
+                  <img src="/carousel_slide_local.png" alt="Local Browser Security" />
+                </div>
+              </div>
+
+              <!-- Slide 2: Form Builder -->
+              <div class="carousel-slide" data-index="1">
+                <div class="slide-content">
+                  <span class="slide-badge badge-pink"><i data-lucide="sparkles" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> New Feature</span>
+                  <h1 class="slide-title">Make Editable Forms</h1>
+                  <p class="slide-description">Convert Word, Excel, or PDF documents into fillable interactive forms. Place text fields, checkboxes, and signature boxes that anyone can fill in their web browser or mobile phone.</p>
+                  <button class="btn btn-primary slide-btn btn-pink" onclick="window.location.hash = '#/formbuilder'">
+                    Create fillable form <i data-lucide="arrow-right" style="width: 16px; height: 16px; margin-left: 6px;"></i>
+                  </button>
+                </div>
+                <div class="slide-image">
+                  <img src="/carousel_slide_form.png" alt="Make Editable Forms" />
+                </div>
+              </div>
+
+              <!-- Slide 3: Scanner -->
+              <div class="carousel-slide" data-index="2">
+                <div class="slide-content">
+                  <span class="slide-badge badge-purple"><i data-lucide="scan" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> High-Contrast Scan</span>
+                  <h1 class="slide-title">Scan Documents Offline</h1>
+                  <p class="slide-description">Align corners with interactive drag-handles and apply perspective warp to straighten photos. Toggle vibrant color or high-contrast photocopy B&W filters live inside your browser.</p>
+                  <button class="btn btn-primary slide-btn btn-purple" onclick="window.location.hash = '#/scanner'">
+                    Start scanning <i data-lucide="arrow-right" style="width: 16px; height: 16px; margin-left: 6px;"></i>
+                  </button>
+                </div>
+                <div class="slide-image">
+                  <img src="/carousel_slide_scan.png" alt="Scan Documents" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Dots Indicator Navigation -->
+            <div class="carousel-indicators">
+              <span class="indicator active" data-index="0"></span>
+              <span class="indicator" data-index="1"></span>
+              <span class="indicator" data-index="2"></span>
+            </div>
           </div>
 
           <div class="tools-grid">
