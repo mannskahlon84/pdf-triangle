@@ -624,6 +624,33 @@ function resetInactiveTools(activeViewName) {
     input.value = '';
   });
 
+  const safeDOM = {
+    hide: (id) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    },
+    show: (id) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('hidden');
+    },
+    html: (id, htmlContent) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = htmlContent;
+    },
+    text: (id, textContent) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = textContent;
+    },
+    val: (id, valContent) => {
+      const el = document.getElementById(id);
+      if (el) el.value = valContent;
+    },
+    disable: (id, isDisabled) => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = isDisabled;
+    }
+  };
+
   // 1. Reset Editor
   if (activeViewName !== 'editor') {
     if (state.editor.pdfManager) {
@@ -632,33 +659,32 @@ function resetInactiveTools(activeViewName) {
       state.editor.pdfManager.file = null;
       state.editor.pdfManager.additions = {};
     }
-    const editorFileInput = document.getElementById('editor-file-input');
-    if (editorFileInput) editorFileInput.value = '';
     
-    document.getElementById('editor-empty-state').classList.remove('hidden');
-    document.getElementById('active-page-container').classList.add('hidden');
-    document.getElementById('active-page-container').innerHTML = '';
-    document.getElementById('editor-thumbnails').innerHTML = '<div class="empty-state-text">No document loaded</div>';
+    safeDOM.val('editor-file-input', '');
+    safeDOM.show('editor-empty-state');
+    safeDOM.hide('active-page-container');
+    safeDOM.html('active-page-container', '');
+    safeDOM.html('editor-thumbnails', '<div class="empty-state-text">No document loaded</div>');
     
-    document.getElementById('meta-info-name').textContent = '--';
-    document.getElementById('meta-info-pages').textContent = '--';
-    document.getElementById('meta-info-size').textContent = '--';
+    safeDOM.text('meta-info-name', '--');
+    safeDOM.text('meta-info-pages', '--');
+    safeDOM.text('meta-info-size', '--');
     
-    document.getElementById('editor-save-btn').disabled = true;
-    document.getElementById('editor-print-btn').disabled = true;
-    document.getElementById('editor-rotate-btn').disabled = true;
-    document.getElementById('editor-close-btn').disabled = true;
-    document.getElementById('ocr-page-btn').disabled = true;
+    safeDOM.disable('editor-save-btn', true);
+    safeDOM.disable('editor-print-btn', true);
+    safeDOM.disable('editor-rotate-btn', true);
+    safeDOM.disable('editor-close-btn', true);
+    safeDOM.disable('ocr-page-btn', true);
     
-    document.getElementById('form-field-editor-properties').classList.add('hidden');
-    document.getElementById('options-form-field-tool').classList.add('hidden');
-    document.getElementById('options-text-tool').classList.add('hidden');
-    document.getElementById('options-draw-tool').classList.add('hidden');
-    document.getElementById('options-erase-tool').classList.add('hidden');
-    document.getElementById('options-shape-tool').classList.add('hidden');
-    document.getElementById('options-stamp-tool').classList.add('hidden');
-    document.getElementById('options-image-tool').classList.add('hidden');
-    document.getElementById('options-metadata-panel').classList.remove('hidden');
+    safeDOM.hide('form-field-editor-properties');
+    safeDOM.hide('options-form-field-tool');
+    safeDOM.hide('options-text-tool');
+    safeDOM.hide('options-draw-tool');
+    safeDOM.hide('options-erase-tool');
+    safeDOM.hide('options-shape-tool');
+    safeDOM.hide('options-stamp-tool');
+    safeDOM.hide('options-image-tool');
+    safeDOM.show('options-metadata-panel');
     
     document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
     const panBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="pan"]');
@@ -670,62 +696,59 @@ function resetInactiveTools(activeViewName) {
   if (activeViewName !== 'merge') {
     state.merge.files = [];
     state.merge.pages = [];
-    document.getElementById('merge-upload-zone').classList.remove('hidden');
-    document.getElementById('merge-files-container').classList.add('hidden');
-    document.getElementById('merge-grid').innerHTML = '';
+    safeDOM.show('merge-upload-zone');
+    safeDOM.hide('merge-files-container');
+    safeDOM.html('merge-grid', '');
   }
 
   // 3. Reset Split
   if (activeViewName !== 'split') {
     state.split.file = null;
     state.split.pageCount = 0;
-    document.getElementById('split-upload-zone').classList.remove('hidden');
-    document.getElementById('split-setup-container').classList.add('hidden');
-    const splitSinglePages = document.getElementById('split-single-pages');
-    if (splitSinglePages) splitSinglePages.value = '';
-    const splitRangePages = document.getElementById('split-range-pages');
-    if (splitRangePages) splitRangePages.value = '';
-    const splitPreview = document.getElementById('split-preview-sidebar');
-    if (splitPreview) splitPreview.innerHTML = '';
+    safeDOM.show('split-upload-zone');
+    safeDOM.hide('split-setup-container');
+    safeDOM.val('split-single-pages', '');
+    safeDOM.val('split-range-pages', '');
+    safeDOM.html('split-preview-sidebar', '');
   }
 
   // 4. Reset Organize
   if (activeViewName !== 'organize') {
     state.organize.file = null;
     state.organize.pages = [];
-    document.getElementById('organize-upload-zone').classList.remove('hidden');
-    document.getElementById('organize-workspace').classList.add('hidden');
-    document.getElementById('organize-grid').innerHTML = '';
+    safeDOM.show('organize-upload-zone');
+    safeDOM.hide('organize-workspace');
+    safeDOM.html('organize-grid', '');
   }
 
   // 5. Reset JPG to PDF
   if (activeViewName !== 'jpg-to-pdf') {
     state.jpgToPdf.files = [];
-    document.getElementById('jpg-to-pdf-upload-zone').classList.remove('hidden');
-    document.getElementById('jpg-to-pdf-container').classList.add('hidden');
-    document.getElementById('jpg-to-pdf-list').innerHTML = '';
+    safeDOM.show('jpg-to-pdf-upload-zone');
+    safeDOM.hide('jpg-to-pdf-container');
+    safeDOM.html('jpg-to-pdf-list', '');
   }
 
   // 6. Reset PDF to JPG
   if (activeViewName !== 'pdf-to-jpg') {
     state.pdfToJpg.file = null;
     state.pdfToJpg.pageCount = 0;
-    document.getElementById('pdf-to-jpg-upload-zone').classList.remove('hidden');
-    document.getElementById('pdf-to-jpg-setup').classList.add('hidden');
+    safeDOM.show('pdf-to-jpg-upload-zone');
+    safeDOM.hide('pdf-to-jpg-setup');
   }
 
   // 7. Reset Word to PDF
   if (activeViewName !== 'word-to-pdf') {
     state.wordToPdf.file = null;
-    document.getElementById('word-upload-zone').classList.remove('hidden');
-    document.getElementById('word-setup-container').classList.add('hidden');
+    safeDOM.show('word-upload-zone');
+    safeDOM.hide('word-setup-container');
   }
 
   // 8. Reset Excel to PDF
   if (activeViewName !== 'excel-to-pdf') {
     state.excelToPdf.file = null;
-    document.getElementById('excel-upload-zone').classList.remove('hidden');
-    document.getElementById('excel-setup-container').classList.add('hidden');
+    safeDOM.show('excel-upload-zone');
+    safeDOM.hide('excel-setup-container');
   }
 
   // 9. Reset Watermark
@@ -735,25 +758,23 @@ function resetInactiveTools(activeViewName) {
     state.watermark.imageBuffer = null;
     state.watermark.imageMime = null;
     state.watermark.pageCount = 0;
-    document.getElementById('watermark-upload-zone').classList.remove('hidden');
-    document.getElementById('watermark-layout').classList.add('hidden');
+    safeDOM.show('watermark-upload-zone');
+    safeDOM.hide('watermark-layout');
     const watermarkCanvas = document.getElementById('watermark-canvas');
     if (watermarkCanvas) {
       const ctx = watermarkCanvas.getContext('2d');
       ctx.clearRect(0, 0, watermarkCanvas.width, watermarkCanvas.height);
     }
-    const watermarkText = document.getElementById('watermark-text');
-    if (watermarkText) watermarkText.value = 'CONFIDENTIAL';
-    const watermarkImgFile = document.getElementById('watermark-image-file');
-    if (watermarkImgFile) watermarkImgFile.classList.add('hidden');
+    safeDOM.val('watermark-text', 'CONFIDENTIAL');
+    safeDOM.hide('watermark-image-file');
   }
 
   // 10. Reset Compress
   if (activeViewName !== 'compress') {
     state.compress.file = null;
     state.compress.pageCount = 0;
-    document.getElementById('compress-upload-zone').classList.remove('hidden');
-    document.getElementById('compress-setup-container').classList.add('hidden');
+    safeDOM.show('compress-upload-zone');
+    safeDOM.hide('compress-setup-container');
   }
 
   // 11. Reset Security
@@ -761,42 +782,41 @@ function resetInactiveTools(activeViewName) {
     state.security.file = null;
     state.security.isLocked = false;
     state.security.password = '';
-    document.getElementById('security-upload-zone').classList.remove('hidden');
-    document.getElementById('security-setup-container').classList.add('hidden');
-    document.getElementById('security-decrypt-group').classList.add('hidden');
-    document.getElementById('security-encrypt-group').classList.remove('hidden');
-    document.getElementById('security-decrypt-password').value = '';
-    document.getElementById('security-encrypt-password').value = '';
+    safeDOM.show('security-upload-zone');
+    safeDOM.hide('security-setup-container');
+    safeDOM.hide('security-decrypt-group');
+    safeDOM.show('security-encrypt-group');
+    safeDOM.val('security-decrypt-password', '');
+    safeDOM.val('security-encrypt-password', '');
   }
 
   // 12. Reset Page Numbering
   if (activeViewName !== 'numbering') {
     state.numbering.file = null;
     state.numbering.pageCount = 0;
-    document.getElementById('numbering-upload-zone').classList.remove('hidden');
-    document.getElementById('numbering-setup-container').classList.add('hidden');
+    safeDOM.show('numbering-upload-zone');
+    safeDOM.hide('numbering-setup-container');
   }
 
   // 13. Reset Batch Actions
   if (activeViewName !== 'batch') {
     state.batch.files = [];
-    document.getElementById('batch-upload-zone').classList.remove('hidden');
-    document.getElementById('batch-setup-container').classList.add('hidden');
-    const batchFilesGrid = document.getElementById('batch-files-grid');
-    if (batchFilesGrid) batchFilesGrid.innerHTML = '';
+    safeDOM.show('batch-upload-zone');
+    safeDOM.hide('batch-setup-container');
+    safeDOM.html('batch-files-grid', '');
   }
 
   // 14. Reset Compare PDFs
   if (activeViewName !== 'compare') {
     state.compare.fileA = null;
     state.compare.fileB = null;
-    document.getElementById('compare-upload-zone').classList.remove('hidden');
-    document.getElementById('compare-results-container').classList.add('hidden');
-    document.getElementById('compare-diff-output').innerHTML = '';
-    document.getElementById('compare-metadata-table-body').innerHTML = '';
-    document.getElementById('compare-submit-btn').classList.add('hidden');
-    document.getElementById('compare-a-status').innerHTML = 'Drag file here or <span class="highlight">browse</span>';
-    document.getElementById('compare-b-status').innerHTML = 'Drag file here or <span class="highlight">browse</span>';
+    safeDOM.show('compare-upload-zone');
+    safeDOM.hide('compare-results-container');
+    safeDOM.html('compare-diff-output', '');
+    safeDOM.html('compare-metadata-table-body', '');
+    safeDOM.hide('compare-submit-btn');
+    safeDOM.html('compare-a-status', 'Drag file here or <span class="highlight">browse</span>');
+    safeDOM.html('compare-b-status', 'Drag file here or <span class="highlight">browse</span>');
   }
 
   // 15. Reset Scanner
@@ -804,8 +824,8 @@ function resetInactiveTools(activeViewName) {
     state.scanner.file = null;
     state.scanner.originalImg = null;
     state.scanner.corners = [];
-    document.getElementById('scan-upload-zone').classList.remove('hidden');
-    document.getElementById('scan-editor-container').classList.add('hidden');
+    safeDOM.show('scan-upload-zone');
+    safeDOM.hide('scan-editor-container');
     const scanCanvas = document.getElementById('scan-canvas');
     if (scanCanvas) {
       const ctx = scanCanvas.getContext('2d');
@@ -818,7 +838,7 @@ function resetInactiveTools(activeViewName) {
     if (state.formbuilder) {
       state.formbuilder.file = null;
     }
-    document.getElementById('formbuilder-upload-zone').classList.remove('hidden');
+    safeDOM.show('formbuilder-upload-zone');
   }
 }
 
