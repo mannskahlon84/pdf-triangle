@@ -564,32 +564,50 @@ body {
 }
 
 /* Draggable Add-Text Element */
-.text-element {
-  position: absolute;
+.text-element-wrapper {
   border: 1px dashed var(--accent-purple);
   padding: 4px 8px;
   cursor: move;
-  outline: none;
-  white-space: pre-wrap;
-  user-select: text;
   transition: border-color var(--transition-fast);
-  resize: horizontal;
-  overflow: hidden;
-  min-width: 60px;
-  box-sizing: border-box;
+  overflow: visible; /* prevents delete button from clipping */
 }
 
-.text-element:hover,
-.text-element:focus,
-.text-element:focus-within {
+.text-element-wrapper:hover,
+.text-element-wrapper:focus-within {
   border-color: var(--accent-purple);
   box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
 }
 
-.text-element .element-delete-btn {
+.text-element-wrapper .element-delete-btn {
   display: flex !important;
-  z-index: 25;
+  z-index: 35;
 }
+
+.text-element {
+  outline: none;
+  white-space: pre-wrap;
+  user-select: text;
+  border: none;
+  background: transparent;
+  min-height: 20px;
+}
+
+/* Corner Resizer Circle Handles styling */
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent-purple);
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  z-index: 30;
+  box-shadow: var(--shadow-sm);
+}
+
+.resize-handle.tl { top: -5px; left: -5px; cursor: nwse-resize; }
+.resize-handle.tr { top: -5px; right: -5px; cursor: nesw-resize; }
+.resize-handle.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.resize-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
 
 /* Draggable Signature Element */
 .signature-element {

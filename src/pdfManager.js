@@ -136,21 +136,31 @@ export class PdfManager {
    * Helper to draw text element in the DOM
    */
   renderTextElement(txtObj, overlay, pageIndex) {
+    // 1. Create Wrapper Container
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-element-wrapper';
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = `${txtObj.percentX * 100}%`;
+    wrapper.style.top = `${txtObj.percentY * 100}%`;
+    wrapper.style.width = txtObj.percentW ? `${txtObj.percentW * 100}%` : 'auto';
+    wrapper.style.height = txtObj.percentH ? `${txtObj.percentH * 100}%` : 'auto';
+    wrapper.style.boxSizing = 'border-box';
+    
+    // 2. Create Inner Editable Text Element
     const el = document.createElement('div');
     el.className = 'text-element';
     el.contentEditable = 'false'; // double click or creation focuses it
-    el.style.left = `${txtObj.percentX * 100}%`;
-    el.style.top = `${txtObj.percentY * 100}%`;
+    el.style.width = '100%';
+    el.style.height = '100%';
+    el.style.boxSizing = 'border-box';
     el.style.fontSize = `${txtObj.size}px`;
     el.style.color = txtObj.color;
     el.style.fontFamily = txtObj.fontFamily || "'Inter', sans-serif";
     el.style.fontWeight = txtObj.isBold ? 'bold' : 'normal';
     el.style.fontStyle = txtObj.isItalic ? 'italic' : 'normal';
     el.innerText = txtObj.text;
-    
-    // Apply width and background fill color if configured
-    el.style.width = txtObj.percentW ? `${txtObj.percentW * 100}%` : 'auto';
     el.style.backgroundColor = txtObj.bgEnable ? txtObj.bgColor : 'transparent';
+    wrapper.appendChild(el);
     
     // Save overlay dimensions
     if (!txtObj.overlayWidth) {
@@ -159,18 +169,18 @@ export class PdfManager {
       txtObj.overlayHeight = overlayRect.height;
     }
     
-    // Explicit Delete Button
+    // 3. Explicit Delete Button (placed on wrapper, avoiding overflow hidden clipping)
     const delBtn = document.createElement('button');
     delBtn.className = 'element-delete-btn';
     delBtn.innerHTML = '&times;';
     delBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      el.remove();
+      wrapper.remove();
       this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
     });
-    el.appendChild(delBtn);
+    wrapper.appendChild(delBtn);
     
-    // Handle positioning and deletion
+    // Focus / Blur updates
     el.addEventListener('focus', () => {
       window.activeTextElement = { el, txtObj, pageIndex };
       if (window.updateTextInspector) {
@@ -182,7 +192,7 @@ export class PdfManager {
       el.contentEditable = 'false';
       txtObj.text = el.innerText.trim();
       if (!txtObj.text || txtObj.text === 'Click to edit text') {
-        el.remove();
+        wrapper.remove();
         this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
       }
     });
@@ -201,17 +211,17 @@ export class PdfManager {
       sel.addRange(range);
     });
 
-    // Dragging text elements
+    // Dragging wrapper logic
     let isDragging = false;
     let startX, startY;
     
     el.addEventListener('mousedown', (e) => {
-      if (e.target === delBtn) return;
+      if (e.target === delBtn || e.target.classList.contains('resize-handle')) return;
       if (el.contentEditable === 'true') return; // type instead of drag if actively editing
       
       isDragging = true;
-      startX = e.clientX - el.offsetLeft;
-      startY = e.clientY - el.offsetTop;
+      startX = e.clientX - wrapper.offsetLeft;
+      startY = e.clientY - wrapper.offsetTop;
       e.preventDefault(); // prevents highlighting while dragging
     });
     
@@ -222,11 +232,11 @@ export class PdfManager {
       let y = e.clientY - startY;
       
       // Keep boundaries
-      x = Math.max(0, Math.min(x, overlayRect.width - el.offsetWidth));
-      y = Math.max(0, Math.min(y, overlayRect.height - el.offsetHeight));
+      x = Math.max(0, Math.min(x, overlayRect.width - wrapper.offsetWidth));
+      y = Math.max(0, Math.min(y, overlayRect.height - wrapper.offsetHeight));
       
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
+      wrapper.style.left = `${x}px`;
+      wrapper.style.top = `${y}px`;
       
       txtObj.percentX = x / overlayRect.width;
       txtObj.percentY = y / overlayRect.height;
@@ -236,16 +246,82 @@ export class PdfManager {
       isDragging = false;
     });
     
-    overlay.appendChild(el);
-
-    // Track size updates using ResizeObserver
-    const ro = new ResizeObserver(() => {
-      const overlayRect = overlay.getBoundingClientRect();
-      if (overlayRect.width > 0) {
-        txtObj.percentW = el.offsetWidth / overlayRect.width;
-      }
+    // 4. Setup Corner Resizing (TL, TR, BL, BR handles)
+    const handles = ['tl', 'tr', 'bl', 'br'];
+    handles.forEach(dir => {
+      const handle = document.createElement('div');
+      handle.className = `resize-handle ${dir}`;
+      wrapper.appendChild(handle);
+      
+      handle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        const startWidth = wrapper.offsetWidth;
+        const startHeight = wrapper.offsetHeight;
+        const startLeft = wrapper.offsetLeft;
+        const startTop = wrapper.offsetTop;
+        const startMouseX = e.clientX;
+        const startMouseY = e.clientY;
+        
+        const onMouseMove = (moveEvent) => {
+          const dx = moveEvent.clientX - startMouseX;
+          const dy = moveEvent.clientY - startMouseY;
+          const overlayRect = overlay.getBoundingClientRect();
+          
+          let newWidth = startWidth;
+          let newHeight = startHeight;
+          let newLeft = startLeft;
+          let newTop = startTop;
+          
+          if (dir.includes('r')) {
+            newWidth = Math.max(50, startWidth + dx);
+          }
+          if (dir.includes('l')) {
+            const potentialWidth = startWidth - dx;
+            if (potentialWidth >= 50) {
+              newWidth = potentialWidth;
+              newLeft = startLeft + dx;
+            }
+          }
+          if (dir.includes('b')) {
+            newHeight = Math.max(24, startHeight + dy);
+          }
+          if (dir.includes('t')) {
+            const potentialHeight = startHeight - dy;
+            if (potentialHeight >= 24) {
+              newHeight = potentialHeight;
+              newTop = startTop + dy;
+            }
+          }
+          
+          // Boundaries checking relative to overlay width/height
+          newLeft = Math.max(0, Math.min(newLeft, overlayRect.width - newWidth));
+          newTop = Math.max(0, Math.min(newTop, overlayRect.height - newHeight));
+          
+          wrapper.style.width = `${newWidth}px`;
+          wrapper.style.height = `${newHeight}px`;
+          wrapper.style.left = `${newLeft}px`;
+          wrapper.style.top = `${newTop}px`;
+          
+          // Save percentage coordinates
+          txtObj.percentX = newLeft / overlayRect.width;
+          txtObj.percentY = newTop / overlayRect.height;
+          txtObj.percentW = newWidth / overlayRect.width;
+          txtObj.percentH = newHeight / overlayRect.height;
+        };
+        
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
     });
-    ro.observe(el);
+
+    overlay.appendChild(wrapper);
 
     // Auto-focus new text blocks immediately on creation
     if (txtObj.text === 'Click to edit text') {
