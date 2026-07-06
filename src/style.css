@@ -579,9 +579,19 @@ body {
   border-color: var(--accent-purple);
 }
 
-.text-element:focus {
+.text-element:focus,
+.text-element:focus-within {
   border-color: var(--accent-purple);
   background-color: rgba(139, 92, 246, 0.05);
+}
+
+.text-element .element-delete-btn {
+  display: none;
+}
+
+.text-element:hover .element-delete-btn,
+.text-element:focus-within .element-delete-btn {
+  display: flex;
 }
 
 /* Draggable Signature Element */

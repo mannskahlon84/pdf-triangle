@@ -138,7 +138,7 @@ export class PdfManager {
   renderTextElement(txtObj, overlay, pageIndex) {
     const el = document.createElement('div');
     el.className = 'text-element';
-    el.contentEditable = 'true';
+    el.contentEditable = 'false'; // double click or creation focuses it
     el.style.left = `${txtObj.percentX * 100}%`;
     el.style.top = `${txtObj.percentY * 100}%`;
     el.style.fontSize = `${txtObj.size}px`;
@@ -155,6 +155,17 @@ export class PdfManager {
       txtObj.overlayHeight = overlayRect.height;
     }
     
+    // Explicit Delete Button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'element-delete-btn';
+    delBtn.innerHTML = '&times;';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      el.remove();
+      this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
+    });
+    el.appendChild(delBtn);
+    
     // Handle positioning and deletion
     el.addEventListener('focus', () => {
       window.activeTextElement = { el, txtObj, pageIndex };
@@ -164,11 +175,26 @@ export class PdfManager {
     });
     
     el.addEventListener('blur', () => {
+      el.contentEditable = 'false';
       txtObj.text = el.innerText.trim();
-      if (!txtObj.text) {
+      if (!txtObj.text || txtObj.text === 'Click to edit text') {
         el.remove();
         this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
       }
+    });
+
+    // Double click to trigger edit mode
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      el.contentEditable = 'true';
+      el.focus();
+      
+      // Select all text
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
     });
 
     // Dragging text elements
@@ -176,11 +202,13 @@ export class PdfManager {
     let startX, startY;
     
     el.addEventListener('mousedown', (e) => {
-      if (document.activeElement === el) return; // type instead of drag if focused
+      if (e.target === delBtn) return;
+      if (el.contentEditable === 'true') return; // type instead of drag if actively editing
+      
       isDragging = true;
       startX = e.clientX - el.offsetLeft;
       startY = e.clientY - el.offsetTop;
-      e.preventDefault();
+      e.preventDefault(); // prevents highlighting while dragging
     });
     
     document.addEventListener('mousemove', (e) => {
@@ -205,6 +233,19 @@ export class PdfManager {
     });
     
     overlay.appendChild(el);
+
+    // Auto-focus new text blocks immediately on creation
+    if (txtObj.text === 'Click to edit text') {
+      el.contentEditable = 'true';
+      setTimeout(() => {
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }, 50);
+    }
   }
 
   /**
