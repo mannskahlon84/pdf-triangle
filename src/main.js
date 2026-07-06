@@ -164,6 +164,13 @@ function handleRouting() {
 function switchView(viewName) {
   state.activeTool = viewName;
   
+  // Toggle fixed body viewport to lock screen scrollbars and keep tools sticky
+  if (viewName === 'dashboard') {
+    document.body.classList.remove('fixed-viewport');
+  } else {
+    document.body.classList.add('fixed-viewport');
+  }
+
   // Clear all other inactive tool workspaces to avoid file leakage/lingering state
   resetInactiveTools(viewName);
   
@@ -319,7 +326,7 @@ function setupEditorWorkspace() {
     });
   }
 
-  // Keyboard Shortcuts for Undo/Redo
+  // Keyboard Shortcuts for Undo/Redo (supports standard key inputs and raw layout KeyCodes)
   document.addEventListener('keydown', (e) => {
     const editorWorkspace = document.getElementById('editor-workspace');
     if (!editorWorkspace || editorWorkspace.classList.contains('hidden')) return;
@@ -330,15 +337,70 @@ function setupEditorWorkspace() {
     const pageIdx = state.editor.activePage?.pageIndex;
     if (pageIdx === undefined) return;
     
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    const isZ = e.key.toLowerCase() === 'z' || e.code === 'KeyZ';
+    const isY = e.key.toLowerCase() === 'y' || e.code === 'KeyY' || (e.shiftKey && (e.key.toLowerCase() === 'z' || e.code === 'KeyZ'));
+    
+    if ((e.ctrlKey || e.metaKey) && isZ && !e.shiftKey) {
       e.preventDefault();
       window.restoreHistoryState(pageIdx, 'undo');
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+    if ((e.ctrlKey || e.metaKey) && isY) {
       e.preventDefault();
       window.restoreHistoryState(pageIdx, 'redo');
     }
   });
+
+  // Zoom In / Zoom Out event handlers
+  state.editor.zoom = 1.0;
+  const zoomInBtn = document.getElementById('editor-zoom-in');
+  const zoomOutBtn = document.getElementById('editor-zoom-out');
+  const zoomValSpan = document.getElementById('editor-zoom-val');
+
+  if (zoomInBtn && zoomOutBtn && zoomValSpan) {
+    const updateZoom = (level) => {
+      state.editor.zoom = Math.max(0.5, Math.min(2.5, level));
+      zoomValSpan.textContent = `${Math.round(state.editor.zoom * 100)}%`;
+      
+      const pageContainer = document.querySelector('.page-container');
+      if (pageContainer) {
+        pageContainer.style.transform = `scale(${state.editor.zoom})`;
+        pageContainer.style.transformOrigin = 'center top';
+      }
+    };
+
+    zoomInBtn.addEventListener('click', () => updateZoom(state.editor.zoom + 0.1));
+    zoomOutBtn.addEventListener('click', () => updateZoom(state.editor.zoom - 0.1));
+  }
+
+  // Responsive Mobile Sidebars Toggle handlers
+  const toggleThumbnailsBtn = document.getElementById('mobile-toggle-thumbnails');
+  const toggleOptionsBtn = document.getElementById('mobile-toggle-options');
+  const sidebar = document.querySelector('.workspace-sidebar');
+  const optionsSidebar = document.querySelector('.workspace-options');
+
+  if (toggleThumbnailsBtn && sidebar) {
+    toggleThumbnailsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+      if (optionsSidebar) optionsSidebar.classList.remove('open'); // close other
+    });
+  }
+
+  if (toggleOptionsBtn && optionsSidebar) {
+    toggleOptionsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      optionsSidebar.classList.toggle('open');
+      if (sidebar) sidebar.classList.remove('open'); // close other
+    });
+  }
+
+  // Clicking on canvas viewport closes drawers on mobile
+  if (viewport) {
+    viewport.addEventListener('click', () => {
+      if (sidebar) sidebar.classList.remove('open');
+      if (optionsSidebar) optionsSidebar.classList.remove('open');
+    });
+  }
 
   // Text Tool Inspector Syncing
   const textFontSelect = document.getElementById('text-font');

@@ -295,12 +295,29 @@
                   </button>
                 </div>
                 <div class="toolbar-group file-actions" style="gap: 0.5rem; flex-wrap: wrap;">
+                  <!-- Mobile Pages Toggle -->
+                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-thumbnails" title="Toggle Pages" style="display: none; height: 38px; width: 38px; align-items: center; justify-content: center; padding: 0;">
+                    <i data-lucide="book-open" style="width: 16px; height: 16px;"></i>
+                  </button>
+
                   <button class="btn btn-secondary" id="editor-undo-btn" disabled title="Undo (Ctrl+Z)" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
                     <i data-lucide="undo" style="width: 16px; height: 16px;"></i> Undo
                   </button>
                   <button class="btn btn-secondary" id="editor-redo-btn" disabled title="Redo (Ctrl+Y)" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
                     <i data-lucide="redo" style="width: 16px; height: 16px;"></i> Redo
                   </button>
+
+                  <!-- Zoom Controls -->
+                  <div class="zoom-controls" style="display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 0.125rem 0.35rem; height: 38px; box-sizing: border-box;">
+                    <button class="btn-icon" id="editor-zoom-out" title="Zoom Out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);">
+                      <i data-lucide="zoom-out" style="width: 16px; height: 16px;"></i>
+                    </button>
+                    <span id="editor-zoom-val" style="font-size: 0.75rem; font-weight: 600; min-width: 36px; text-align: center; color: var(--text-primary);">100%</span>
+                    <button class="btn-icon" id="editor-zoom-in" title="Zoom In" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);">
+                      <i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i>
+                    </button>
+                  </div>
+
                   <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
                     <i data-lucide="print" style="width: 16px; height: 16px;"></i> Print
                   </button>
@@ -314,6 +331,12 @@
                   <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
                     <i data-lucide="download" style="width: 16px; height: 16px;"></i> Download PDF
                   </button>
+
+                  <!-- Mobile Settings/Options Toggle -->
+                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-options" title="Toggle Options" style="display: none; height: 38px; width: 38px; align-items: center; justify-content: center; padding: 0;">
+                    <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                  </button>
+
                   <button class="btn btn-danger" id="editor-close-btn" disabled style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
                     <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i> Clear File
                   </button>

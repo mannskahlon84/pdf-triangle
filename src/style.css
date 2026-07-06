@@ -1629,3 +1629,81 @@ body {
   }
 }
 
+/* Locked Height & Non-scrolling body for fixed desktop/mobile toolbars */
+body.fixed-viewport {
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+body.fixed-viewport .app-content {
+  height: calc(100vh - 70px) !important;
+  overflow: hidden !important;
+}
+
+/* Responsive Mobile Editor Sidebars and Toolbar */
+@media (max-width: 768px) {
+  .workspace-layout {
+    position: relative;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+  }
+
+  .workspace-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 150;
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+    box-shadow: var(--shadow-xl);
+    width: 220px;
+    background-color: var(--bg-secondary);
+  }
+
+  .workspace-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .workspace-options {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 150;
+    transform: translateX(100%);
+    transition: transform var(--transition-normal);
+    box-shadow: var(--shadow-xl);
+    width: 260px;
+    background-color: var(--bg-secondary);
+  }
+
+  .workspace-options.open {
+    transform: translateX(0);
+  }
+
+  /* Make workspace toolbar swipeable horizontally on mobile */
+  .workspace-toolbar {
+    overflow-x: auto;
+    white-space: nowrap;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .workspace-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar-group {
+    flex-wrap: nowrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-toggle-btn {
+    display: inline-flex !important;
+  }
+}
+
