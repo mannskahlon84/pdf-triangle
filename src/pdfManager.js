@@ -177,6 +177,7 @@ export class PdfManager {
       e.stopPropagation();
       wrapper.remove();
       this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
+      window.saveHistoryState(pageIndex);
     });
     wrapper.appendChild(delBtn);
     
@@ -190,10 +191,14 @@ export class PdfManager {
     
     el.addEventListener('blur', () => {
       el.contentEditable = 'false';
+      const oldVal = txtObj.text;
       txtObj.text = el.innerText.trim();
       if (!txtObj.text || txtObj.text === 'Click to edit text') {
         wrapper.remove();
         this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
+        window.saveHistoryState(pageIndex);
+      } else if (oldVal !== txtObj.text) {
+        window.saveHistoryState(pageIndex);
       }
     });
 
@@ -211,39 +216,39 @@ export class PdfManager {
       sel.addRange(range);
     });
 
-    // Dragging wrapper logic
-    let isDragging = false;
-    let startX, startY;
-    
-    el.addEventListener('mousedown', (e) => {
+    // Dragging wrapper logic (bound to wrapper, using dynamic doc listeners)
+    wrapper.addEventListener('mousedown', (e) => {
       if (e.target === delBtn || e.target.classList.contains('resize-handle')) return;
       if (el.contentEditable === 'true') return; // type instead of drag if actively editing
       
-      isDragging = true;
-      startX = e.clientX - wrapper.offsetLeft;
-      startY = e.clientY - wrapper.offsetTop;
+      const startX = e.clientX - wrapper.offsetLeft;
+      const startY = e.clientY - wrapper.offsetTop;
       e.preventDefault(); // prevents highlighting while dragging
-    });
-    
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const overlayRect = overlay.getBoundingClientRect();
-      let x = e.clientX - startX;
-      let y = e.clientY - startY;
       
-      // Keep boundaries
-      x = Math.max(0, Math.min(x, overlayRect.width - wrapper.offsetWidth));
-      y = Math.max(0, Math.min(y, overlayRect.height - wrapper.offsetHeight));
+      const onMouseMove = (moveEvent) => {
+        const overlayRect = overlay.getBoundingClientRect();
+        let x = moveEvent.clientX - startX;
+        let y = moveEvent.clientY - startY;
+        
+        // Keep boundaries
+        x = Math.max(0, Math.min(x, overlayRect.width - wrapper.offsetWidth));
+        y = Math.max(0, Math.min(y, overlayRect.height - wrapper.offsetHeight));
+        
+        wrapper.style.left = `${x}px`;
+        wrapper.style.top = `${y}px`;
+        
+        txtObj.percentX = x / overlayRect.width;
+        txtObj.percentY = y / overlayRect.height;
+      };
       
-      wrapper.style.left = `${x}px`;
-      wrapper.style.top = `${y}px`;
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        window.saveHistoryState(pageIndex);
+      };
       
-      txtObj.percentX = x / overlayRect.width;
-      txtObj.percentY = y / overlayRect.height;
-    });
-    
-    document.addEventListener('mouseup', () => {
-      isDragging = false;
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
     });
     
     // 4. Setup Corner Resizing (TL, TR, BL, BR handles)
@@ -314,6 +319,7 @@ export class PdfManager {
         const onMouseUp = () => {
           document.removeEventListener('mousemove', onMouseMove);
           document.removeEventListener('mouseup', onMouseUp);
+          window.saveHistoryState(pageIndex);
         };
         
         document.addEventListener('mousemove', onMouseMove);
@@ -719,5 +725,49 @@ export class PdfManager {
     const g = parseInt(hex.slice(3, 5), 16) / 255;
     const b = parseInt(hex.slice(5, 7), 16) / 255;
     return rgb(r, g, b);
+  }
+
+  /**
+   * Scans page text content to find closest font descriptors
+   */
+  async detectFontAtPercent(pageIndex, percentX, percentY) {
+    try {
+      if (!this.pdfJsDoc) return null;
+      const page = await this.pdfJsDoc.getPage(pageIndex + 1);
+      const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: 1 });
+      
+      const clickPdfX = percentX * pageWidth;
+      const clickPdfY = (1 - percentY) * pageHeight;
+      
+      const textContent = await page.getTextContent();
+      let closestItem = null;
+      let minDistance = 50; // threshold in points
+      
+      textContent.items.forEach(item => {
+        const x = item.transform[4];
+        const y = item.transform[5];
+        const dx = x - clickPdfX;
+        const dy = y - clickPdfY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestItem = item;
+        }
+      });
+      
+      if (closestItem) {
+        const style = textContent.styles[closestItem.fontName];
+        return {
+          fontFamily: style ? style.fontFamily : null,
+          fontName: closestItem.fontName,
+          text: closestItem.str
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('Font detection error:', err);
+      return null;
+    }
   }
 }

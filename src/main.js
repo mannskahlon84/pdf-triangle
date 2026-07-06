@@ -305,6 +305,41 @@ function setupEditorWorkspace() {
     }
   });
 
+  // Undo/Redo click event handlers
+  const undoBtn = document.getElementById('editor-undo-btn');
+  const redoBtn = document.getElementById('editor-redo-btn');
+  if (undoBtn && redoBtn) {
+    undoBtn.addEventListener('click', () => {
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined) window.restoreHistoryState(pageIdx, 'undo');
+    });
+    redoBtn.addEventListener('click', () => {
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined) window.restoreHistoryState(pageIdx, 'redo');
+    });
+  }
+
+  // Keyboard Shortcuts for Undo/Redo
+  document.addEventListener('keydown', (e) => {
+    const editorWorkspace = document.getElementById('editor-workspace');
+    if (!editorWorkspace || editorWorkspace.classList.contains('hidden')) return;
+    
+    // Ignore keypresses inside editable text elements
+    if (document.activeElement && document.activeElement.contentEditable === 'true') return;
+    
+    const pageIdx = state.editor.activePage?.pageIndex;
+    if (pageIdx === undefined) return;
+    
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      window.restoreHistoryState(pageIdx, 'undo');
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+      e.preventDefault();
+      window.restoreHistoryState(pageIdx, 'redo');
+    }
+  });
+
   // Text Tool Inspector Syncing
   const textFontSelect = document.getElementById('text-font');
   const textSizeInput = document.getElementById('text-size');
@@ -930,6 +965,106 @@ function injectWorkspaceCancelButtons() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+// History State snapshots (Undo/Redo)
+state.editor.history = {};
+
+function copyAdditions(arr) {
+  if (!arr) return [];
+  return arr.map(item => JSON.parse(JSON.stringify(item)));
+}
+
+function getHistoryState(pageIndex) {
+  if (!state.editor.history[pageIndex]) {
+    state.editor.history[pageIndex] = { snapshots: [], index: -1 };
+  }
+  return state.editor.history[pageIndex];
+}
+
+window.saveHistoryState = (pageIndex) => {
+  const page = state.editor.activePage;
+  if (!page || !page.drawingCanvas) return;
+  
+  const history = getHistoryState(pageIndex);
+  
+  // Truncate redo snapshots if we are ahead of history.index
+  if (history.index < history.snapshots.length - 1) {
+    history.snapshots = history.snapshots.slice(0, history.index + 1);
+  }
+  
+  const snapshot = {
+    canvasDataUrl: page.drawingCanvas.toDataURL(),
+    text: copyAdditions(state.editor.pdfManager.additions[pageIndex].text),
+    signatures: copyAdditions(state.editor.pdfManager.additions[pageIndex].signatures),
+    formFields: copyAdditions(state.editor.pdfManager.additions[pageIndex].formFields)
+  };
+  
+  history.snapshots.push(snapshot);
+  history.index++;
+  
+  window.updateUndoRedoButtons();
+};
+
+window.restoreHistoryState = (pageIndex, direction) => {
+  const history = getHistoryState(pageIndex);
+  if (direction === 'undo' && history.index > 0) {
+    history.index--;
+  } else if (direction === 'redo' && history.index < history.snapshots.length - 1) {
+    history.index++;
+  } else {
+    return;
+  }
+  
+  const snapshot = history.snapshots[history.index];
+  if (!snapshot) return;
+  
+  const page = state.editor.activePage;
+  if (!page) return;
+  
+  // Restore Additions
+  state.editor.pdfManager.additions[pageIndex].text = copyAdditions(snapshot.text);
+  state.editor.pdfManager.additions[pageIndex].signatures = copyAdditions(snapshot.signatures);
+  state.editor.pdfManager.additions[pageIndex].formFields = copyAdditions(snapshot.formFields);
+  
+  // Restore Drawing Canvas
+  const ctx = page.drawingCanvas.getContext('2d');
+  ctx.clearRect(0, 0, page.drawingCanvas.width, page.drawingCanvas.height);
+  
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0);
+  };
+  img.src = snapshot.canvasDataUrl;
+  
+  // Clear and rebuild annotations overlay
+  page.annotationOverlay.innerHTML = '';
+  
+  state.editor.pdfManager.additions[pageIndex].text.forEach(txtObj => {
+    state.editor.pdfManager.renderTextElement(txtObj, page.annotationOverlay, pageIndex);
+  });
+  
+  state.editor.pdfManager.additions[pageIndex].signatures.forEach(sigObj => {
+    state.editor.pdfManager.renderSignatureElement(sigObj, page.annotationOverlay, pageIndex);
+  });
+  
+  state.editor.pdfManager.additions[pageIndex].formFields.forEach(fieldObj => {
+    state.editor.pdfManager.renderFormFieldElement(fieldObj, page.annotationOverlay, pageIndex);
+  });
+  
+  window.updateUndoRedoButtons();
+};
+
+window.updateUndoRedoButtons = () => {
+  const pageIdx = state.editor.activePage?.pageIndex;
+  if (pageIdx === undefined) return;
+  
+  const history = getHistoryState(pageIdx);
+  const undoBtn = document.getElementById('editor-undo-btn');
+  const redoBtn = document.getElementById('editor-redo-btn');
+  
+  if (undoBtn) undoBtn.disabled = history.index <= 0;
+  if (redoBtn) redoBtn.disabled = history.index >= history.snapshots.length - 1;
+};
+
 window.updateTextInspector = (txtObj) => {
   document.getElementById('text-font').value = txtObj.fontFamily || "'Inter', sans-serif";
   document.getElementById('text-size').value = txtObj.size || 18;
@@ -1037,15 +1172,26 @@ function setEditorTool(tool) {
   }
 
   // Adjust pointer events dynamically so the drawing canvas doesn't block clicks on forms and text boxes
+  if (tool === 'fontdetect') {
+    showToast('Font ID mode active! Click on document text to detect its font.', 'info');
+  }
+
   const overlay = document.querySelector('.annotation-overlay');
   const drawingCanvas = document.querySelector('.drawing-canvas');
   if (overlay && drawingCanvas) {
-    if (tool === 'draw' || tool === 'erase') {
-      overlay.style.pointerEvents = 'none';
-      drawingCanvas.style.pointerEvents = 'auto';
-    } else {
+    if (tool === 'fontdetect') {
       overlay.style.pointerEvents = 'auto';
       drawingCanvas.style.pointerEvents = 'none';
+      overlay.style.cursor = 'crosshair';
+    } else {
+      overlay.style.cursor = 'default';
+      if (tool === 'draw' || tool === 'erase') {
+        overlay.style.pointerEvents = 'none';
+        drawingCanvas.style.pointerEvents = 'auto';
+      } else {
+        overlay.style.pointerEvents = 'auto';
+        drawingCanvas.style.pointerEvents = 'none';
+      }
     }
   }
 }
@@ -1065,6 +1211,20 @@ async function loadEditorPage(pageIndex) {
   
   // Setup Freehand Drawing Layer
   setupDrawingLayer(renderData.drawingCanvas);
+
+  // Set up activePage global state
+  state.editor.activePage = {
+    pageIndex,
+    annotationOverlay: renderData.annotationOverlay,
+    drawingCanvas: renderData.drawingCanvas
+  };
+
+  // Initialize history stack with current state if empty
+  if (!state.editor.history[pageIndex] || state.editor.history[pageIndex].snapshots.length === 0) {
+    window.saveHistoryState(pageIndex);
+  } else {
+    window.updateUndoRedoButtons();
+  }
   
   // Set pointer events based on currently selected tool for the newly loaded page
   const activeTool = state.editor.activeTool;
@@ -1074,6 +1234,9 @@ async function loadEditorPage(pageIndex) {
   } else {
     renderData.annotationOverlay.style.pointerEvents = 'auto';
     renderData.drawingCanvas.style.pointerEvents = 'none';
+    if (activeTool === 'fontdetect') {
+      renderData.annotationOverlay.style.cursor = 'crosshair';
+    }
   }
   
   // Click to insert elements (text/signature)
@@ -1111,6 +1274,7 @@ async function loadEditorPage(pageIndex) {
       
       state.editor.pdfManager.additions[pageIndex].text.push(txtObj);
       state.editor.pdfManager.renderTextElement(txtObj, renderData.annotationOverlay, pageIndex);
+      window.saveHistoryState(pageIndex);
       
     } else if (state.editor.activeTool === 'signature') {
       if (!state.editor.activeSignatureDataUrl) {
@@ -1128,9 +1292,41 @@ async function loadEditorPage(pageIndex) {
       
       state.editor.pdfManager.additions[pageIndex].signatures.push(sigObj);
       state.editor.pdfManager.renderSignatureElement(sigObj, renderData.annotationOverlay, pageIndex);
+      window.saveHistoryState(pageIndex);
       
       // Reset back to pan tool
       document.querySelector('[data-action="pan"]').click();
+    } else if (state.editor.activeTool === 'fontdetect') {
+      state.editor.pdfManager.detectFontAtPercent(pageIndex, percentX, percentY).then(fontResult => {
+        if (fontResult && fontResult.fontFamily) {
+          showToast(`Detected Font: ${fontResult.fontFamily} (Matches text: "${fontResult.text}")`, 'success');
+          
+          // Update font selector dropdown
+          const fontSelect = document.getElementById('text-font');
+          if (fontSelect) {
+            let matchedVal = null;
+            const detectedLower = fontResult.fontFamily.toLowerCase();
+            
+            for (let option of fontSelect.options) {
+              if (option.value.toLowerCase().includes(detectedLower) || detectedLower.includes(option.text.toLowerCase())) {
+                matchedVal = option.value;
+                break;
+              }
+            }
+            
+            if (matchedVal) {
+              fontSelect.value = matchedVal;
+              showToast(`Automatically updated editor font to: ${fontSelect.options[fontSelect.selectedIndex].text}!`, 'info');
+            }
+          }
+          
+          // Switch back to Text tool immediately so they can write
+          const textBtn = document.querySelector('[data-action="text"]');
+          if (textBtn) textBtn.click();
+        } else {
+          showToast('No text or font detected at this location. Try clicking directly on a word.', 'warning');
+        }
+      });
     }
   });
 
@@ -1180,6 +1376,10 @@ function setupDrawingLayer(canvas) {
     } else if (tool === 'stamp') {
       drawStampOnCanvas(ctx, pos.x, pos.y);
       isDragging = false;
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined) {
+        window.saveHistoryState(pageIdx);
+      }
     } else if (tool === 'erase') {
       const mode = document.getElementById('erase-mode').value;
       if (mode === 'camouflage') {
@@ -1335,9 +1535,21 @@ function setupDrawingLayer(canvas) {
   };
 
   const stop = () => {
-    isDragging = false;
-    savedImageData = null;
+    if (isDragging) {
+      isDragging = false;
+      savedImageData = null;
+      
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined) {
+        window.saveHistoryState(pageIdx);
+      }
+    }
   };
+
+  // Clean up previous event listeners if setupDrawingLayer is recalled
+  if (state.editor.cleanupDrawingListeners) {
+    state.editor.cleanupDrawingListeners();
+  }
 
   canvas.addEventListener('mousedown', start);
   canvas.addEventListener('mousemove', draw);
@@ -1346,6 +1558,16 @@ function setupDrawingLayer(canvas) {
   canvas.addEventListener('touchstart', start, { passive: false });
   canvas.addEventListener('touchmove', draw, { passive: false });
   document.addEventListener('touchend', stop);
+
+  state.editor.cleanupDrawingListeners = () => {
+    canvas.removeEventListener('mousedown', start);
+    canvas.removeEventListener('mousemove', draw);
+    document.removeEventListener('mouseup', stop);
+
+    canvas.removeEventListener('touchstart', start);
+    canvas.removeEventListener('touchmove', draw);
+    document.removeEventListener('touchend', stop);
+  };
 }
 
 function drawStampOnCanvas(ctx, x, y) {
@@ -2557,6 +2779,7 @@ function setupOcrModal() {
   const closeBtn = document.getElementById('ocr-close-btn');
   const okBtn = document.getElementById('ocr-ok-btn');
   const copyBtn = document.getElementById('ocr-copy-btn');
+  const makeEditableBtn = document.getElementById('ocr-make-editable-btn');
   
   ocrPageBtn.addEventListener('click', async () => {
     const pageCanvas = document.querySelector('.pdf-render-canvas');
@@ -2564,11 +2787,12 @@ function setupOcrModal() {
     
     showLoader('Initializing Tesseract OCR worker...');
     try {
-      const text = await runOcrOnCanvas(pageCanvas, (percent) => {
+      const data = await runOcrOnCanvas(pageCanvas, (percent) => {
         document.getElementById('spinner-text').textContent = `Analyzing page text... ${percent}%`;
       });
       
-      document.getElementById('ocr-text-output').value = text || 'No text found on this page.';
+      state.editor.lastOcrData = data;
+      document.getElementById('ocr-text-output').value = data.text || 'No text found on this page.';
       modal.classList.remove('hidden');
     } catch (err) {
       console.error(err);
@@ -2586,6 +2810,89 @@ function setupOcrModal() {
     textOutput.select();
     navigator.clipboard.writeText(textOutput.value);
     showToast('Text copied to clipboard!');
+  });
+
+  makeEditableBtn.addEventListener('click', () => {
+    const ocrData = state.editor.lastOcrData;
+    if (!ocrData || !ocrData.lines) {
+      showToast('No OCR text lines available to convert.', 'warning');
+      return;
+    }
+    
+    const pageIdx = state.editor.activePage?.pageIndex;
+    if (pageIdx === undefined) return;
+    
+    const overlay = state.editor.activePage.annotationOverlay;
+    const overlayRect = overlay.getBoundingClientRect();
+    const pdfCanvas = state.editor.activePage.drawingCanvas;
+    const pdfCtx = pdfCanvas.getContext('2d');
+    
+    showLoader('Converting scanned text to editable layers...');
+    
+    setTimeout(() => {
+      try {
+        let count = 0;
+        ocrData.lines.forEach(line => {
+          if (!line.text || line.text.trim().length === 0) return;
+          
+          const bbox = line.bbox;
+          if (!bbox) return;
+          
+          const percentX = bbox.x0 / pdfCanvas.width;
+          const percentY = bbox.y0 / pdfCanvas.height;
+          const percentW = (bbox.x1 - bbox.x0) / pdfCanvas.width;
+          const percentH = (bbox.y1 - bbox.y0) / pdfCanvas.height;
+          
+          // Sample paper color at top-left corner
+          const pixel = pdfCtx.getImageData(
+            Math.max(0, Math.min(pdfCanvas.width - 1, bbox.x0 - 2)),
+            Math.max(0, Math.min(pdfCanvas.height - 1, bbox.y0 - 2)),
+            1, 1
+          ).data;
+          const r = pixel[0];
+          const g = pixel[1];
+          const b = pixel[2];
+          const bgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+          
+          const cssHeight = percentH * overlayRect.height;
+          const fontSize = Math.max(10, Math.round(cssHeight * 0.72));
+          
+          const txtObj = {
+            percentX,
+            percentY,
+            percentW,
+            percentH,
+            text: line.text.trim(),
+            size: fontSize,
+            color: '#000000',
+            fontFamily: "'Inter', sans-serif",
+            isBold: false,
+            isItalic: false,
+            bgEnable: true, // auto cover original scanned text!
+            bgColor: bgColor,
+            overlayWidth: overlayRect.width,
+            overlayHeight: overlayRect.height
+          };
+          
+          state.editor.pdfManager.additions[pageIdx].text.push(txtObj);
+          state.editor.pdfManager.renderTextElement(txtObj, overlay, pageIdx);
+          count++;
+        });
+        
+        if (count > 0) {
+          window.saveHistoryState(pageIdx);
+          showToast(`Converted ${count} text blocks! Scanned text is now editable.`, 'success');
+        } else {
+          showToast('No text blocks found to convert.', 'info');
+        }
+        modal.classList.add('hidden');
+      } catch (e) {
+        console.error(e);
+        showToast('Failed to convert scanned text.', 'danger');
+      } finally {
+        hideLoader();
+      }
+    }, 50);
   });
 }
 
