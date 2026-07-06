@@ -282,6 +282,7 @@ function setupEditorWorkspace() {
       document.getElementById('meta-producer-input').value = meta.producer || '';
       
       document.getElementById('editor-empty-state').classList.add('hidden');
+      document.getElementById('zoom-wrapper').classList.remove('hidden');
       document.getElementById('active-page-container').classList.remove('hidden');
       saveBtn.disabled = false;
       printBtn.disabled = false;
@@ -361,12 +362,22 @@ function setupEditorWorkspace() {
       state.editor.zoom = Math.max(0.5, Math.min(2.5, level));
       zoomValSpan.textContent = `${Math.round(state.editor.zoom * 100)}%`;
       
-      const pageContainer = document.querySelector('.page-container');
-      if (pageContainer) {
+      const pageContainer = document.getElementById('active-page-container');
+      const zoomWrapper = document.getElementById('zoom-wrapper');
+      
+      if (pageContainer && zoomWrapper) {
         pageContainer.style.transform = `scale(${state.editor.zoom})`;
-        pageContainer.style.transformOrigin = 'center top';
+        pageContainer.style.transformOrigin = 'left top';
+        
+        const baseWidth = parseFloat(pageContainer.style.width) || pageContainer.offsetWidth || 800;
+        const baseHeight = parseFloat(pageContainer.style.height) || pageContainer.offsetHeight || 1100;
+        
+        zoomWrapper.style.width = `${baseWidth * state.editor.zoom}px`;
+        zoomWrapper.style.height = `${baseHeight * state.editor.zoom}px`;
       }
     };
+
+    window.updateEditorZoom = updateZoom;
 
     zoomInBtn.addEventListener('click', () => updateZoom(state.editor.zoom + 0.1));
     zoomOutBtn.addEventListener('click', () => updateZoom(state.editor.zoom - 0.1));
@@ -711,6 +722,7 @@ function resetEditor() {
   if (fileInput) fileInput.value = '';
   
   document.getElementById('editor-empty-state').classList.remove('hidden');
+  document.getElementById('zoom-wrapper').classList.add('hidden');
   document.getElementById('active-page-container').classList.add('hidden');
   document.getElementById('active-page-container').innerHTML = '';
   
@@ -796,6 +808,7 @@ function resetInactiveTools(activeViewName) {
     
     safeDOM.val('editor-file-input', '');
     safeDOM.show('editor-empty-state');
+    safeDOM.hide('zoom-wrapper');
     safeDOM.hide('active-page-container');
     safeDOM.html('active-page-container', '');
     safeDOM.html('editor-thumbnails', '<div class="empty-state-text">No document loaded</div>');
@@ -1397,6 +1410,11 @@ async function loadEditorPage(pageIndex) {
     if (idx === pageIndex) thumb.classList.add('active');
     else thumb.classList.remove('active');
   });
+
+  // Apply current zoom factor and zoom-wrapper sizes
+  if (window.updateEditorZoom) {
+    window.updateEditorZoom(state.editor.zoom);
+  }
   
   hideLoader();
 }
@@ -4389,6 +4407,7 @@ function setupFormbuilderWorkspace() {
       
       // Hide Empty State and show Active Page
       document.getElementById('editor-empty-state').classList.add('hidden');
+      document.getElementById('zoom-wrapper').classList.remove('hidden');
       document.getElementById('active-page-container').classList.remove('hidden');
       
       // Enable main action buttons

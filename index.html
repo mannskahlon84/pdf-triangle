@@ -350,8 +350,11 @@
                   <h2>Upload a PDF to Start Editing</h2>
                   <p>Click "Upload" above or drag your file here to draw, annotate, and sign.</p>
                 </div>
-                <div class="page-container hidden" id="active-page-container">
-                  <!-- The PDF Canvas & Annotation Layer will be dynamically generated here -->
+                <!-- Zoom wrapper container to trigger standard horizontal and vertical scrollbars -->
+                <div class="zoom-wrapper hidden" id="zoom-wrapper" style="display: inline-block; position: relative; margin: 2rem auto; vertical-align: top; text-align: left;">
+                  <div class="page-container" id="active-page-container" style="position: absolute; top: 0; left: 0; margin: 0; transform-origin: left top;">
+                    <!-- The PDF Canvas & Annotation Layer will be dynamically generated here -->
+                  </div>
                 </div>
               </div>
             </div>

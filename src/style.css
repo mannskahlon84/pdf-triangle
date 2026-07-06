@@ -530,18 +530,19 @@ body {
 .canvas-viewport {
   flex: 1;
   overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
   padding: 2rem;
   position: relative;
 }
 
 .page-container {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   background-color: white;
   box-shadow: var(--shadow-lg);
-  transform-origin: center center;
+  transform-origin: left top;
 }
 
 .pdf-render-canvas {
