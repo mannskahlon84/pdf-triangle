@@ -293,16 +293,14 @@
                     <i data-lucide="eye-dropper" style="width: 20px; height: 20px;"></i>
                     <span>Font ID</span>
                   </button>
-                  <button class="tool-btn" id="editor-undo-btn" disabled title="Undo (Ctrl+Z)" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
-                    <i data-lucide="undo" style="width: 20px; height: 20px;"></i>
-                    <span>Undo</span>
-                  </button>
-                  <button class="tool-btn" id="editor-redo-btn" disabled title="Redo (Ctrl+Y)" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
-                    <i data-lucide="redo" style="width: 20px; height: 20px;"></i>
-                    <span>Redo</span>
-                  </button>
                 </div>
                 <div class="toolbar-group file-actions" style="gap: 0.5rem; flex-wrap: wrap;">
+                  <button class="btn btn-secondary" id="editor-undo-btn" disabled title="Undo (Ctrl+Z)" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="undo" style="width: 16px; height: 16px;"></i> Undo
+                  </button>
+                  <button class="btn btn-secondary" id="editor-redo-btn" disabled title="Redo (Ctrl+Y)" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="redo" style="width: 16px; height: 16px;"></i> Redo
+                  </button>
                   <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
                     <i data-lucide="print" style="width: 16px; height: 16px;"></i> Print
                   </button>
