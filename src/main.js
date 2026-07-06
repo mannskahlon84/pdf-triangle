@@ -93,6 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide Icons
   lucide.createIcons();
   
+  // Inject Cancel/Discard buttons into all workspace setup panels
+  injectWorkspaceCancelButtons();
+  
   // Theme Toggle
   const themeToggle = document.getElementById('theme-toggle');
   themeToggle.addEventListener('click', toggleTheme);
@@ -160,6 +163,9 @@ function handleRouting() {
 
 function switchView(viewName) {
   state.activeTool = viewName;
+  
+  // Clear all other inactive tool workspaces to avoid file leakage/lingering state
+  resetInactiveTools(viewName);
   
   // Hide all views
   document.querySelectorAll('.view-panel').forEach(panel => {
@@ -609,6 +615,262 @@ function resetEditor() {
   state.editor.activeTool = 'pan';
   
   showToast('Document cleared.', 'info');
+}
+
+function resetInactiveTools(activeViewName) {
+  // Clear all file inputs' values so re-uploading the same file works
+  const fileInputs = document.querySelectorAll('input[type="file"]');
+  fileInputs.forEach(input => {
+    input.value = '';
+  });
+
+  // 1. Reset Editor
+  if (activeViewName !== 'editor') {
+    if (state.editor.pdfManager) {
+      state.editor.pdfManager.pdfDoc = null;
+      state.editor.pdfManager.pdfBuffer = null;
+      state.editor.pdfManager.file = null;
+      state.editor.pdfManager.additions = {};
+    }
+    const editorFileInput = document.getElementById('editor-file-input');
+    if (editorFileInput) editorFileInput.value = '';
+    
+    document.getElementById('editor-empty-state').classList.remove('hidden');
+    document.getElementById('active-page-container').classList.add('hidden');
+    document.getElementById('active-page-container').innerHTML = '';
+    document.getElementById('editor-thumbnails').innerHTML = '<div class="empty-state-text">No document loaded</div>';
+    
+    document.getElementById('meta-info-name').textContent = '--';
+    document.getElementById('meta-info-pages').textContent = '--';
+    document.getElementById('meta-info-size').textContent = '--';
+    
+    document.getElementById('editor-save-btn').disabled = true;
+    document.getElementById('editor-print-btn').disabled = true;
+    document.getElementById('editor-rotate-btn').disabled = true;
+    document.getElementById('editor-close-btn').disabled = true;
+    document.getElementById('ocr-page-btn').disabled = true;
+    
+    document.getElementById('form-field-editor-properties').classList.add('hidden');
+    document.getElementById('options-form-field-tool').classList.add('hidden');
+    document.getElementById('options-text-tool').classList.add('hidden');
+    document.getElementById('options-draw-tool').classList.add('hidden');
+    document.getElementById('options-erase-tool').classList.add('hidden');
+    document.getElementById('options-shape-tool').classList.add('hidden');
+    document.getElementById('options-stamp-tool').classList.add('hidden');
+    document.getElementById('options-image-tool').classList.add('hidden');
+    document.getElementById('options-metadata-panel').classList.remove('hidden');
+    
+    document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+    const panBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="pan"]');
+    if (panBtn) panBtn.classList.add('active');
+    state.editor.activeTool = 'pan';
+  }
+
+  // 2. Reset Merge
+  if (activeViewName !== 'merge') {
+    state.merge.files = [];
+    state.merge.pages = [];
+    document.getElementById('merge-upload-zone').classList.remove('hidden');
+    document.getElementById('merge-files-container').classList.add('hidden');
+    document.getElementById('merge-grid').innerHTML = '';
+  }
+
+  // 3. Reset Split
+  if (activeViewName !== 'split') {
+    state.split.file = null;
+    state.split.pageCount = 0;
+    document.getElementById('split-upload-zone').classList.remove('hidden');
+    document.getElementById('split-setup-container').classList.add('hidden');
+    const splitSinglePages = document.getElementById('split-single-pages');
+    if (splitSinglePages) splitSinglePages.value = '';
+    const splitRangePages = document.getElementById('split-range-pages');
+    if (splitRangePages) splitRangePages.value = '';
+    const splitPreview = document.getElementById('split-preview-sidebar');
+    if (splitPreview) splitPreview.innerHTML = '';
+  }
+
+  // 4. Reset Organize
+  if (activeViewName !== 'organize') {
+    state.organize.file = null;
+    state.organize.pages = [];
+    document.getElementById('organize-upload-zone').classList.remove('hidden');
+    document.getElementById('organize-workspace').classList.add('hidden');
+    document.getElementById('organize-grid').innerHTML = '';
+  }
+
+  // 5. Reset JPG to PDF
+  if (activeViewName !== 'jpg-to-pdf') {
+    state.jpgToPdf.files = [];
+    document.getElementById('jpg-to-pdf-upload-zone').classList.remove('hidden');
+    document.getElementById('jpg-to-pdf-container').classList.add('hidden');
+    document.getElementById('jpg-to-pdf-list').innerHTML = '';
+  }
+
+  // 6. Reset PDF to JPG
+  if (activeViewName !== 'pdf-to-jpg') {
+    state.pdfToJpg.file = null;
+    state.pdfToJpg.pageCount = 0;
+    document.getElementById('pdf-to-jpg-upload-zone').classList.remove('hidden');
+    document.getElementById('pdf-to-jpg-setup').classList.add('hidden');
+  }
+
+  // 7. Reset Word to PDF
+  if (activeViewName !== 'word-to-pdf') {
+    state.wordToPdf.file = null;
+    document.getElementById('word-upload-zone').classList.remove('hidden');
+    document.getElementById('word-setup-container').classList.add('hidden');
+  }
+
+  // 8. Reset Excel to PDF
+  if (activeViewName !== 'excel-to-pdf') {
+    state.excelToPdf.file = null;
+    document.getElementById('excel-upload-zone').classList.remove('hidden');
+    document.getElementById('excel-setup-container').classList.add('hidden');
+  }
+
+  // 9. Reset Watermark
+  if (activeViewName !== 'watermark') {
+    state.watermark.file = null;
+    state.watermark.imageFile = null;
+    state.watermark.imageBuffer = null;
+    state.watermark.imageMime = null;
+    state.watermark.pageCount = 0;
+    document.getElementById('watermark-upload-zone').classList.remove('hidden');
+    document.getElementById('watermark-layout').classList.add('hidden');
+    const watermarkCanvas = document.getElementById('watermark-canvas');
+    if (watermarkCanvas) {
+      const ctx = watermarkCanvas.getContext('2d');
+      ctx.clearRect(0, 0, watermarkCanvas.width, watermarkCanvas.height);
+    }
+    const watermarkText = document.getElementById('watermark-text');
+    if (watermarkText) watermarkText.value = 'CONFIDENTIAL';
+    const watermarkImgFile = document.getElementById('watermark-image-file');
+    if (watermarkImgFile) watermarkImgFile.classList.add('hidden');
+  }
+
+  // 10. Reset Compress
+  if (activeViewName !== 'compress') {
+    state.compress.file = null;
+    state.compress.pageCount = 0;
+    document.getElementById('compress-upload-zone').classList.remove('hidden');
+    document.getElementById('compress-setup-container').classList.add('hidden');
+  }
+
+  // 11. Reset Security
+  if (activeViewName !== 'security') {
+    state.security.file = null;
+    state.security.isLocked = false;
+    state.security.password = '';
+    document.getElementById('security-upload-zone').classList.remove('hidden');
+    document.getElementById('security-setup-container').classList.add('hidden');
+    document.getElementById('security-decrypt-group').classList.add('hidden');
+    document.getElementById('security-encrypt-group').classList.remove('hidden');
+    document.getElementById('security-decrypt-password').value = '';
+    document.getElementById('security-encrypt-password').value = '';
+  }
+
+  // 12. Reset Page Numbering
+  if (activeViewName !== 'numbering') {
+    state.numbering.file = null;
+    state.numbering.pageCount = 0;
+    document.getElementById('numbering-upload-zone').classList.remove('hidden');
+    document.getElementById('numbering-setup-container').classList.add('hidden');
+  }
+
+  // 13. Reset Batch Actions
+  if (activeViewName !== 'batch') {
+    state.batch.files = [];
+    document.getElementById('batch-upload-zone').classList.remove('hidden');
+    document.getElementById('batch-setup-container').classList.add('hidden');
+    const batchFilesGrid = document.getElementById('batch-files-grid');
+    if (batchFilesGrid) batchFilesGrid.innerHTML = '';
+  }
+
+  // 14. Reset Compare PDFs
+  if (activeViewName !== 'compare') {
+    state.compare.fileA = null;
+    state.compare.fileB = null;
+    document.getElementById('compare-upload-zone').classList.remove('hidden');
+    document.getElementById('compare-results-container').classList.add('hidden');
+    document.getElementById('compare-diff-output').innerHTML = '';
+    document.getElementById('compare-metadata-table-body').innerHTML = '';
+    document.getElementById('compare-submit-btn').classList.add('hidden');
+    document.getElementById('compare-a-status').innerHTML = 'Drag file here or <span class="highlight">browse</span>';
+    document.getElementById('compare-b-status').innerHTML = 'Drag file here or <span class="highlight">browse</span>';
+  }
+
+  // 15. Reset Scanner
+  if (activeViewName !== 'scanner') {
+    state.scanner.file = null;
+    state.scanner.originalImg = null;
+    state.scanner.corners = [];
+    document.getElementById('scan-upload-zone').classList.remove('hidden');
+    document.getElementById('scan-editor-container').classList.add('hidden');
+    const scanCanvas = document.getElementById('scan-canvas');
+    if (scanCanvas) {
+      const ctx = scanCanvas.getContext('2d');
+      ctx.clearRect(0, 0, scanCanvas.width, scanCanvas.height);
+    }
+  }
+
+  // 16. Reset Formbuilder
+  if (activeViewName !== 'formbuilder') {
+    if (state.formbuilder) {
+      state.formbuilder.file = null;
+    }
+    document.getElementById('formbuilder-upload-zone').classList.remove('hidden');
+  }
+}
+
+function injectWorkspaceCancelButtons() {
+  const setupContainers = [
+    { id: 'merge-files-container', tool: 'merge' },
+    { id: 'split-setup-container', tool: 'split' },
+    { id: 'organize-workspace', tool: 'organize' },
+    { id: 'jpg-to-pdf-container', tool: 'jpg-to-pdf' },
+    { id: 'pdf-to-jpg-setup', tool: 'pdf-to-jpg' },
+    { id: 'word-setup-container', tool: 'word-to-pdf' },
+    { id: 'excel-setup-container', tool: 'excel-to-pdf' },
+    { id: 'watermark-layout', tool: 'watermark' },
+    { id: 'compress-setup-container', tool: 'compress' },
+    { id: 'security-setup-container', tool: 'security' },
+    { id: 'numbering-setup-container', tool: 'numbering' },
+    { id: 'batch-setup-container', tool: 'batch' },
+    { id: 'compare-results-container', tool: 'compare' },
+    { id: 'scan-editor-container', tool: 'scanner' }
+  ];
+
+  setupContainers.forEach(cfg => {
+    const el = document.getElementById(cfg.id);
+    if (!el) return;
+    
+    // Create Discard button
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary btn-cancel-workspace';
+    cancelBtn.style.width = '100%';
+    cancelBtn.style.marginTop = '1rem';
+    cancelBtn.style.display = 'flex';
+    cancelBtn.style.alignItems = 'center';
+    cancelBtn.style.justifyContent = 'center';
+    cancelBtn.style.gap = '0.5rem';
+    cancelBtn.innerHTML = '<i data-lucide="x-circle" style="width:16px; height:16px;"></i> Discard & Change File';
+    
+    // Position it
+    if (cfg.id === 'organize-workspace' || cfg.id === 'merge-files-container' || cfg.id === 'jpg-to-pdf-container') {
+      el.insertBefore(cancelBtn, el.firstChild);
+    } else {
+      el.appendChild(cancelBtn);
+    }
+    
+    // Bind reset action
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetInactiveTools(''); // reset all
+      showToast('File discarded.', 'info');
+    });
+  });
+  
+  if (window.lucide) window.lucide.createIcons();
 }
 
 window.updateTextInspector = (txtObj) => {
