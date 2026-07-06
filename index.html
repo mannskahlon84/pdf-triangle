@@ -353,8 +353,14 @@
                   <label for="text-size">Font Size</label>
                   <input type="number" id="text-size" value="18" min="8" max="120" style="margin-bottom: 0.75rem;" />
 
-                  <label for="text-color">Color</label>
-                  <input type="color" id="text-color" value="#000000" />
+                  <label for="text-color">Text Color</label>
+                  <input type="color" id="text-color" value="#000000" style="margin-bottom: 0.75rem;" />
+
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                    <input type="checkbox" id="text-fill-enable" style="width: auto; margin: 0; cursor: pointer;" />
+                    <label for="text-fill-enable" style="margin: 0; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Enable Fill Color</label>
+                  </div>
+                  <input type="color" id="text-fill-color" value="#ffffff" />
                 </div>
 
                 <!-- Drawing Tool Config -->
@@ -372,7 +378,20 @@
                 <!-- Eraser Config -->
                 <div class="option-group hidden" id="options-erase-tool">
                   <label for="erase-width">Eraser Size</label>
-                  <input type="range" id="erase-width" min="5" max="100" value="20" />
+                  <input type="range" id="erase-width" min="5" max="100" value="20" style="margin-bottom: 0.75rem;" />
+
+                  <label for="erase-mode">Eraser Mode</label>
+                  <select id="erase-mode" style="width: 100%; margin-bottom: 0.75rem;">
+                    <option value="whiteout" selected>Whiteout (Standard White Mask)</option>
+                    <option value="camouflage">Camouflage (Auto-Match background)</option>
+                    <option value="drawings">Erase Drawings (Transparent Mask)</option>
+                    <option value="custom">Custom Color Mask</option>
+                  </select>
+
+                  <div id="options-erase-custom-color-group" class="hidden">
+                    <label for="erase-color">Custom Mask Color</label>
+                    <input type="color" id="erase-color" value="#ffffff" />
+                  </div>
                 </div>
 
                 <!-- Shapes Config -->

@@ -371,6 +371,43 @@ function setupEditorWorkspace() {
     }
   });
 
+  // Text Fill Color Toggle Binds
+  const textFillEnable = document.getElementById('text-fill-enable');
+  const textFillColor = document.getElementById('text-fill-color');
+  if (textFillEnable && textFillColor) {
+    textFillEnable.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      if (window.activeTextElement) {
+        const { el, txtObj } = window.activeTextElement;
+        txtObj.bgEnable = isEnabled;
+        el.style.backgroundColor = isEnabled ? textFillColor.value : 'transparent';
+      }
+    });
+
+    textFillColor.addEventListener('input', (e) => {
+      if (window.activeTextElement && textFillEnable.checked) {
+        const { el, txtObj } = window.activeTextElement;
+        txtObj.bgColor = e.target.value;
+        el.style.backgroundColor = e.target.value;
+      }
+    });
+  }
+
+  // Eraser Mode Toggle Bind
+  const eraseModeSelect = document.getElementById('erase-mode');
+  if (eraseModeSelect) {
+    eraseModeSelect.addEventListener('change', (e) => {
+      const customColorGroup = document.getElementById('options-erase-custom-color-group');
+      if (customColorGroup) {
+        if (e.target.value === 'custom') {
+          customColorGroup.classList.remove('hidden');
+        } else {
+          customColorGroup.classList.add('hidden');
+        }
+      }
+    });
+  }
+
   // Image Upload Integration Binds
   const imgFileInput = document.getElementById('editor-image-file-input');
   const imgUploadBtn = document.getElementById('image-upload-btn');
@@ -898,6 +935,13 @@ window.updateTextInspector = (txtObj) => {
   document.getElementById('text-size').value = txtObj.size || 18;
   document.getElementById('text-color').value = txtObj.color || '#000000';
   
+  const fillEnable = document.getElementById('text-fill-enable');
+  const fillColor = document.getElementById('text-fill-color');
+  if (fillEnable && fillColor) {
+    fillEnable.checked = !!txtObj.bgEnable;
+    fillColor.value = txtObj.bgColor || '#ffffff';
+  }
+  
   const boldBtn = document.getElementById('text-bold-btn');
   const italicBtn = document.getElementById('text-italic-btn');
   
@@ -1047,6 +1091,9 @@ async function loadEditorPage(pageIndex) {
       const boldBtn = document.getElementById('text-bold-btn');
       const italicBtn = document.getElementById('text-italic-btn');
       
+      const fillEnable = document.getElementById('text-fill-enable');
+      const fillColor = document.getElementById('text-fill-color');
+
       const txtObj = {
         percentX,
         percentY,
@@ -1056,6 +1103,8 @@ async function loadEditorPage(pageIndex) {
         fontFamily: fontSelect.value,
         isBold: boldBtn.classList.contains('active'),
         isItalic: italicBtn.classList.contains('active'),
+        bgEnable: fillEnable ? fillEnable.checked : false,
+        bgColor: fillColor ? fillColor.value : '#ffffff',
         overlayWidth: rect.width,
         overlayHeight: rect.height
       };
@@ -1113,6 +1162,8 @@ function setupDrawingLayer(canvas) {
     };
   };
 
+  let activeEraseColor = '#ffffff';
+
   const start = (e) => {
     const tool = state.editor.activeTool;
     if (tool !== 'draw' && tool !== 'erase' && tool !== 'shape' && tool !== 'stamp') return;
@@ -1129,6 +1180,32 @@ function setupDrawingLayer(canvas) {
     } else if (tool === 'stamp') {
       drawStampOnCanvas(ctx, pos.x, pos.y);
       isDragging = false;
+    } else if (tool === 'erase') {
+      const mode = document.getElementById('erase-mode').value;
+      if (mode === 'camouflage') {
+        const pdfCanvas = canvas.parentElement.querySelector('.pdf-render-canvas');
+        if (pdfCanvas) {
+          const pdfCtx = pdfCanvas.getContext('2d');
+          const rect = canvas.getBoundingClientRect();
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          
+          const x = Math.max(0, Math.min(pdfCanvas.width - 1, (clientX - rect.left) * (pdfCanvas.width / rect.width)));
+          const y = Math.max(0, Math.min(pdfCanvas.height - 1, (clientY - rect.top) * (pdfCanvas.height / rect.height)));
+          
+          const pixel = pdfCtx.getImageData(x, y, 1, 1).data;
+          const r = pixel[0];
+          const g = pixel[1];
+          const b = pixel[2];
+          activeEraseColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        } else {
+          activeEraseColor = '#ffffff';
+        }
+      } else if (mode === 'whiteout') {
+        activeEraseColor = '#ffffff';
+      } else if (mode === 'custom') {
+        activeEraseColor = document.getElementById('erase-color').value;
+      }
     }
   };
 
@@ -1160,10 +1237,17 @@ function setupDrawingLayer(canvas) {
       state.editor.lastDrawY = pos.y;
       
     } else if (tool === 'erase') {
-      ctx.globalCompositeOperation = 'destination-out';
+      const mode = document.getElementById('erase-mode').value;
       const width = document.getElementById('erase-width').value;
       
-      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      if (mode === 'drawings') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = activeEraseColor;
+      }
+      
       ctx.lineWidth = width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';

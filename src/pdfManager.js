@@ -148,6 +148,10 @@ export class PdfManager {
     el.style.fontStyle = txtObj.isItalic ? 'italic' : 'normal';
     el.innerText = txtObj.text;
     
+    // Apply width and background fill color if configured
+    el.style.width = txtObj.percentW ? `${txtObj.percentW * 100}%` : 'auto';
+    el.style.backgroundColor = txtObj.bgEnable ? txtObj.bgColor : 'transparent';
+    
     // Save overlay dimensions
     if (!txtObj.overlayWidth) {
       const overlayRect = overlay.getBoundingClientRect();
@@ -233,6 +237,15 @@ export class PdfManager {
     });
     
     overlay.appendChild(el);
+
+    // Track size updates using ResizeObserver
+    const ro = new ResizeObserver(() => {
+      const overlayRect = overlay.getBoundingClientRect();
+      if (overlayRect.width > 0) {
+        txtObj.percentW = el.offsetWidth / overlayRect.width;
+      }
+    });
+    ro.observe(el);
 
     // Auto-focus new text blocks immediately on creation
     if (txtObj.text === 'Click to edit text') {
@@ -482,23 +495,57 @@ export class PdfManager {
         const fontStyle = `${txtObj.isItalic ? 'italic' : ''} ${txtObj.isBold ? 'bold' : ''} ${fontSize}px ${txtObj.fontFamily || 'sans-serif'}`;
         
         tempCtx.font = fontStyle;
-        const lines = txtObj.text.split('\n');
+        
+        // Word wrapping calculations based on resized overlay width
+        const maxCanvasWidth = txtObj.percentW ? (txtObj.percentW * (txtObj.overlayWidth || pageWidth) * scale) : null;
+        const lines = [];
+        const rawLines = txtObj.text.split('\n');
+        
+        if (maxCanvasWidth) {
+          rawLines.forEach(rawLine => {
+            const words = rawLine.split(' ');
+            let currentLine = '';
+            
+            words.forEach(word => {
+              const testLine = currentLine ? currentLine + ' ' + word : word;
+              const testWidth = tempCtx.measureText(testLine).width;
+              if (testWidth > maxCanvasWidth - 40) { // accounting for padding
+                lines.push(currentLine);
+                currentLine = word;
+              } else {
+                currentLine = testLine;
+              }
+            });
+            if (currentLine) lines.push(currentLine);
+          });
+        } else {
+          rawLines.forEach(rl => lines.push(rl));
+        }
+        
         let maxWidth = 0;
         for (const line of lines) {
           maxWidth = Math.max(maxWidth, tempCtx.measureText(line).width);
         }
         
+        const finalWidth = maxCanvasWidth ? Math.max(maxWidth, maxCanvasWidth - 40) : maxWidth;
         const lineHeight = fontSize * 1.35;
         const totalHeight = lineHeight * lines.length;
         
-        tempCanvas.width = maxWidth + 40;
+        tempCanvas.width = finalWidth + 40;
         tempCanvas.height = totalHeight + 40;
         
-        // Draw text on resized canvas
+        // Redraw states
         tempCtx.font = fontStyle;
-        tempCtx.fillStyle = txtObj.color || '#000000';
         tempCtx.textBaseline = 'top';
         
+        // Draw background fill color if enabled
+        if (txtObj.bgEnable && txtObj.bgColor) {
+          tempCtx.fillStyle = txtObj.bgColor;
+          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        }
+        
+        // Draw text characters
+        tempCtx.fillStyle = txtObj.color || '#000000';
         lines.forEach((line, idx) => {
           tempCtx.fillText(line, 20, 20 + idx * lineHeight);
         });

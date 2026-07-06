@@ -566,32 +566,29 @@ body {
 /* Draggable Add-Text Element */
 .text-element {
   position: absolute;
-  border: 1px dashed transparent;
-  padding: 2px 6px;
+  border: 1px dashed var(--accent-purple);
+  padding: 4px 8px;
   cursor: move;
   outline: none;
   white-space: pre-wrap;
   user-select: text;
   transition: border-color var(--transition-fast);
+  resize: horizontal;
+  overflow: hidden;
+  min-width: 60px;
+  box-sizing: border-box;
 }
 
-.text-element:hover {
-  border-color: var(--accent-purple);
-}
-
+.text-element:hover,
 .text-element:focus,
 .text-element:focus-within {
   border-color: var(--accent-purple);
-  background-color: rgba(139, 92, 246, 0.05);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
 }
 
 .text-element .element-delete-btn {
-  display: none;
-}
-
-.text-element:hover .element-delete-btn,
-.text-element:focus-within .element-delete-btn {
-  display: flex;
+  display: flex !important;
+  z-index: 25;
 }
 
 /* Draggable Signature Element */
