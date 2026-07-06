@@ -181,6 +181,14 @@ function switchView(viewName) {
   } else {
     backBtn.classList.remove('hidden');
   }
+  
+  // Scroll window and containers to top so document is fully visible in active screen area
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  const viewports = document.querySelectorAll('.canvas-viewport, .workspace-main');
+  viewports.forEach(vp => {
+    vp.scrollTop = 0;
+    vp.scrollLeft = 0;
+  });
 }
 
 // Global UI Loaders & Feedback
@@ -701,6 +709,19 @@ function setEditorTool(tool) {
   } else {
     document.getElementById('options-metadata-panel').classList.remove('hidden');
   }
+
+  // Adjust pointer events dynamically so the drawing canvas doesn't block clicks on forms and text boxes
+  const overlay = document.querySelector('.annotation-overlay');
+  const drawingCanvas = document.querySelector('.drawing-canvas');
+  if (overlay && drawingCanvas) {
+    if (tool === 'draw' || tool === 'erase') {
+      overlay.style.pointerEvents = 'none';
+      drawingCanvas.style.pointerEvents = 'auto';
+    } else {
+      overlay.style.pointerEvents = 'auto';
+      drawingCanvas.style.pointerEvents = 'none';
+    }
+  }
 }
 
 async function loadEditorPage(pageIndex) {
@@ -718,6 +739,16 @@ async function loadEditorPage(pageIndex) {
   
   // Setup Freehand Drawing Layer
   setupDrawingLayer(renderData.drawingCanvas);
+  
+  // Set pointer events based on currently selected tool for the newly loaded page
+  const activeTool = state.editor.activeTool;
+  if (activeTool === 'draw' || activeTool === 'erase') {
+    renderData.annotationOverlay.style.pointerEvents = 'none';
+    renderData.drawingCanvas.style.pointerEvents = 'auto';
+  } else {
+    renderData.annotationOverlay.style.pointerEvents = 'auto';
+    renderData.drawingCanvas.style.pointerEvents = 'none';
+  }
   
   // Click to insert elements (text/signature)
   renderData.annotationOverlay.addEventListener('click', (e) => {

@@ -7,16 +7,13 @@ import { createWorker } from 'tesseract.js';
  * @returns {Promise<string>}
  */
 export async function runOcrOnCanvas(canvas, onProgress) {
-  const worker = await createWorker({
+  const worker = await createWorker('eng', 1, {
     logger: m => {
       if (m.status === 'recognizing' && onProgress) {
         onProgress(Math.round(m.progress * 100));
       }
     }
   });
-  
-  await worker.loadLanguage('eng');
-  await worker.initialize('eng');
   
   const { data: { text } } = await worker.recognize(canvas);
   await worker.terminate();

@@ -293,7 +293,19 @@ export async function encryptPdf(pdfBuffer, userPassword) {
  */
 export async function decryptPdf(pdfBuffer, password) {
   const pdfDoc = await PDFDocument.load(pdfBuffer, { password });
-  return await pdfDoc.save();
+  const cleanDoc = await PDFDocument.create();
+  
+  const pageIndices = pdfDoc.getPageIndices();
+  const copiedPages = await cleanDoc.copyPages(pdfDoc, pageIndices);
+  copiedPages.forEach(page => cleanDoc.addPage(page));
+  
+  cleanDoc.setTitle(pdfDoc.getTitle() || '');
+  cleanDoc.setAuthor(pdfDoc.getAuthor() || '');
+  cleanDoc.setSubject(pdfDoc.getSubject() || '');
+  cleanDoc.setCreator(pdfDoc.getCreator() || '');
+  cleanDoc.setProducer(pdfDoc.getProducer() || '');
+  
+  return await cleanDoc.save();
 }
 
 /**
