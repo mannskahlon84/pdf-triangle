@@ -301,6 +301,7 @@ function setupEditorWorkspace() {
       rotateBtn.disabled = false;
       closeBtn.disabled = false;
       document.getElementById('ocr-page-btn').disabled = false;
+      document.getElementById('editor-edit-pdf-text-btn').disabled = false;
       
       await loadEditorPage(0);
       await generateEditorThumbnails();
@@ -308,6 +309,79 @@ function setupEditorWorkspace() {
     } catch (err) {
       console.error(err);
       showToast('Failed to load PDF.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+
+  // Edit Existing PDF Text click handler
+  const editPdfTextBtn = document.getElementById('editor-edit-pdf-text-btn');
+  editPdfTextBtn.addEventListener('click', async () => {
+    const pageIdx = state.editor.activePage?.pageIndex;
+    if (pageIdx === undefined) return;
+    
+    showLoader('Extracting document text layers...');
+    try {
+      const blocks = await state.editor.pdfManager.extractNativeTextBlocks(pageIdx);
+      if (blocks.length === 0) {
+        showToast('No native editable text blocks found on this page.', 'warning');
+        return;
+      }
+      
+      const overlay = state.editor.activePage.annotationOverlay;
+      const overlayRect = overlay.getBoundingClientRect();
+      const pdfCanvas = state.editor.activePage.drawingCanvas;
+      const pdfCtx = pdfCanvas.getContext('2d');
+      
+      let count = 0;
+      blocks.forEach(block => {
+        const bboxX = block.percentX * pdfCanvas.width;
+        const bboxY = block.percentY * pdfCanvas.height;
+        const bboxW = block.percentW * pdfCanvas.width;
+        const bboxH = block.percentH * pdfCanvas.height;
+        
+        const pixel = pdfCtx.getImageData(
+          Math.max(0, Math.min(pdfCanvas.width - 1, bboxX - 2)),
+          Math.max(0, Math.min(pdfCanvas.height - 1, bboxY - 2)),
+          1, 1
+        ).data;
+        const r = pixel[0];
+        const g = pixel[1];
+        const b = pixel[2];
+        const bgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        
+        const cssHeight = block.percentH * overlayRect.height;
+        const fontSize = Math.max(8, Math.round(cssHeight * 0.76));
+        
+        const txtObj = {
+          percentX: block.percentX,
+          percentY: block.percentY,
+          percentW: block.percentW,
+          percentH: block.percentH,
+          text: block.text,
+          size: fontSize,
+          color: '#000000',
+          fontFamily: block.fontFamily || "'Inter', sans-serif",
+          isBold: false,
+          isItalic: false,
+          bgEnable: true, // auto cover original background text!
+          bgColor: bgColor,
+          overlayWidth: overlayRect.width,
+          overlayHeight: overlayRect.height
+        };
+        
+        state.editor.pdfManager.additions[pageIdx].text.push(txtObj);
+        state.editor.pdfManager.renderTextElement(txtObj, overlay, pageIdx);
+        count++;
+      });
+      
+      if (count > 0) {
+        window.saveHistoryState(pageIdx);
+        showToast(`Converted ${count} existing text blocks into editable overlays!`, 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to extract native text.', 'danger');
     } finally {
       hideLoader();
     }
@@ -757,6 +831,7 @@ function resetEditor() {
   document.getElementById('editor-rotate-btn').disabled = true;
   document.getElementById('editor-close-btn').disabled = true;
   document.getElementById('ocr-page-btn').disabled = true;
+  document.getElementById('editor-edit-pdf-text-btn').disabled = true;
   
   document.getElementById('form-field-editor-properties').classList.add('hidden');
   document.getElementById('options-form-field-tool').classList.add('hidden');
@@ -836,6 +911,7 @@ function resetInactiveTools(activeViewName) {
     safeDOM.disable('editor-rotate-btn', true);
     safeDOM.disable('editor-close-btn', true);
     safeDOM.disable('ocr-page-btn', true);
+    safeDOM.disable('editor-edit-pdf-text-btn', true);
     
     safeDOM.hide('form-field-editor-properties');
     safeDOM.hide('options-form-field-tool');
@@ -4446,6 +4522,7 @@ function setupFormbuilderWorkspace() {
       document.getElementById('editor-rotate-btn').disabled = false;
       document.getElementById('editor-close-btn').disabled = false;
       document.getElementById('ocr-page-btn').disabled = false;
+      document.getElementById('editor-edit-pdf-text-btn').disabled = false;
       
       // Render first page and thumbnails
       await loadEditorPage(0);

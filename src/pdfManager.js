@@ -770,4 +770,48 @@ export class PdfManager {
       return null;
     }
   }
+
+  /**
+   * Extracts text items and computes precise absolute overlay percentage coordinates
+   */
+  async extractNativeTextBlocks(pageIndex) {
+    try {
+      if (!this.pdfJsDoc) return [];
+      const page = await this.pdfJsDoc.getPage(pageIndex + 1);
+      const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: 1.5 });
+      
+      const textContent = await page.getTextContent();
+      const blocks = [];
+      
+      textContent.items.forEach(item => {
+        if (!item.str || item.str.trim().length === 0) return;
+        
+        const x = item.transform[4];
+        const y = item.transform[5];
+        const fontHeight = item.transform[3];
+        
+        const percentX = x / pageWidth;
+        const percentY = (pageHeight - y - item.height) / pageHeight;
+        const percentW = item.width / pageWidth;
+        const percentH = item.height / pageHeight;
+        
+        const style = textContent.styles[item.fontName];
+        
+        blocks.push({
+          percentX,
+          percentY,
+          percentW,
+          percentH,
+          text: item.str,
+          fontSize: Math.max(10, Math.round(fontHeight)),
+          fontFamily: style ? style.fontFamily : "'Inter', sans-serif"
+        });
+      });
+      
+      return blocks;
+    } catch (err) {
+      console.error('Text block extraction error:', err);
+      return [];
+    }
+  }
 }
