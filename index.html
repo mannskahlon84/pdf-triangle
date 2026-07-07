@@ -126,6 +126,14 @@
               <button class="btn btn-primary">Open Tool</button>
             </div>
 
+            <!-- AI Copilot / Summarizer -->
+            <div class="tool-card" data-tool="copilot">
+              <div class="card-icon purple" style="background: linear-gradient(135deg, #a78bfa, #8b5cf6); color: white;"><i data-lucide="sparkles"></i></div>
+              <h3>AI Copilot / Summarizer</h3>
+              <p>Upload PDF, Word, Excel, or JPG to generate summaries or execute raw AI commands in real-time.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
             <!-- Split PDF -->
             <div class="tool-card" data-tool="split">
               <div class="card-icon red"><i data-lucide="scissors"></i></div>
@@ -1339,6 +1347,92 @@
               <p>Drag & drop PDF, Word, Excel, or images here, or <span class="highlight" style="color: var(--accent-pink);">browse file</span></p>
               <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Supports .pdf, .docx, .xlsx, .jpg, .png, .webp</p>
               <input type="file" id="formbuilder-file-input" accept=".pdf, .docx, .xlsx, image/png, image/jpeg, image/webp" class="hidden" />
+            </div>
+          </div>
+        </section>
+
+        <!-- 18. AI COPILOT WORKSPACE -->
+        <section id="copilot-view" class="view-panel hidden">
+          <div class="workspace-layout">
+            <!-- Sidebar / Chat Area -->
+            <aside class="workspace-sidebar" style="width: 380px; flex-shrink: 0; display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--border-color);">
+              <div class="sidebar-header" style="display: flex; align-items: center; justify-content: space-between;">
+                <h4 style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;"><i data-lucide="sparkles" style="color: var(--accent-purple); width: 18px; height: 18px;"></i> AI Copilot Chat</h4>
+                <a href="#/dashboard" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; height: auto;">Dashboard</a>
+              </div>
+              
+              <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1; overflow: hidden;">
+                <!-- API Key Config -->
+                <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); flex-shrink: 0;">
+                  <i data-lucide="key" style="width: 16px; height: 16px; color: var(--accent-purple);"></i>
+                  <input type="password" id="copilot-api-key" placeholder="Enter Gemini API Key..." style="flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: 0.75rem; outline: none;" />
+                  <button class="btn btn-purple" id="copilot-save-key-btn" style="padding: 0.25rem 0.5rem; font-size: 0.65rem; height: auto;">Save Key</button>
+                </div>
+                
+                <!-- Chat history -->
+                <div id="copilot-chat-history" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: var(--bg-secondary); min-height: 180px;">
+                  <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--border-radius-sm); font-size: 0.8125rem; color: var(--text-secondary); border-left: 3px solid var(--accent-purple);">
+                    <p><strong>Copilot:</strong> Hello! Upload your document, then write a query or request a summary in the input below. I can reformat tables, extract data, translate, or summarize into Word, Excel, or PDF formats!</p>
+                  </div>
+                </div>
+                
+                <!-- Suggestions -->
+                <div id="copilot-suggestions" style="display: flex; flex-direction: column; gap: 0.35rem; flex-shrink: 0;">
+                  <span style="font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Quick Prompts:</span>
+                  <button class="btn btn-secondary copilot-suggest-btn" data-prompt="Summarize this document in 3 short paragraphs" style="text-align: left; font-size: 0.75rem; padding: 0.375rem 0.5rem; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">✨ Summarize Document</button>
+                  <button class="btn btn-secondary copilot-suggest-btn" data-prompt="Extract all employee names and split them into First, Middle, and Last name columns in a table" style="text-align: left; font-size: 0.75rem; padding: 0.375rem 0.5rem; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">✨ Split employee names (Excel / Grid)</button>
+                  <button class="btn btn-secondary copilot-suggest-btn" data-prompt="Extract key deliverables and dates into a clean table structure" style="text-align: left; font-size: 0.75rem; padding: 0.375rem 0.5rem; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">✨ Extract Tables & Dates</button>
+                </div>
+                
+                <!-- Prompt Input box -->
+                <div style="position: relative; margin-top: auto; flex-shrink: 0;">
+                  <textarea id="copilot-prompt-input" placeholder="Ask Copilot what to do with this document..." style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); padding: 0.5rem 3rem 0.5rem 0.5rem; font-size: 0.8125rem; resize: none; height: 60px; outline: none;"></textarea>
+                  <button class="btn btn-purple" id="copilot-send-btn" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); height: 34px; width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-purple); border-radius: 50%; border: none; cursor: pointer; color: white;"><i data-lucide="send" style="width: 16px; height: 16px;"></i></button>
+                </div>
+              </div>
+            </aside>
+            
+            <!-- Main Content / Preview Area -->
+            <div class="workspace-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+              <div class="workspace-toolbar" style="height: auto; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); flex-shrink: 0; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Output format:</span>
+                  <select id="copilot-output-format" style="font-size: 0.8125rem; padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-weight: 600;">
+                    <option value="pdf">PDF Document</option>
+                    <option value="docx">Word Document (.docx)</option>
+                    <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                    <option value="jpg">Image (.jpg)</option>
+                  </select>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem;">
+                  <button class="btn btn-secondary" id="copilot-upload-trigger-btn" style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i> Upload another file
+                  </button>
+                  <input type="file" id="copilot-file-input" accept=".pdf, .docx, .xlsx, image/png, image/jpeg, image/webp" class="hidden" />
+                  <button class="btn btn-success" id="copilot-download-btn" disabled style="display: inline-flex; align-items: center; gap: 0.375rem; height: 38px;">
+                    <i data-lucide="download" style="width: 16px; height: 16px;"></i> Download Result
+                  </button>
+                </div>
+              </div>
+              
+              <div class="canvas-viewport" id="copilot-viewport" style="flex: 1; overflow: auto; background-color: var(--bg-primary); padding: 2rem; position: relative;">
+                <!-- Upload State -->
+                <div class="empty-state-large" id="copilot-upload-zone" style="cursor: pointer; border: 2px dashed var(--border-color); border-radius: var(--border-radius-lg); padding: 3rem; text-align: center; margin: 0 auto; max-width: 500px;">
+                  <i data-lucide="sparkles" style="width: 48px; height: 48px; color: var(--accent-purple); margin-bottom: 1rem;"></i>
+                  <h2>AI Copilot Summarizer</h2>
+                  <p>Upload a document (PDF, Word, Excel, or Image) to begin interacting with the AI Copilot.</p>
+                  <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">All text extraction and API request formatting happens locally inside your browser.</p>
+                </div>
+                
+                <!-- Live Preview State -->
+                <div class="hidden" id="copilot-preview-container" style="display: inline-block; width: 100%; max-width: 900px; margin: 0 auto; text-align: left; vertical-align: top;">
+                  <div style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.5rem; box-shadow: var(--shadow-lg); min-height: 500px;" id="copilot-preview-box">
+                    <!-- Dynamic preview content goes here (Spreadsheet grid, or formatted page layout) -->
+                    <div class="empty-state-text">No output generated yet. Type your query or choose a quick prompt to generate content.</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
