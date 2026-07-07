@@ -264,6 +264,7 @@ function setupEditorWorkspace() {
     const file = e.target.files[0];
     if (!file) return;
     
+    state.editor.hasInitializedZoom = false;
     showLoader('Loading PDF document...');
     try {
       const buffer = await file.arrayBuffer();
@@ -717,6 +718,8 @@ function resetEditor() {
     state.editor.pdfManager.file = null;
     state.editor.pdfManager.additions = {};
   }
+  state.editor.hasInitializedZoom = false;
+  state.editor.zoom = 1.0;
   
   const fileInput = document.getElementById('editor-file-input');
   if (fileInput) fileInput.value = '';
@@ -1410,6 +1413,22 @@ async function loadEditorPage(pageIndex) {
     if (idx === pageIndex) thumb.classList.add('active');
     else thumb.classList.remove('active');
   });
+
+  // Calculate default fit-to-width zoom level on first load
+  if (!state.editor.hasInitializedZoom) {
+    const viewport = document.getElementById('canvas-viewport');
+    const baseWidth = renderData.drawingCanvas.width || 800;
+    
+    if (viewport && baseWidth > 0) {
+      const clientW = viewport.clientWidth - 48; // allowing padding
+      if (clientW < baseWidth) {
+        state.editor.zoom = Math.max(0.3, Math.min(1.0, clientW / baseWidth));
+      } else {
+        state.editor.zoom = 1.0;
+      }
+    }
+    state.editor.hasInitializedZoom = true;
+  }
 
   // Apply current zoom factor and zoom-wrapper sizes
   if (window.updateEditorZoom) {
