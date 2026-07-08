@@ -296,6 +296,10 @@ function setupEditorWorkspace() {
       document.getElementById('editor-empty-state').classList.add('hidden');
       document.getElementById('zoom-wrapper').classList.remove('hidden');
       document.getElementById('active-page-container').classList.remove('hidden');
+      
+      const floatingBar = document.getElementById('floating-navigator-bar');
+      if (floatingBar) floatingBar.classList.remove('hidden');
+      
       saveBtn.disabled = false;
       printBtn.disabled = false;
       rotateBtn.disabled = false;
@@ -401,6 +405,63 @@ function setupEditorWorkspace() {
     await runEditPdfTextExtraction();
   });
 
+  // Sidebar Save Button Click (Redirects to main saveBtn)
+  const sidebarSaveBtn = document.getElementById('editor-sidebar-save-btn');
+  if (sidebarSaveBtn) {
+    sidebarSaveBtn.addEventListener('click', () => {
+      saveBtn.click();
+    });
+  }
+
+  // Annotate vs Edit Mode Switcher Controls (iLovePDF Style)
+  const modeAnnotateBtn = document.getElementById('mode-annotate-btn');
+  const modeEditBtn = document.getElementById('mode-edit-btn');
+
+  if (modeAnnotateBtn && modeEditBtn) {
+    modeAnnotateBtn.addEventListener('click', async () => {
+      if (modeAnnotateBtn.classList.contains('active')) return;
+      
+      modeAnnotateBtn.classList.add('active');
+      modeEditBtn.classList.remove('active');
+      
+      // Set to Select/Pan tool
+      setEditorTool('pan');
+      
+      // Reload current page to wipe out temporary editable text block divs
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined) {
+        showLoader('Exiting Edit mode...');
+        await loadEditorPage(pageIdx);
+        hideLoader();
+      }
+    });
+
+    modeEditBtn.addEventListener('click', () => {
+      if (modeEditBtn.classList.contains('active')) return;
+      // Trigger the ad unlock modal countdown!
+      editPdfTextBtn.click();
+    });
+  }
+
+  // Floating Navigator Page Up/Down Buttons
+  const floatPrevPage = document.getElementById('float-prev-page');
+  const floatNextPage = document.getElementById('float-next-page');
+
+  if (floatPrevPage && floatNextPage) {
+    floatPrevPage.addEventListener('click', () => {
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined && pageIdx > 0) {
+        loadEditorPage(pageIdx - 1);
+      }
+    });
+    floatNextPage.addEventListener('click', () => {
+      const pageIdx = state.editor.activePage?.pageIndex;
+      if (pageIdx !== undefined && state.editor.pdfManager && pageIdx < state.editor.pdfManager.numPages - 1) {
+        loadEditorPage(pageIdx + 1);
+      }
+    });
+  }
+
   async function runEditPdfTextExtraction() {
     const pageIdx = state.editor.activePage?.pageIndex;
     if (pageIdx === undefined) return;
@@ -461,6 +522,15 @@ function setupEditorWorkspace() {
       });
       
       if (count > 0) {
+        // Toggle mode buttons active classes
+        if (modeEditBtn && modeAnnotateBtn) {
+          modeEditBtn.classList.add('active');
+          modeAnnotateBtn.classList.remove('active');
+        }
+        
+        // Show text styling options sidebar
+        setEditorTool('text');
+        
         window.saveHistoryState(pageIdx);
         showToast(`Converted ${count} existing text blocks into editable overlays!`, 'success');
       }
@@ -530,8 +600,13 @@ function setupEditorWorkspace() {
 
   if (zoomInBtn && zoomOutBtn && zoomValSpan) {
     const updateZoom = (level) => {
-      state.editor.zoom = Math.max(0.5, Math.min(2.5, level));
+      state.editor.zoom = Math.max(0.25, Math.min(2.5, level));
       zoomValSpan.textContent = `${Math.round(state.editor.zoom * 100)}%`;
+      
+      const floatZoomVal = document.getElementById('float-zoom-val');
+      if (floatZoomVal) {
+        floatZoomVal.textContent = `${Math.round(state.editor.zoom * 100)}%`;
+      }
       
       const pageContainer = document.getElementById('active-page-container');
       const zoomWrapper = document.getElementById('zoom-wrapper');
@@ -552,6 +627,25 @@ function setupEditorWorkspace() {
 
     zoomInBtn.addEventListener('click', () => updateZoom(state.editor.zoom + 0.1));
     zoomOutBtn.addEventListener('click', () => updateZoom(state.editor.zoom - 0.1));
+    
+    // Wire up floating navigator zoom buttons
+    const floatZoomIn = document.getElementById('float-zoom-in');
+    const floatZoomOut = document.getElementById('float-zoom-out');
+    const floatFitWidth = document.getElementById('float-fit-width');
+    
+    if (floatZoomIn) floatZoomIn.addEventListener('click', () => updateZoom(state.editor.zoom + 0.1));
+    if (floatZoomOut) floatZoomOut.addEventListener('click', () => updateZoom(state.editor.zoom - 0.1));
+    if (floatFitWidth) {
+      floatFitWidth.addEventListener('click', () => {
+        const pageContainer = document.getElementById('active-page-container');
+        if (pageContainer && viewport) {
+          const viewportWidth = viewport.clientWidth - 64; // pad
+          const baseWidth = parseFloat(pageContainer.style.width) || pageContainer.offsetWidth || 800;
+          const fitZoom = Math.max(0.25, Math.min(2.5, viewportWidth / baseWidth));
+          updateZoom(fitZoom);
+        }
+      });
+    }
   }
 
   // Responsive Mobile Sidebars Toggle handlers
@@ -897,6 +991,9 @@ function resetEditor() {
   document.getElementById('editor-empty-state').classList.remove('hidden');
   document.getElementById('zoom-wrapper').classList.add('hidden');
   document.getElementById('active-page-container').classList.add('hidden');
+  
+  const floatingBar = document.getElementById('floating-navigator-bar');
+  if (floatingBar) floatingBar.classList.add('hidden');
   document.getElementById('active-page-container').innerHTML = '';
   
   document.getElementById('editor-thumbnails').innerHTML = '<div class="empty-state-text">No document loaded</div>';
@@ -1594,6 +1691,12 @@ async function loadEditorPage(pageIndex) {
     if (idx === pageIndex) thumb.classList.add('active');
     else thumb.classList.remove('active');
   });
+
+  // Update floating page navigator count
+  const floatPageNum = document.getElementById('float-page-num');
+  if (floatPageNum && state.editor.pdfManager) {
+    floatPageNum.textContent = `${pageIndex + 1} / ${state.editor.pdfManager.numPages}`;
+  }
 
   // Calculate default fit-to-width zoom level on first load
   if (!state.editor.hasInitializedZoom) {

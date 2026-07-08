@@ -202,18 +202,20 @@ export class PdfManager {
       }
     });
 
-    // Double click to trigger edit mode
-    el.addEventListener('dblclick', (e) => {
+    // Single click to trigger edit mode
+    el.addEventListener('click', (e) => {
       e.stopPropagation();
-      el.contentEditable = 'true';
-      el.focus();
-      
-      // Select all text
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
+      if (el.contentEditable !== 'true') {
+        el.contentEditable = 'true';
+        el.focus();
+        
+        // Select all text
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
     });
 
     // Dragging wrapper logic (bound to wrapper, using dynamic doc listeners)

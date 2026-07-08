@@ -1742,3 +1742,42 @@ body.fixed-viewport .app-content {
   }
 }
 
+/* Annotate vs Edit Mode Switcher (iLovePDF Style) */
+.mode-toggles {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.mode-toggle-btn {
+  color: var(--text-secondary);
+}
+
+.mode-toggle-btn.active {
+  background-color: var(--accent-purple) !important;
+  color: white !important;
+  box-shadow: var(--shadow-sm);
+}
+
+body.dark-mode .mode-toggle-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Floating Navigator Bar Hover Effects */
+.floating-navigator-bar button {
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.floating-navigator-bar button:hover {
+  opacity: 0.85;
+  transform: scale(1.1);
+}
+
+.floating-navigator-bar button:active {
+  transform: scale(0.95);
+}
+

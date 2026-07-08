@@ -256,7 +256,12 @@
             <!-- Main Render Area -->
             <div class="workspace-main">
               <div class="workspace-toolbar" style="height: auto; padding: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
-                <div class="toolbar-group" style="gap: 0.5rem; flex-wrap: wrap; margin-right: auto;">
+                <div class="toolbar-group" style="gap: 0.5rem; flex-wrap: wrap; margin-right: auto; align-items: center;">
+                  <!-- Annotate vs Edit Mode Switcher -->
+                  <div class="mode-toggles" style="display: flex; background: var(--bg-tertiary); padding: 0.25rem; border-radius: 30px; border: 1px solid var(--border-color); margin-right: 0.5rem; flex-shrink: 0; height: 38px; align-items: center;">
+                    <button class="mode-toggle-btn active" id="mode-annotate-btn" style="border: none; background: transparent; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-primary); transition: all var(--transition-fast);">Annotate</button>
+                    <button class="mode-toggle-btn" id="mode-edit-btn" style="border: none; background: transparent; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 0.25rem; transition: all var(--transition-fast);">Edit <i data-lucide="crown" style="width: 12px; height: 12px; color: #f59e0b;"></i></button>
+                  </div>
                   <button class="tool-btn active" data-action="pan" title="Select / Move" style="display: flex; flex-direction: column; height: auto; padding: 0.5rem; width: 64px; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.25rem;">
                     <i data-lucide="mouse-pointer" style="width: 20px; height: 20px;"></i>
                     <span>Select</span>
@@ -367,6 +372,23 @@
                   <div class="page-container" id="active-page-container" style="position: absolute; top: 0; left: 0; margin: 0; transform-origin: left top;">
                     <!-- The PDF Canvas & Annotation Layer will be dynamically generated here -->
                   </div>
+                </div>
+
+                <!-- Floating page navigator and zoom bar (iLovePDF Style) -->
+                <div class="floating-navigator-bar hidden" id="floating-navigator-bar" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.75rem; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(10px); padding: 0.5rem 1rem; border-radius: 30px; z-index: 100; box-shadow: var(--shadow-xl); border: 1px solid rgba(255, 255, 255, 0.15); color: white;">
+                  <button id="float-prev-page" title="Previous Page" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="chevron-up" style="width: 16px; height: 16px;"></i></button>
+                  <button id="float-next-page" title="Next Page" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i></button>
+                  <span style="font-size: 0.75rem; font-weight: 700; min-width: 45px; text-align: center;" id="float-page-num">1 / 1</span>
+                  
+                  <div style="width: 1px; height: 16px; background: rgba(255, 255, 255, 0.2); flex-shrink: 0;"></div>
+                  
+                  <button id="float-zoom-out" title="Zoom Out" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="minus" style="width: 14px; height: 14px;"></i></button>
+                  <span style="font-size: 0.75rem; font-weight: 700; min-width: 40px; text-align: center;" id="float-zoom-val">100%</span>
+                  <button id="float-zoom-in" title="Zoom In" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="plus" style="width: 14px; height: 14px;"></i></button>
+                  
+                  <div style="width: 1px; height: 16px; background: rgba(255, 255, 255, 0.2); flex-shrink: 0;"></div>
+                  
+                  <button id="float-fit-width" title="Fit to screen width" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="expand" style="width: 14px; height: 14px; color: var(--accent-pink);"></i></button>
                 </div>
               </div>
             </div>
