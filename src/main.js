@@ -494,7 +494,12 @@ function setupEditorWorkspace() {
         const r = pixel[0];
         const g = pixel[1];
         const b = pixel[2];
-        const bgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        
+        // Default to white background color if the extracted pixel is black/dark
+        let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        if (r < 120 && g < 120 && b < 120) {
+          finalBgColor = '#ffffff';
+        }
         
         const cssHeight = block.percentH * overlayRect.height;
         const fontSize = Math.max(8, Math.round(cssHeight * 0.76));
@@ -511,7 +516,7 @@ function setupEditorWorkspace() {
           isBold: false,
           isItalic: false,
           bgEnable: true, // auto cover original background text!
-          bgColor: bgColor,
+          bgColor: finalBgColor,
           overlayWidth: overlayRect.width,
           overlayHeight: overlayRect.height
         };

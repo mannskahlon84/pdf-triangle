@@ -596,8 +596,13 @@ body.fixed-viewport .view-panel.active {
 }
 
 .text-element-wrapper .element-delete-btn {
-  display: flex !important;
+  display: none !important;
   z-index: 35;
+}
+
+.text-element-wrapper:hover .element-delete-btn,
+.text-element-wrapper:focus-within .element-delete-btn {
+  display: flex !important;
 }
 
 .text-element {
