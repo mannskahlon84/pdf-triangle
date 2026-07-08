@@ -176,10 +176,10 @@ function switchView(viewName) {
   state.activeTool = viewName;
   
   // Toggle fixed body viewport to lock screen scrollbars and keep tools sticky
-  if (viewName === 'dashboard') {
-    document.body.classList.remove('fixed-viewport');
-  } else {
+  if (viewName === 'editor' || viewName === 'copilot') {
     document.body.classList.add('fixed-viewport');
+  } else {
+    document.body.classList.remove('fixed-viewport');
   }
 
   // Clear all other inactive tool workspaces to avoid file leakage/lingering state
