@@ -4787,12 +4787,14 @@ function setupCopilotWorkspace() {
       // Excel/Spreadsheet Mode
       const tableWrapper = document.createElement('div');
       tableWrapper.style.width = '100%';
+      tableWrapper.style.maxHeight = '550px';
       tableWrapper.style.overflow = 'auto';
       tableWrapper.style.border = '1px solid var(--border-color)';
       tableWrapper.style.borderRadius = 'var(--border-radius-sm)';
       
       const table = document.createElement('table');
-      table.style.width = '100%';
+      table.style.width = 'max-content';
+      table.style.minWidth = '100%';
       table.style.borderCollapse = 'collapse';
       table.style.fontFamily = 'monospace';
       table.style.fontSize = '0.8125rem';
@@ -4816,6 +4818,7 @@ function setupCopilotWorkspace() {
         th.style.border = '1px solid var(--border-color)';
         th.style.padding = '0.35rem';
         th.style.textAlign = 'center';
+        th.style.minWidth = '120px';
         th.textContent = String.fromCharCode(65 + i); // A, B, C...
         headRow.appendChild(th);
       }
@@ -4841,6 +4844,8 @@ function setupCopilotWorkspace() {
           td.style.border = '1px solid var(--border-color)';
           td.style.padding = '0.35rem';
           td.style.backgroundColor = 'var(--bg-secondary)';
+          td.style.minWidth = '120px';
+          td.style.whiteSpace = 'nowrap';
           td.textContent = row[i] !== undefined ? row[i] : '';
           tr.appendChild(td);
         }
