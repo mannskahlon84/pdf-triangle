@@ -1360,7 +1360,16 @@ function setEditorTool(tool) {
 
   const overlay = document.querySelector('.annotation-overlay');
   const drawingCanvas = document.querySelector('.drawing-canvas');
+  const pageContainer = document.getElementById('active-page-container');
   if (overlay && drawingCanvas) {
+    const isDrawingTool = tool === 'draw' || tool === 'erase' || tool === 'shape' || tool === 'stamp';
+    
+    if (pageContainer) {
+      pageContainer.style.touchAction = isDrawingTool ? 'none' : 'pan-x pan-y';
+    }
+    drawingCanvas.style.touchAction = isDrawingTool ? 'none' : 'pan-x pan-y';
+    overlay.style.touchAction = isDrawingTool ? 'none' : 'pan-x pan-y';
+
     if (tool === 'fontdetect') {
       overlay.style.pointerEvents = 'auto';
       drawingCanvas.style.pointerEvents = 'none';
