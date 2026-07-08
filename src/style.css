@@ -1637,6 +1637,11 @@ body {
   }
 }
 
+.copilot-sidebar {
+  width: 380px;
+  max-width: 100%;
+}
+
 /* Locked Height & Non-scrolling body for fixed desktop/mobile toolbars */
 body.fixed-viewport {
   height: 100vh !important;
@@ -1654,6 +1659,14 @@ body.fixed-viewport .app-content {
     position: relative;
     height: calc(100vh - 70px);
     overflow: hidden;
+    flex-direction: column !important;
+  }
+
+  .copilot-sidebar {
+    width: 100% !important;
+    height: 340px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
   }
 
   .workspace-sidebar {
