@@ -780,7 +780,9 @@ export class PdfManager {
     try {
       if (!this.pdfJsDoc) return [];
       const page = await this.pdfJsDoc.getPage(pageIndex + 1);
-      const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: 1.5 });
+      const viewport = page.getViewport({ scale: 1.0 });
+      const pageWidth = viewport.width;
+      const pageHeight = viewport.height;
       
       const textContent = await page.getTextContent();
       const blocks = [];
@@ -790,12 +792,12 @@ export class PdfManager {
         
         const x = item.transform[4];
         const y = item.transform[5];
-        const fontHeight = item.transform[3];
+        const fontHeight = Math.abs(item.transform[3]);
         
         const percentX = x / pageWidth;
-        const percentY = (pageHeight - y - item.height) / pageHeight;
+        const percentY = (pageHeight - y - fontHeight) / pageHeight;
         const percentW = item.width / pageWidth;
-        const percentH = item.height / pageHeight;
+        const percentH = fontHeight / pageHeight;
         
         const style = textContent.styles[item.fontName];
         

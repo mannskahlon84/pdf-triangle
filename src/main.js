@@ -501,8 +501,7 @@ function setupEditorWorkspace() {
           finalBgColor = '#ffffff';
         }
         
-        const cssHeight = block.percentH * overlayRect.height;
-        const fontSize = Math.max(8, Math.round(cssHeight * 0.76));
+        const fontSize = Math.max(8, Math.round(block.fontSize * 1.5));
         
         const txtObj = {
           percentX: block.percentX,
