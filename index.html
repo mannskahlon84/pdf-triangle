@@ -255,8 +255,9 @@
 
             <!-- Main Render Area -->
             <div class="workspace-main">
-              <div class="workspace-toolbar" style="height: 52px; padding: 0.35rem 1rem; flex-wrap: nowrap; overflow-x: auto; gap: 0.75rem; align-items: center; justify-content: space-between; display: flex; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--border-color); flex-shrink: 0; width: 100%;">
-                <div class="toolbar-group" style="gap: 0.35rem; flex-wrap: nowrap; display: flex; align-items: center; flex-shrink: 0; margin-right: auto;">
+              <div class="workspace-toolbar" style="display: flex; flex-direction: column; gap: 0.35rem; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-secondary); width: 100%;">
+                <!-- Row 1: Mode Switcher & Tool Buttons -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; height: 38px;">
                   <!-- Annotate vs Edit Mode Switcher -->
                   <div class="mode-toggles" style="display: flex; background: var(--bg-tertiary); padding: 0.2rem; border-radius: 30px; border: 1px solid var(--border-color); margin-right: 0.5rem; flex-shrink: 0; height: 34px; align-items: center;">
                     <button class="mode-toggle-btn active" id="mode-annotate-btn" style="border: none; background: transparent; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-primary); transition: all var(--transition-fast);">Annotate</button>
@@ -301,7 +302,8 @@
                   </button>
                 </div>
                 
-                <div class="toolbar-group file-actions" style="gap: 0.5rem; flex-wrap: nowrap; display: flex; align-items: center; flex-shrink: 0;">
+                <!-- Row 2: File Actions & Zoom Controls -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; height: 38px;">
                   <!-- Mobile Pages Toggle -->
                   <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-thumbnails" title="Toggle Pages" style="display: none; height: 34px; width: 34px; align-items: center; justify-content: center; padding: 0;">
                     <i data-lucide="book-open" style="width: 16px; height: 16px;"></i>
@@ -313,9 +315,11 @@
                   <button class="btn btn-secondary" id="editor-redo-btn" disabled title="Redo (Ctrl+Y)" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;">
                     <i data-lucide="redo" style="width: 16px; height: 16px;"></i>
                   </button>
+                  
+                  <div style="width: 1px; height: 18px; background: var(--border-color); flex-shrink: 0; margin: 0 0.15rem;"></div>
 
                   <!-- Zoom Controls -->
-                  <div class="zoom-controls" style="display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 0.125rem 0.35rem; height: 34px; box-sizing: border-box;">
+                  <div class="zoom-controls" style="display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 0.125rem 0.35rem; height: 34px; box-sizing: border-box; flex-shrink: 0;">
                     <button class="btn-icon" id="editor-zoom-out" title="Zoom Out" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);">
                       <i data-lucide="zoom-out" style="width: 14px; height: 14px;"></i>
                     </button>
@@ -325,26 +329,29 @@
                     </button>
                   </div>
 
-                  <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.5rem; font-size: 0.75rem;">
+                  <div style="width: 1px; height: 18px; background: var(--border-color); flex-shrink: 0; margin: 0 0.15rem;"></div>
+
+                  <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
                     <i data-lucide="print" style="width: 14px; height: 14px;"></i> <span>Print</span>
                   </button>
-                  <button class="btn btn-secondary" id="editor-rotate-btn" disabled title="Rotate Page" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.5rem; font-size: 0.75rem;">
+                  <button class="btn btn-secondary" id="editor-rotate-btn" disabled title="Rotate Page" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
                     <i data-lucide="rotate-cw" style="width: 14px; height: 14px;"></i> <span>Rotate</span>
                   </button>
-                  <button class="btn btn-secondary" id="editor-upload-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.5rem; font-size: 0.75rem;">
+                  <button class="btn btn-secondary" id="editor-upload-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
                     <i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i> <span>Upload</span>
                   </button>
                   <input type="file" id="editor-file-input" accept=".pdf" class="hidden" />
-                  <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.75rem; font-size: 0.75rem; font-weight: 600;">
+                  
+                  <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.75rem; font-size: 0.75rem; font-weight: 600; flex-shrink: 0;">
                     <i data-lucide="download" style="width: 14px; height: 14px;"></i> <span>Download PDF</span>
                   </button>
 
                   <!-- Mobile Settings/Options Toggle -->
-                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-options" title="Toggle Options" style="display: none; height: 34px; width: 34px; align-items: center; justify-content: center; padding: 0;">
+                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-options" title="Toggle Options" style="display: none; height: 34px; width: 34px; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;">
                     <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
                   </button>
 
-                  <button class="btn btn-danger" id="editor-close-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.5rem; font-size: 0.75rem;">
+                  <button class="btn btn-danger" id="editor-close-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
                     <i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> <span>Clear File</span>
                   </button>
                 </div>
@@ -363,23 +370,23 @@
                     <!-- The PDF Canvas & Annotation Layer will be dynamically generated here -->
                   </div>
                 </div>
+              </div>
 
-                <!-- Floating page navigator and zoom bar (iLovePDF Style) -->
-                <div class="floating-navigator-bar hidden" id="floating-navigator-bar" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.75rem; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(10px); padding: 0.5rem 1rem; border-radius: 30px; z-index: 100; box-shadow: var(--shadow-xl); border: 1px solid rgba(255, 255, 255, 0.15); color: white;">
-                  <button id="float-prev-page" title="Previous Page" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="chevron-up" style="width: 16px; height: 16px;"></i></button>
-                  <button id="float-next-page" title="Next Page" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i></button>
-                  <span style="font-size: 0.75rem; font-weight: 700; min-width: 45px; text-align: center;" id="float-page-num">1 / 1</span>
-                  
-                  <div style="width: 1px; height: 16px; background: rgba(255, 255, 255, 0.2); flex-shrink: 0;"></div>
-                  
-                  <button id="float-zoom-out" title="Zoom Out" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="minus" style="width: 14px; height: 14px;"></i></button>
-                  <span style="font-size: 0.75rem; font-weight: 700; min-width: 40px; text-align: center;" id="float-zoom-val">100%</span>
-                  <button id="float-zoom-in" title="Zoom In" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="plus" style="width: 14px; height: 14px;"></i></button>
-                  
-                  <div style="width: 1px; height: 16px; background: rgba(255, 255, 255, 0.2); flex-shrink: 0;"></div>
-                  
-                  <button id="float-fit-width" title="Fit to screen width" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="expand" style="width: 14px; height: 14px; color: var(--accent-pink);"></i></button>
-                </div>
+              <!-- Floating page navigator and zoom bar (iLovePDF Style) - Placed outside canvas-viewport to remain fixed -->
+              <div class="floating-navigator-bar hidden" id="floating-navigator-bar" style="position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.75rem; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(10px); padding: 0.5rem 1rem; border-radius: 30px; z-index: 100; box-shadow: var(--shadow-xl); border: 1px solid rgba(255, 255, 255, 0.15); color: white;">
+                <button id="float-prev-page" title="Previous Page" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="chevron-up" style="width: 16px; height: 16px;"></i></button>
+                <button id="float-next-page" title="Next Page" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i></button>
+                <span style="font-size: 0.75rem; font-weight: 700; min-width: 45px; text-align: center;" id="float-page-num">1 / 1</span>
+                
+                <div style="width: 1px; height: 16px; background: rgba(255, 255, 255, 0.2); flex-shrink: 0;"></div>
+                
+                <button id="float-zoom-out" title="Zoom Out" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="minus" style="width: 14px; height: 14px;"></i></button>
+                <span style="font-size: 0.75rem; font-weight: 700; min-width: 40px; text-align: center;" id="float-zoom-val">100%</span>
+                <button id="float-zoom-in" title="Zoom In" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="plus" style="width: 14px; height: 14px;"></i></button>
+                
+                <div style="width: 1px; height: 16px; background: rgba(255, 255, 255, 0.2); flex-shrink: 0;"></div>
+                
+                <button id="float-fit-width" title="Fit to screen width" style="background: none; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem;"><i data-lucide="expand" style="width: 14px; height: 14px; color: var(--accent-pink);"></i></button>
               </div>
             </div>
 
