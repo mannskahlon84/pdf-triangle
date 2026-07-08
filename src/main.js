@@ -314,22 +314,90 @@ function setupEditorWorkspace() {
     }
   });
 
-  // Edit Existing PDF Text click handler (Triggers Native App Download Modal)
+  // Edit Existing PDF Text click handler (Triggers Ad Sponsored Unlock Modal)
   const editPdfTextBtn = document.getElementById('editor-edit-pdf-text-btn');
   const appDownloadModal = document.getElementById('app-download-modal');
   const appDownloadCloseBtn = document.getElementById('app-download-close-btn');
   const appDownloadDemoBtn = document.getElementById('app-download-demo-btn');
+  
+  let adCountdownInterval = null;
 
   editPdfTextBtn.addEventListener('click', () => {
     appDownloadModal.classList.remove('hidden');
+    
+    // Reset ad countdown state
+    let timeLeft = 30;
+    const adTimerBadge = document.getElementById('ad-timer-badge');
+    const adProgressBar = document.getElementById('ad-progress-bar');
+    
+    if (adTimerBadge) {
+      adTimerBadge.textContent = `Skip in ${timeLeft}s`;
+      adTimerBadge.style.background = 'var(--accent-purple-light)';
+      adTimerBadge.style.color = 'var(--accent-purple)';
+    }
+    
+    if (adProgressBar) {
+      adProgressBar.style.width = '0%';
+    }
+    
+    appDownloadDemoBtn.disabled = true;
+    appDownloadDemoBtn.style.background = 'var(--border-color)';
+    appDownloadDemoBtn.style.color = 'var(--text-muted)';
+    appDownloadDemoBtn.style.cursor = 'not-allowed';
+    appDownloadDemoBtn.innerHTML = `<i data-lucide="lock" style="width: 14px; height: 14px; vertical-align: middle;"></i> <span>Skip Ad (${timeLeft}s)</span>`;
+    
+    if (window.lucide) window.lucide.createIcons();
+    
+    if (adCountdownInterval) clearInterval(adCountdownInterval);
+    
+    adCountdownInterval = setInterval(() => {
+      timeLeft--;
+      
+      if (adTimerBadge) {
+        adTimerBadge.textContent = `Skip in ${timeLeft}s`;
+      }
+      if (adProgressBar) {
+        adProgressBar.style.width = `${((30 - timeLeft) / 30) * 100}%`;
+      }
+      
+      appDownloadDemoBtn.innerHTML = `<i data-lucide="lock" style="width: 14px; height: 14px; vertical-align: middle;"></i> <span>Skip Ad (${timeLeft}s)</span>`;
+      if (window.lucide) window.lucide.createIcons();
+      
+      if (timeLeft <= 0) {
+        clearInterval(adCountdownInterval);
+        adCountdownInterval = null;
+        
+        if (adTimerBadge) {
+          adTimerBadge.textContent = 'Ad Complete';
+          adTimerBadge.style.background = 'var(--accent-green-light)';
+          adTimerBadge.style.color = 'var(--accent-green)';
+        }
+        
+        appDownloadDemoBtn.disabled = false;
+        appDownloadDemoBtn.style.background = 'var(--accent-purple)';
+        appDownloadDemoBtn.style.color = 'white';
+        appDownloadDemoBtn.style.cursor = 'pointer';
+        appDownloadDemoBtn.innerHTML = `<i data-lucide="unlock" style="width: 14px; height: 14px; vertical-align: middle;"></i> <span>Skip Ad & Edit Text</span>`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }, 1000);
   });
 
   appDownloadCloseBtn.addEventListener('click', () => {
     appDownloadModal.classList.add('hidden');
+    if (adCountdownInterval) {
+      clearInterval(adCountdownInterval);
+      adCountdownInterval = null;
+    }
   });
 
   appDownloadDemoBtn.addEventListener('click', async () => {
+    if (appDownloadDemoBtn.disabled) return;
     appDownloadModal.classList.add('hidden');
+    if (adCountdownInterval) {
+      clearInterval(adCountdownInterval);
+      adCountdownInterval = null;
+    }
     await runEditPdfTextExtraction();
   });
 
