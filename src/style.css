@@ -1722,24 +1722,18 @@ body.fixed-viewport .app-content {
     transform: translateX(0);
   }
 
-  /* Make workspace toolbar swipeable horizontally on mobile */
+  /* Make workspace toolbar stack in two rows on mobile with horizontal scrolling per row */
   .workspace-toolbar {
-    overflow-x: auto;
-    white-space: nowrap;
-    flex-wrap: nowrap !important;
-    justify-content: flex-start !important;
-    gap: 0.5rem !important;
-    padding: 0.5rem !important;
-    -webkit-overflow-scrolling: touch;
+    flex-direction: column !important;
+    height: auto !important;
+    padding: 0.35rem 0.5rem !important;
+    gap: 0.35rem !important;
+    overflow: visible !important;
+    white-space: normal !important;
   }
 
   .workspace-toolbar::-webkit-scrollbar {
     display: none;
-  }
-
-  .toolbar-group {
-    flex-wrap: nowrap !important;
-    gap: 0.5rem !important;
   }
 
   .mobile-toggle-btn {
