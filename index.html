@@ -1477,17 +1477,36 @@
           </div>
 
           <!-- Ad Screen Container -->
-          <div style="background: #0f172a; border-radius: var(--border-radius); overflow: hidden; position: relative; aspect-ratio: 16/9; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
-            <!-- Simulated Premium Video Ad -->
-            <div id="ad-video-simulation" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 2rem; box-sizing: border-box; background: linear-gradient(135deg, #1e1b4b, #311042);">
-              <i data-lucide="play-circle" style="width: 48px; height: 48px; color: var(--accent-pink); margin-bottom: 0.75rem;"></i>
-              <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.35rem; color: #fff; margin-top: 0;">PDF Triangle Pro</h4>
-              <p style="font-size: 0.75rem; color: #cbd5e1; text-align: center; max-width: 320px; line-height: 1.4; margin-bottom: 1rem; margin-top: 0;">Unlock full batch capabilities, unlimited document storage, and offline desktop editing with Pro.</p>
+          <div style="background: #0f172a; border-radius: var(--border-radius); overflow: hidden; position: relative; min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+            
+            <!-- Paste your Google AdSense / Google Ad Manager script or Affiliate Banner code inside this container -->
+            <div id="ad-slot-container" style="width: 100%; height: 100%; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
               
-              <!-- Simulated Progress Bar -->
-              <div style="width: 80%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; margin-top: 1rem;">
-                <div id="ad-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink)); transition: width 1s linear;"></div>
+              <!-- MOCK AD (Will be visible if no active ad script is rendering) -->
+              <div id="ad-video-simulation" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 1.5rem; box-sizing: border-box; background: linear-gradient(135deg, #1e1b4b, #311042);">
+                <i data-lucide="sparkles" style="width: 36px; height: 36px; color: #f59e0b; margin-bottom: 0.5rem;"></i>
+                <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; margin-top: 0;">PDF Triangle Premium</h4>
+                <p style="font-size: 0.75rem; color: #cbd5e1; text-align: center; max-width: 320px; line-height: 1.4; margin-bottom: 1rem; margin-top: 0;">Remove all ads, unlock OCR scanning, and get unlimited edits by upgrading to a Premium account.</p>
+                
+                <!-- PROGRESS TIMER DISPLAY -->
+                <div style="width: 80%; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                  <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Ad is running... please wait</span>
+                  <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden;">
+                    <div id="ad-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink)); transition: width 1s linear;"></div>
+                  </div>
+                </div>
               </div>
+
+              <!-- PLACE YOUR ADSENSE TAG HERE:
+              <ins class="adsbygoogle"
+                   style="display:inline-block;width:300px;height:250px"
+                   data-ad-client="ca-pub-YOUR-AD-CLIENT-ID"
+                   data-ad-slot="YOUR-AD-SLOT-ID"></ins>
+              <script>
+                   (adsbygoogle = window.adsbygoogle || []).push({});
+              </script>
+              -->
+
             </div>
           </div>
 
