@@ -1,6 +1,18 @@
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 
+function mapPdfFontToWeb(pdfFontFamily) {
+  if (!pdfFontFamily) return "'Inter', sans-serif";
+  const lower = pdfFontFamily.toLowerCase();
+  if (lower.includes('times') || lower.includes('serif') || lower.includes('georgia') || lower.includes('cambria') || lower.includes('gothic') || lower.includes('roman')) {
+    return "'Times New Roman', Times, Georgia, serif";
+  }
+  if (lower.includes('courier') || lower.includes('mono') || lower.includes('consolas')) {
+    return "'Courier New', Courier, monospace";
+  }
+  return "'Inter', Arial, Helvetica, sans-serif";
+}
+
 export class PdfManager {
   constructor() {
     this.pdfDoc = null;         // pdf-lib instance
@@ -169,6 +181,51 @@ export class PdfManager {
       txtObj.overlayWidth = overlayRect.width;
       txtObj.overlayHeight = overlayRect.height;
     }
+
+    // 2.5 Add Right-Side Resize Handle (for horizontal expansion)
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'text-resize-handle';
+    wrapper.appendChild(resizeHandle);
+
+    const onStartResize = (clientX) => {
+      const startWidth = wrapper.offsetWidth;
+      const startX = clientX;
+      
+      const onMoveResize = (moveEvent) => {
+        const currX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const deltaX = currX - startX;
+        const newWidth = Math.max(30, startWidth + deltaX);
+        
+        // Convert to percentage of overlay width
+        const overlayWidth = overlay.clientWidth || 1;
+        txtObj.percentW = newWidth / overlayWidth;
+        wrapper.style.width = `${txtObj.percentW * 100}%`;
+      };
+      
+      const onEndResize = () => {
+        window.removeEventListener('mousemove', onMoveResize);
+        window.removeEventListener('mouseup', onEndResize);
+        window.removeEventListener('touchmove', onMoveResize);
+        window.removeEventListener('touchend', onEndResize);
+        window.saveHistoryState(pageIndex);
+      };
+      
+      window.addEventListener('mousemove', onMoveResize);
+      window.addEventListener('mouseup', onEndResize);
+      window.addEventListener('touchmove', onMoveResize, { passive: true });
+      window.addEventListener('touchend', onEndResize);
+    };
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onStartResize(e.clientX);
+    });
+
+    resizeHandle.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      onStartResize(e.touches[0].clientX);
+    }, { passive: true });
     
     // 3. Explicit Delete Button (placed on wrapper, avoiding overflow hidden clipping)
     const delBtn = document.createElement('button');
@@ -832,7 +889,7 @@ export class PdfManager {
           h: fontHeight,
           text: item.str,
           fontSize: Math.max(10, Math.round(fontHeight)),
-          fontFamily: style ? style.fontFamily : "'Inter', sans-serif"
+          fontFamily: style ? mapPdfFontToWeb(style.fontFamily) : "'Inter', sans-serif"
         });
       });
       

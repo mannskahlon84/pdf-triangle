@@ -607,11 +607,38 @@ body.fixed-viewport .view-panel.active {
 
 .text-element {
   outline: none;
-  white-space: pre-wrap;
+  white-space: pre; /* Keep text inline without auto-wrapping, but allow manual enters */
   user-select: text;
   border: none;
   background: transparent;
   min-height: 20px;
+}
+
+/* Right-side drag resizer handle for text boxes */
+.text-resize-handle {
+  position: absolute;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-resize-handle::after {
+  content: '';
+  width: 4px;
+  height: 55%;
+  background-color: var(--accent-purple);
+  border-radius: 2px;
+}
+
+.text-element-wrapper:hover .text-resize-handle,
+.text-element-wrapper:focus-within .text-resize-handle {
+  display: flex;
 }
 
 /* Corner Resizer Circle Handles styling */
