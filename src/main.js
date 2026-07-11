@@ -466,6 +466,17 @@ function setupEditorWorkspace() {
     const pageIdx = state.editor.activePage?.pageIndex;
     if (pageIdx === undefined) return;
     
+    // Avoid double text extraction if text has already been loaded for this page
+    if (state.editor.pdfManager.additions[pageIdx].text.length > 0) {
+      if (modeEditBtn && modeAnnotateBtn) {
+        modeEditBtn.classList.add('active');
+        modeAnnotateBtn.classList.remove('active');
+      }
+      document.getElementById('options-text-tool').classList.remove('hidden');
+      document.getElementById('options-metadata-panel').classList.add('hidden');
+      return;
+    }
+    
     showLoader('Extracting document text layers...');
     try {
       const blocks = await state.editor.pdfManager.extractNativeTextBlocks(pageIdx);
@@ -476,30 +487,50 @@ function setupEditorWorkspace() {
       
       const overlay = state.editor.activePage.annotationOverlay;
       const overlayRect = overlay.getBoundingClientRect();
-      const pdfCanvas = state.editor.activePage.drawingCanvas;
-      const pdfCtx = pdfCanvas.getContext('2d');
+      const pdfRenderCanvas = state.editor.activePage.pdfRenderCanvas;
+      const pdfRenderCtx = pdfRenderCanvas.getContext('2d');
       
       let count = 0;
+      const coveredRects = [];
+      
       blocks.forEach(block => {
-        const bboxX = block.percentX * pdfCanvas.width;
-        const bboxY = block.percentY * pdfCanvas.height;
-        const bboxW = block.percentW * pdfCanvas.width;
-        const bboxH = block.percentH * pdfCanvas.height;
+        const bboxX = block.percentX * pdfRenderCanvas.width;
+        const bboxY = block.percentY * pdfRenderCanvas.height;
+        const bboxW = block.percentW * pdfRenderCanvas.width;
+        const bboxH = block.percentH * pdfRenderCanvas.height;
         
-        const pixel = pdfCtx.getImageData(
-          Math.max(0, Math.min(pdfCanvas.width - 1, bboxX - 2)),
-          Math.max(0, Math.min(pdfCanvas.height - 1, bboxY - 2)),
+        const pixel = pdfRenderCtx.getImageData(
+          Math.max(0, Math.min(pdfRenderCanvas.width - 1, bboxX - 2)),
+          Math.max(0, Math.min(pdfRenderCanvas.height - 1, bboxY - 2)),
           1, 1
         ).data;
         const r = pixel[0];
         const g = pixel[1];
         const b = pixel[2];
+        const a = pixel[3];
         
-        // Default to white background color if the extracted pixel is black/dark
+        // Default to white background color if the extracted pixel is black/dark or transparent
         let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-        if (r < 120 && g < 120 && b < 120) {
+        if ((r < 120 && g < 120 && b < 120) || a === 0) {
           finalBgColor = '#ffffff';
         }
+        
+        // Erase the original native text drawn on the canvas by drawing a solid background rect
+        pdfRenderCtx.fillStyle = finalBgColor;
+        pdfRenderCtx.fillRect(
+          Math.max(0, bboxX - 2),
+          Math.max(0, bboxY - 2),
+          Math.min(pdfRenderCanvas.width - bboxX + 2, bboxW + 4),
+          Math.min(pdfRenderCanvas.height - bboxY + 2, bboxH + 4)
+        );
+        
+        coveredRects.push({
+          percentX: block.percentX,
+          percentY: block.percentY,
+          percentW: block.percentW,
+          percentH: block.percentH,
+          bgColor: finalBgColor
+        });
         
         const fontSize = Math.max(8, Math.round(block.fontSize * 1.5));
         
@@ -514,7 +545,7 @@ function setupEditorWorkspace() {
           fontFamily: block.fontFamily || "'Inter', sans-serif",
           isBold: false,
           isItalic: false,
-          bgEnable: true, // auto cover original background text!
+          bgEnable: false, // background covered directly on canvas now!
           bgColor: finalBgColor,
           overlayWidth: overlayRect.width,
           overlayHeight: overlayRect.height
@@ -524,6 +555,9 @@ function setupEditorWorkspace() {
         state.editor.pdfManager.renderTextElement(txtObj, overlay, pageIdx);
         count++;
       });
+      
+      state.editor.pdfManager.additions[pageIdx].coveredRects = coveredRects;
+      window.saveHistoryState(pageIdx);
       
       if (count > 0) {
         // Toggle mode buttons active classes
@@ -1576,7 +1610,8 @@ async function loadEditorPage(pageIndex) {
   state.editor.activePage = {
     pageIndex,
     annotationOverlay: renderData.annotationOverlay,
-    drawingCanvas: renderData.drawingCanvas
+    drawingCanvas: renderData.drawingCanvas,
+    pdfRenderCanvas: renderData.canvas
   };
 
   // Initialize history stack with current state if empty

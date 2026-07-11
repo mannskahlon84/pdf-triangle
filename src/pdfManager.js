@@ -52,6 +52,7 @@ export class PdfManager {
         text: [],
         signatures: [],
         formFields: [],
+        coveredRects: [],
         drawingBlob: null // Drawing canvas stored as PNG blob URL
       };
     }
@@ -548,10 +549,37 @@ export class PdfManager {
     const outPdf = await PDFDocument.load(this.pdfBuffer);
     const helveticaFont = await outPdf.embedFont(StandardFonts.Helvetica);
     
+    const hexToRgbColor = (hex) => {
+      const cleanHex = hex.replace('#', '');
+      const r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+      const g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+      const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+      return rgb(r, g, b);
+    };
+    
     for (let i = 0; i < this.numPages; i++) {
       const page = outPdf.getPage(i);
       const { width: pageWidth, height: pageHeight } = page.getSize();
       const pageAdditions = this.additions[i];
+      
+      // 0. Cover original text blocks with background color
+      if (pageAdditions.coveredRects) {
+        for (const rect of pageAdditions.coveredRects) {
+          const rectColor = hexToRgbColor(rect.bgColor || '#ffffff');
+          const rectW = rect.percentW * pageWidth;
+          const rectH = rect.percentH * pageHeight;
+          const rectX = rect.percentX * pageWidth;
+          const rectY = pageHeight - (rect.percentY * pageHeight) - rectH;
+          
+          page.drawRectangle({
+            x: rectX - 1,
+            y: rectY - 1,
+            width: rectW + 2,
+            height: rectH + 2,
+            color: rectColor,
+          });
+        }
+      }
       
       // 1. Embed drawings (if any)
       if (pageAdditions.drawingBlob) {
