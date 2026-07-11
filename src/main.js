@@ -3346,8 +3346,39 @@ function setupDragAndDrop(element, callback) {
   });
 }
 
-// Triggers native browser download
+// Triggers native browser download after a 5-second unskippable ad countdown
 function downloadBlob(blob, filename) {
+  const downloadAdModal = document.getElementById('download-ad-modal');
+  const downloadAdTimer = document.getElementById('download-ad-timer');
+  const downloadAdProgress = document.getElementById('download-ad-progress');
+  
+  if (!downloadAdModal || !downloadAdTimer || !downloadAdProgress) {
+    // Fallback: trigger immediate download if elements are missing
+    triggerImmediateDownload(blob, filename);
+    return;
+  }
+  
+  // Show the unskippable ad modal
+  downloadAdModal.classList.remove('hidden');
+  
+  let timeLeft = 5;
+  downloadAdTimer.textContent = `Please wait ${timeLeft}s`;
+  downloadAdProgress.style.width = '0%';
+  
+  const interval = setInterval(() => {
+    timeLeft--;
+    downloadAdTimer.textContent = `Please wait ${timeLeft}s`;
+    downloadAdProgress.style.width = `${((5 - timeLeft) / 5) * 100}%`;
+    
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      downloadAdModal.classList.add('hidden');
+      triggerImmediateDownload(blob, filename);
+    }
+  }, 1000);
+}
+
+function triggerImmediateDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

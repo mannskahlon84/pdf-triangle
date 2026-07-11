@@ -238,6 +238,25 @@
               <button class="btn btn-primary">Open Tool</button>
             </div>
           </div>
+
+          <!-- PERSISTENT GLOBAL BANNER AD (Leaderboard 728x90 or Responsive) -->
+          <div class="ad-banner-slot" style="margin: 2rem auto 0 auto; width: 100%; max-width: 970px; display: flex; justify-content: center; align-items: center; min-height: 90px; background: rgba(0,0,0,0.02); border: 1px dashed var(--border-color); border-radius: var(--border-radius-sm); padding: 0.5rem; box-sizing: border-box; text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">
+              <strong>Advertisement</strong><br>
+              Place Google AdSense Horizontal Banner here (Leaderboard 728x90 or Responsive)
+              <!-- PLACE YOUR ADSENSE TAG HERE:
+              <ins class="adsbygoogle"
+                   style="display:block"
+                   data-ad-client="ca-pub-YOUR-AD-CLIENT-ID"
+                   data-ad-slot="YOUR-AD-SLOT-ID"
+                   data-ad-format="auto"
+                   data-full-width-responsive="true"></ins>
+              <script>
+                   (adsbygoogle = window.adsbygoogle || []).push({});
+              </script>
+              -->
+            </div>
+          </div>
         </section>
 
         <!-- 2. EDITOR WORKSPACE -->
@@ -617,6 +636,24 @@
               <div class="action-footer">
                 <button class="btn btn-secondary" id="merge-add-more-btn"><i data-lucide="plus"></i> Add Files</button>
                 <button class="btn btn-success" id="merge-submit-btn"><i data-lucide="combine"></i> Merge & Download</button>
+            </div>
+            
+            <!-- AD BANNER SLOT (Safe Area, will not overlap any options or content) -->
+            <div class="ad-banner-slot" style="margin-top: 2.5rem; width: 100%; display: flex; justify-content: center; align-items: center; min-height: 90px; background: rgba(0,0,0,0.02); border: 1px dashed var(--border-color); border-radius: var(--border-radius-sm); padding: 0.5rem; box-sizing: border-box; text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted);">
+                <strong>Advertisement</strong><br>
+                Place Google AdSense Horizontal Banner here (Leaderboard 728x90 or Responsive)
+                <!-- PLACE YOUR ADSENSE TAG HERE:
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-YOUR-AD-CLIENT-ID"
+                     data-ad-slot="YOUR-AD-SLOT-ID"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+                -->
               </div>
             </div>
           </div>
@@ -1523,6 +1560,53 @@
               <span>Skip Ad (30s)</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- 5-SECOND UNSKIPPABLE DOWNLOAD AD MODAL -->
+      <div class="modal-overlay hidden" id="download-ad-modal" style="z-index: 2000;">
+        <div class="modal-content" style="max-width: 480px; text-align: center; padding: 2rem; border-radius: var(--border-radius-lg); background: var(--bg-secondary); border: 1px solid var(--border-color); box-shadow: var(--shadow-2xl);">
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+              <i data-lucide="download-cloud" style="color: var(--accent-green); width: 18px; height: 18px;"></i>
+              Preparing Download...
+            </h3>
+            <span id="download-ad-timer" style="background: var(--accent-pink-light); color: var(--accent-pink); font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 20px;">
+              Please wait 5s
+            </span>
+          </div>
+
+          <!-- Ad Slot Container (Place Google AdSense or Video code here) -->
+          <div style="background: #0f172a; border-radius: var(--border-radius); overflow: hidden; position: relative; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+            <div id="download-ad-slot" style="width: 100%; height: 100%; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+              <!-- Simulated Video Ad / Loading Offer -->
+              <div id="download-ad-simulation" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 1.5rem; box-sizing: border-box; background: linear-gradient(135deg, #0f172a, #1e293b);">
+                <i data-lucide="play-circle" style="width: 44px; height: 44px; color: var(--accent-pink); margin-bottom: 0.5rem;"></i>
+                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; margin-top: 0;">Your PDF is Ready!</h4>
+                <p style="font-size: 0.75rem; color: #cbd5e1; text-align: center; max-width: 280px; line-height: 1.4; margin-bottom: 1rem; margin-top: 0;">Brought to you by PDF Triangle. Fast, free, and secure PDF tools.</p>
+                
+                <!-- Progress Line -->
+                <div style="width: 80%; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden;">
+                  <div id="download-ad-progress" style="width: 0%; height: 100%; background: var(--accent-green); transition: width 1s linear;"></div>
+                </div>
+              </div>
+
+              <!-- PLACE YOUR 300x250 ADSENSE CODE HERE:
+              <ins class="adsbygoogle"
+                   style="display:inline-block;width:300px;height:250px"
+                   data-ad-client="ca-pub-YOUR-AD-CLIENT-ID"
+                   data-ad-slot="YOUR-AD-SLOT-ID"></ins>
+              <script>
+                   (adsbygoogle = window.adsbygoogle || []).push({});
+              </script>
+              -->
+            </div>
+          </div>
+
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">
+            This download is free. Thank you for your patience during this short sponsor ad!
+          </p>
         </div>
       </div>
 
