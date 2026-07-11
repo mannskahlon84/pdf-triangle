@@ -813,8 +813,9 @@ export class PdfManager {
       const pageHeight = viewport.height;
       
       const textContent = await page.getTextContent();
-      const blocks = [];
+      const rawItems = [];
       
+      // 1. Gather all raw items and extract coordinates in native PDF space
       textContent.items.forEach(item => {
         if (!item.str || item.str.trim().length === 0) return;
         
@@ -822,22 +823,87 @@ export class PdfManager {
         const y = item.transform[5];
         const fontHeight = Math.abs(item.transform[3]);
         
-        const percentX = x / pageWidth;
-        const percentY = (pageHeight - y - fontHeight) / pageHeight;
-        const percentW = item.width / pageWidth;
-        const percentH = fontHeight / pageHeight;
-        
         const style = textContent.styles[item.fontName];
         
-        blocks.push({
-          percentX,
-          percentY,
-          percentW,
-          percentH,
+        rawItems.push({
+          x,
+          y,
+          w: item.width,
+          h: fontHeight,
           text: item.str,
           fontSize: Math.max(10, Math.round(fontHeight)),
           fontFamily: style ? style.fontFamily : "'Inter', sans-serif"
         });
+      });
+      
+      if (rawItems.length === 0) return [];
+      
+      // 2. Sort vertically first (from top of the page to the bottom)
+      rawItems.sort((a, b) => b.y - a.y || a.x - b.x);
+      
+      // 3. Group items into rows that are on the same vertical line
+      const groupedRows = [];
+      rawItems.forEach(item => {
+        let foundRow = groupedRows.find(row => Math.abs(row[0].y - item.y) < Math.max(4, item.h * 0.45));
+        if (foundRow) {
+          foundRow.push(item);
+        } else {
+          groupedRows.push([item]);
+        }
+      });
+      
+      // 4. Sort each row horizontally and merge adjacent items with a small gap
+      const mergedBlocks = [];
+      
+      groupedRows.forEach(row => {
+        row.sort((a, b) => a.x - b.x);
+        
+        let currentBlock = null;
+        row.forEach(item => {
+          if (!currentBlock) {
+            currentBlock = { ...item };
+            return;
+          }
+          
+          const gap = item.x - (currentBlock.x + currentBlock.w);
+          const maxAllowedGap = Math.max(18, currentBlock.fontSize * 1.5);
+          
+          // Merge if the gap is small and font sizes are close (prevents mixing fonts/columns)
+          if (gap < maxAllowedGap && Math.abs(currentBlock.fontSize - item.fontSize) < 4) {
+            const needsSpace = gap > currentBlock.fontSize * 0.18 && 
+                               !currentBlock.text.endsWith(' ') && 
+                               !item.text.startsWith(' ');
+            currentBlock.text += (needsSpace ? ' ' : '') + item.text;
+            currentBlock.w = (item.x + item.w) - currentBlock.x;
+            currentBlock.h = Math.max(currentBlock.h, item.h);
+            currentBlock.y = Math.min(currentBlock.y, item.y);
+          } else {
+            mergedBlocks.push(currentBlock);
+            currentBlock = { ...item };
+          }
+        });
+        
+        if (currentBlock) {
+          mergedBlocks.push(currentBlock);
+        }
+      });
+      
+      // 5. Convert merged items to percentage-based layout blocks
+      const blocks = mergedBlocks.map(block => {
+        const percentX = block.x / pageWidth;
+        const percentY = (pageHeight - block.y - block.h) / pageHeight;
+        const percentW = block.w / pageWidth;
+        const percentH = block.h / pageHeight;
+        
+        return {
+          percentX,
+          percentY,
+          percentW,
+          percentH,
+          text: block.text,
+          fontSize: block.fontSize,
+          fontFamily: block.fontFamily
+        };
       });
       
       return blocks;
