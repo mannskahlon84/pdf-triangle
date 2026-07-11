@@ -93,7 +93,7 @@ fun MainScreen(
   }
 
   AndroidView(
-    modifier = Modifier.fillMaxSize(),
+    modifier = modifier.fillMaxSize(),
     factory = { ctx ->
       WebView(ctx).apply {
         layoutParams = ViewGroup.LayoutParams(
@@ -142,6 +142,7 @@ fun MainScreen(
           allowContentAccess = true
           databaseEnabled = true
           cacheMode = WebSettings.LOAD_DEFAULT
+          userAgentString = (userAgentString ?: "") + " PDFTriangleApp"
         }
         loadUrl("https://pdftriangle.netlify.app/")
       }

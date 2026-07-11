@@ -100,6 +100,17 @@ let signaturePadInstance = null;
 
 // Bootstrap Application
 document.addEventListener('DOMContentLoaded', () => {
+  // Check if running inside the custom PDFTriangle Android WebView App wrapper
+  if (navigator.userAgent.includes('PDFTriangleApp')) {
+    const apkBtn = document.getElementById('apk-download-btn');
+    if (apkBtn) {
+      apkBtn.innerHTML = '<i data-lucide="external-link" style="width: 16px; height: 16px; margin-right: 2px;"></i> Open in Browser';
+      apkBtn.removeAttribute('download');
+      apkBtn.href = 'https://pdftriangle.netlify.app/';
+      apkBtn.target = '_blank';
+    }
+  }
+
   // Initialize Lucide Icons
   lucide.createIcons();
   
