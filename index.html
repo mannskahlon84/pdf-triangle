@@ -1425,11 +1425,19 @@
               </div>
               
               <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1; overflow: hidden;">
-                <!-- API Key Config (Hidden as requested, using default embedded key) -->
-                <div style="display: none !important; gap: 0.5rem; align-items: center; background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); flex-shrink: 0;">
-                  <i data-lucide="key" style="width: 16px; height: 16px; color: var(--accent-purple);"></i>
-                  <input type="password" id="copilot-api-key" placeholder="Enter Gemini API Key..." style="flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: 0.75rem; outline: none;" />
-                  <button class="btn btn-purple" id="copilot-save-key-btn" style="padding: 0.25rem 0.5rem; font-size: 0.65rem; height: auto;">Save Key</button>
+                <!-- API Key Config -->
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); flex-shrink: 0;">
+                  <span style="font-size: 0.7rem; font-weight: 700; color: var(--accent-pink); display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.15rem;">
+                    <i data-lucide="key" style="width: 13px; height: 13px;"></i>
+                    Gemini API Key Setup:
+                  </span>
+                  <div style="display: flex; gap: 0.5rem; width: 100%;">
+                    <input type="password" id="copilot-api-key" placeholder="Paste Gemini API Key..." style="flex: 1; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.75rem; outline: none; padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm);" />
+                    <button class="btn btn-purple" id="copilot-save-key-btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; height: 28px; background: var(--accent-purple); color: white; border: none; border-radius: var(--border-radius-sm); font-weight: 600;">Save</button>
+                  </div>
+                  <a href="https://aistudio.google.com/" target="_blank" style="font-size: 0.65rem; color: var(--accent-purple); text-decoration: underline; text-align: left; display: block; margin-top: 0.1rem;">
+                    Get a free API Key from Google AI Studio
+                  </a>
                 </div>
                 
                 <!-- Chat history -->
@@ -1489,10 +1497,29 @@
                 </div>
                 
                 <!-- Live Preview State -->
-                <div class="hidden" id="copilot-preview-container" style="display: inline-block; width: 100%; max-width: 900px; margin: 0 auto; text-align: left; vertical-align: top;">
-                  <div style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.5rem; box-shadow: var(--shadow-lg); min-height: 500px;" id="copilot-preview-box">
-                    <!-- Dynamic preview content goes here (Spreadsheet grid, or formatted page layout) -->
-                    <div class="empty-state-text">No output generated yet. Type your query or choose a quick prompt to generate content.</div>
+                <div class="hidden" id="copilot-preview-container" style="display: flex; flex-direction: column; width: 100%; max-width: 900px; margin: 0 auto; text-align: left;">
+                  <!-- Tabs Navigation -->
+                  <div style="display: flex; gap: 0.25rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2px; flex-shrink: 0;">
+                    <button class="copilot-tab-btn active" id="copilot-tab-doc" type="button">
+                      <i data-lucide="file-text" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> Original Document
+                    </button>
+                    <button class="copilot-tab-btn" id="copilot-tab-ai" type="button">
+                      <i data-lucide="sparkles" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> AI Summary & Output
+                    </button>
+                  </div>
+
+                  <!-- Tab Contents -->
+                  <div id="copilot-preview-box" style="position: relative; flex: 1;">
+                    <!-- Original Document Tab Content -->
+                    <div id="copilot-doc-tab-content" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.75rem; box-shadow: var(--shadow-lg); min-height: 500px; font-family: 'Inter', sans-serif; font-size: 0.875rem; line-height: 1.6; color: var(--text-secondary); max-height: 600px; overflow-y: auto;">
+                      <!-- Extracted document text will be filled here dynamically -->
+                    </div>
+
+                    <!-- AI Output Tab Content -->
+                    <div id="copilot-ai-tab-content" class="hidden" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2rem; box-shadow: var(--shadow-lg); min-height: 500px;">
+                      <!-- AI Summary / Markdown Output will be filled here dynamically -->
+                      <div class="empty-state-text" style="color: var(--text-muted); font-style: italic; text-align: center; padding-top: 5rem;">No summary generated yet. Ask a question or click "Summarize Document" on the left!</div>
+                    </div>
                   </div>
                 </div>
               </div>

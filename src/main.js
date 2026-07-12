@@ -4903,7 +4903,29 @@ function setupCopilotWorkspace() {
   const sendBtn = document.getElementById('copilot-send-btn');
   
   const previewContainer = document.getElementById('copilot-preview-container');
-  const previewBox = document.getElementById('copilot-preview-box');
+  
+  const tabDocBtn = document.getElementById('copilot-tab-doc');
+  const tabAiBtn = document.getElementById('copilot-tab-ai');
+  const docTabContent = document.getElementById('copilot-doc-tab-content');
+  const aiTabContent = document.getElementById('copilot-ai-tab-content');
+
+  // Tab Switcher Logic
+  function switchTab(activeTab) {
+    if (activeTab === 'doc') {
+      tabDocBtn.classList.add('active');
+      tabAiBtn.classList.remove('active');
+      docTabContent.classList.remove('hidden');
+      aiTabContent.classList.add('hidden');
+    } else {
+      tabDocBtn.classList.remove('active');
+      tabAiBtn.classList.add('active');
+      docTabContent.classList.add('hidden');
+      aiTabContent.classList.remove('hidden');
+    }
+  }
+
+  tabDocBtn.addEventListener('click', () => switchTab('doc'));
+  tabAiBtn.addEventListener('click', () => switchTab('ai'));
 
   // Load saved API Key
   apiKeyInput.value = localStorage.getItem('copilot_gemini_key') || '';
@@ -4928,6 +4950,7 @@ function setupCopilotWorkspace() {
     state.copilot.file = file;
     state.copilot.documentText = '';
     state.copilot.extractedData = null;
+    state.copilot.lastResponse = ''; // Reset last AI response
     
     showLoader('Analyzing and extracting text...');
     
@@ -4988,6 +5011,9 @@ function setupCopilotWorkspace() {
       // Add system message
       appendMessage('system', `Successfully loaded document: "${file.name}" (${state.copilot.documentText.length} characters of text extracted). Ask me to summarize it or reformat details!`);
       
+      // Force Original Document tab active first when uploaded
+      switchTab('doc');
+      
       // Render baseline preview
       renderPreview();
       
@@ -5032,125 +5058,220 @@ function setupCopilotWorkspace() {
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 
-  function renderPreview() {
-    previewBox.innerHTML = '';
+  // Markdown Parser to Beautiful Modern HTML with colors
+  function parseMarkdownToHtml(markdownText) {
+    if (!markdownText) return '';
     
-    if (state.copilot.extractedData && Array.isArray(state.copilot.extractedData)) {
-      // Excel/Spreadsheet Mode
-      const tableWrapper = document.createElement('div');
-      tableWrapper.style.width = '100%';
-      tableWrapper.style.maxHeight = '550px';
-      tableWrapper.style.overflow = 'auto';
-      tableWrapper.style.border = '1px solid var(--border-color)';
-      tableWrapper.style.borderRadius = 'var(--border-radius-sm)';
+    let html = markdownText;
+    
+    // Escaping html
+    html = html
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
       
-      const table = document.createElement('table');
-      table.style.width = 'max-content';
-      table.style.minWidth = '100%';
-      table.style.borderCollapse = 'collapse';
-      table.style.fontFamily = 'monospace';
-      table.style.fontSize = '0.8125rem';
-      table.style.color = 'var(--text-primary)';
+    // Parse Headers
+    html = html.replace(/^### (.*?)$/gm, '<h4 style="font-family: \'Outfit\', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--accent-purple); margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem;">$1</h4>');
+    html = html.replace(/^## (.*?)$/gm, '<h3 style="font-family: \'Outfit\', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--accent-pink); margin-top: 1.75rem; margin-bottom: 0.75rem;">$1</h3>');
+    html = html.replace(/^# (.*?)$/gm, '<h2 style="font-family: \'Outfit\', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--accent-purple); display: table; margin: 0 auto 1.5rem auto; padding-bottom: 0.25rem;">$1</h2>');
+    
+    // Parse Bold text (Premium color code badges)
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 700; color: #4338ca; background: rgba(99, 102, 241, 0.07); padding: 0.125rem 0.35rem; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.12); font-size: 0.8125rem; display: inline-block; margin-bottom: 0.15rem;">$1</strong>');
+    
+    // Parse Bullet Lists
+    html = html.replace(/^\s*[-*]\s+(.*?)$/gm, '<li style="margin-left: 1.25rem; margin-bottom: 0.5rem; list-style-type: disc; color: var(--text-secondary); line-height: 1.6; font-size: 0.8125rem;">$1</li>');
+    
+    // Parse Numbered Lists (Gradient circular indicator badges)
+    html = html.replace(/^\s*(\d+)\.\s+(.*?)$/gm, '<div style="display: flex; gap: 0.65rem; margin-bottom: 0.85rem; align-items: flex-start;"><span style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; font-weight: 700; font-size: 0.725rem; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.125rem; box-shadow: 0 2px 4px rgba(124, 58, 237, 0.2);">$1</span><div style="flex: 1; color: var(--text-secondary); line-height: 1.6; font-size: 0.8125rem;">$2</div></div>');
+    
+    // Parse Paragraphs (Double newlines)
+    html = html.replace(/\n\n/g, '</p><p style="margin-bottom: 1rem; line-height: 1.6; color: var(--text-secondary); font-size: 0.8125rem;">');
+    
+    // Single newlines to line breaks (inside lists/paragraphs)
+    html = html.replace(/\n/g, '<br>');
+    
+    // Wrap in paragraph
+    html = '<p style="margin-bottom: 1rem; line-height: 1.6; color: var(--text-secondary); font-size: 0.8125rem;">' + html + '</p>';
+    
+    // Clean up empty tags
+    html = html.replace(/<p><\/p>/g, '');
+    
+    return html;
+  }
+
+  function renderPreview() {
+    // 1. Render Original Document Text in its tab
+    if (docTabContent) {
+      docTabContent.innerHTML = '';
       
-      const maxCols = state.copilot.extractedData.reduce((max, row) => Math.max(max, row.length), 0);
+      const docHeader = document.createElement('div');
+      docHeader.style.display = 'flex';
+      docHeader.style.justifyContent = 'space-between';
+      docHeader.style.alignItems = 'center';
+      docHeader.style.marginBottom = '1.25rem';
+      docHeader.style.borderBottom = '1px solid var(--border-color)';
+      docHeader.style.paddingBottom = '0.5rem';
       
-      // Header labels A, B, C...
-      const thead = document.createElement('thead');
-      const headRow = document.createElement('tr');
-      headRow.style.background = 'var(--bg-tertiary)';
+      const docBadge = document.createElement('div');
+      docBadge.style.display = 'inline-flex';
+      docBadge.style.alignItems = 'center';
+      docBadge.style.gap = '0.35rem';
+      docBadge.style.padding = '0.25rem 0.5rem';
+      docBadge.style.fontSize = '0.75rem';
+      docBadge.style.fontWeight = '600';
+      docBadge.style.background = 'var(--accent-pink-light)';
+      docBadge.style.color = 'var(--accent-pink)';
+      docBadge.style.borderRadius = '4px';
+      docBadge.innerHTML = `<i data-lucide="file-text" style="width:13px; height:13px;"></i> Original Extracted Text`;
+      docHeader.appendChild(docBadge);
       
-      const cornerTh = document.createElement('th');
-      cornerTh.style.border = '1px solid var(--border-color)';
-      cornerTh.style.padding = '0.35rem';
-      cornerTh.style.width = '40px';
-      headRow.appendChild(cornerTh);
-      
-      for (let i = 0; i < maxCols; i++) {
-        const th = document.createElement('th');
-        th.style.border = '1px solid var(--border-color)';
-        th.style.padding = '0.35rem';
-        th.style.textAlign = 'center';
-        th.style.minWidth = '120px';
-        th.textContent = String.fromCharCode(65 + i); // A, B, C...
-        headRow.appendChild(th);
+      if (state.copilot.file) {
+        const docName = document.createElement('span');
+        docName.style.fontSize = '0.75rem';
+        docName.style.color = 'var(--text-muted)';
+        docName.style.fontWeight = '500';
+        docName.textContent = state.copilot.file.name;
+        docHeader.appendChild(docName);
       }
-      thead.appendChild(headRow);
-      table.appendChild(thead);
+      docTabContent.appendChild(docHeader);
       
-      // Body rows 1, 2, 3...
-      const tbody = document.createElement('tbody');
-      state.copilot.extractedData.forEach((row, rowIdx) => {
-        const tr = document.createElement('tr');
+      const docTextBody = document.createElement('pre');
+      docTextBody.style.whiteSpace = 'pre-wrap';
+      docTextBody.style.fontFamily = "'Inter', sans-serif";
+      docTextBody.style.fontSize = '0.8125rem';
+      docTextBody.style.color = 'var(--text-secondary)';
+      docTextBody.style.margin = '0';
+      docTextBody.textContent = state.copilot.documentText || 'No document uploaded yet. Upload a file to view its extracted text here.';
+      docTabContent.appendChild(docTextBody);
+    }
+    
+    // 2. Render AI Output Tab
+    if (aiTabContent) {
+      aiTabContent.innerHTML = '';
+      
+      if (state.copilot.extractedData && Array.isArray(state.copilot.extractedData)) {
+        // Excel/Spreadsheet Mode (Grid View)
+        const tableWrapper = document.createElement('div');
+        tableWrapper.style.width = '100%';
+        tableWrapper.style.maxHeight = '550px';
+        tableWrapper.style.overflow = 'auto';
+        tableWrapper.style.border = '1px solid var(--border-color)';
+        tableWrapper.style.borderRadius = 'var(--border-radius-sm)';
         
-        const indexTd = document.createElement('td');
-        indexTd.style.border = '1px solid var(--border-color)';
-        indexTd.style.padding = '0.35rem';
-        indexTd.style.textAlign = 'center';
-        indexTd.style.background = 'var(--bg-tertiary)';
-        indexTd.style.fontWeight = '600';
-        indexTd.textContent = rowIdx + 1;
-        tr.appendChild(indexTd);
+        const table = document.createElement('table');
+        table.style.width = 'max-content';
+        table.style.minWidth = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.fontFamily = 'monospace';
+        table.style.fontSize = '0.8125rem';
+        table.style.color = 'var(--text-primary)';
+        
+        const maxCols = state.copilot.extractedData.reduce((max, row) => Math.max(max, row.length), 0);
+        
+        // Header labels A, B, C...
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        headRow.style.background = 'var(--bg-tertiary)';
+        
+        const cornerTh = document.createElement('th');
+        cornerTh.style.border = '1px solid var(--border-color)';
+        cornerTh.style.padding = '0.35rem';
+        cornerTh.style.width = '40px';
+        headRow.appendChild(cornerTh);
         
         for (let i = 0; i < maxCols; i++) {
-          const td = document.createElement('td');
-          td.style.border = '1px solid var(--border-color)';
-          td.style.padding = '0.35rem';
-          td.style.backgroundColor = 'var(--bg-secondary)';
-          td.style.minWidth = '120px';
-          td.style.whiteSpace = 'nowrap';
-          td.textContent = row[i] !== undefined ? row[i] : '';
-          tr.appendChild(td);
+          const th = document.createElement('th');
+          th.style.border = '1px solid var(--border-color)';
+          th.style.padding = '0.35rem';
+          th.style.textAlign = 'center';
+          th.style.minWidth = '120px';
+          th.textContent = String.fromCharCode(65 + i); // A, B, C...
+          headRow.appendChild(th);
         }
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      tableWrapper.appendChild(table);
-      
-      // Add sheet title badge
-      const badge = document.createElement('div');
-      badge.style.display = 'inline-block';
-      badge.style.padding = '0.25rem 0.5rem';
-      badge.style.fontSize = '0.75rem';
-      badge.style.fontWeight = '600';
-      badge.style.background = 'var(--accent-purple)';
-      badge.style.color = 'white';
-      badge.style.borderRadius = '4px';
-      badge.style.marginBottom = '0.75rem';
-      badge.innerHTML = `<i data-lucide="sheet" style="width:12px; height:12px; vertical-align:middle; margin-right:4px;"></i> Excel Preview Grid`;
-      
-      previewBox.appendChild(badge);
-      previewBox.appendChild(tableWrapper);
-      if (window.lucide) window.lucide.createIcons();
-    } else {
-      // Word/Document Mode
-      const docPage = document.createElement('div');
-      docPage.style.background = 'white';
-      docPage.style.color = 'black';
-      docPage.style.padding = '2.5rem';
-      docPage.style.fontFamily = '"Times New Roman", Times, serif';
-      docPage.style.lineHeight = '1.6';
-      docPage.style.border = '1px solid var(--border-color)';
-      docPage.style.borderRadius = 'var(--border-radius-sm)';
-      docPage.style.boxShadow = 'var(--shadow-sm)';
-      docPage.style.minHeight = '480px';
-      docPage.style.textAlign = 'left';
-      
-      const title = document.createElement('h2');
-      title.style.textAlign = 'center';
-      title.style.marginBottom = '1.5rem';
-      title.style.fontSize = '1.5rem';
-      title.textContent = state.copilot.file ? `${state.copilot.file.name} Summary` : 'AI Output Document';
-      docPage.appendChild(title);
-      
-      const contentDiv = document.createElement('div');
-      contentDiv.style.fontSize = '11pt';
-      contentDiv.innerHTML = state.copilot.lastResponse
-        ? state.copilot.lastResponse.replace(/\n/g, '<br>')
-        : `<p style="color: #666; font-style: italic;">No summary generated yet. Type your query in the chat box or click "Summarize Document" to begin.</p>`;
-      docPage.appendChild(contentDiv);
-      
-      previewBox.appendChild(docPage);
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+        
+        // Body rows 1, 2, 3...
+        const tbody = document.createElement('tbody');
+        state.copilot.extractedData.forEach((row, rowIdx) => {
+          const tr = document.createElement('tr');
+          
+          const indexTd = document.createElement('td');
+          indexTd.style.border = '1px solid var(--border-color)';
+          indexTd.style.padding = '0.35rem';
+          indexTd.style.textAlign = 'center';
+          indexTd.style.background = 'var(--bg-tertiary)';
+          indexTd.style.fontWeight = '600';
+          indexTd.textContent = rowIdx + 1;
+          tr.appendChild(indexTd);
+          
+          for (let i = 0; i < maxCols; i++) {
+            const td = document.createElement('td');
+            td.style.border = '1px solid var(--border-color)';
+            td.style.padding = '0.35rem';
+            td.style.backgroundColor = 'var(--bg-secondary)';
+            td.style.minWidth = '120px';
+            td.style.whiteSpace = 'nowrap';
+            td.textContent = row[i] !== undefined ? row[i] : '';
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        tableWrapper.appendChild(table);
+        
+        // Add sheet title badge
+        const badge = document.createElement('div');
+        badge.style.display = 'inline-block';
+        badge.style.padding = '0.25rem 0.5rem';
+        badge.style.fontSize = '0.75rem';
+        badge.style.fontWeight = '600';
+        badge.style.background = 'var(--accent-purple)';
+        badge.style.color = 'white';
+        badge.style.borderRadius = '4px';
+        badge.style.marginBottom = '0.75rem';
+        badge.innerHTML = `<i data-lucide="sheet" style="width:12px; height:12px; vertical-align:middle; margin-right:4px;"></i> Excel Preview Grid`;
+        
+        aiTabContent.appendChild(badge);
+        aiTabContent.appendChild(tableWrapper);
+      } else {
+        // Word/Document Mode (Formatted summary page layout)
+        const docPage = document.createElement('div');
+        docPage.style.background = 'white';
+        docPage.style.color = '#1e293b';
+        docPage.style.padding = '2.5rem';
+        docPage.style.fontFamily = "'Inter', sans-serif";
+        docPage.style.lineHeight = '1.6';
+        docPage.style.border = '1px solid var(--border-color)';
+        docPage.style.borderRadius = 'var(--border-radius-sm)';
+        docPage.style.boxShadow = 'var(--shadow-md)';
+        docPage.style.minHeight = '480px';
+        docPage.style.textAlign = 'left';
+        
+        const title = document.createElement('h3');
+        title.style.textAlign = 'center';
+        title.style.marginBottom = '1.5rem';
+        title.style.fontSize = '1.35rem';
+        title.style.fontFamily = "'Outfit', sans-serif";
+        title.style.fontWeight = '800';
+        title.style.color = '#1e1b4b';
+        title.style.borderBottom = '2px solid var(--accent-purple)';
+        title.style.display = 'table';
+        title.style.margin = '0 auto 1.75rem auto';
+        title.style.paddingBottom = '0.25rem';
+        title.textContent = state.copilot.file ? `${state.copilot.file.name.split('.').shift()} AI Summary` : 'AI Output Document';
+        docPage.appendChild(title);
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.innerHTML = state.copilot.lastResponse
+          ? parseMarkdownToHtml(state.copilot.lastResponse)
+          : `<div style="color: var(--text-muted); font-style: italic; text-align: center; padding-top: 5rem;">No summary generated yet. Ask a question or click "Summarize Document" on the left!</div>`;
+        docPage.appendChild(contentDiv);
+        aiTabContent.appendChild(docPage);
+      }
     }
+    
+    if (window.lucide) window.lucide.createIcons();
   }
 
   // Suggestion click
@@ -5160,6 +5281,9 @@ function setupCopilotWorkspace() {
       sendBtn.click();
     });
   });
+
+  // Export tab switch callback so other functions can switch tabs dynamically
+  window.switchCopilotTab = switchTab;
 
   // Chat send trigger
   sendBtn.addEventListener('click', async () => {
@@ -5318,6 +5442,11 @@ Here is my AI assessment: The document contains text sections detailing project 
     }
     
     renderPreview();
+    
+    // Switch to AI Output tab automatically when response completes
+    if (window.switchCopilotTab) {
+      window.switchCopilotTab('ai');
+    }
   }
 
   // Download Action
@@ -5342,8 +5471,8 @@ Here is my AI assessment: The document contains text sections detailing project 
           XLSX.writeFile(wb, `${docName}_copilot.xlsx`);
           showToast('Excel workbook downloaded successfully!', 'success');
         } else if (format === 'pdf') {
-          // Generate PDF using html2pdf
-          const element = document.getElementById('copilot-preview-box');
+          // Generate PDF using html2pdf (target the styled AI content tab)
+          const element = document.getElementById('copilot-ai-tab-content');
           const opt = {
             margin:       10,
             filename:     `${docName}_copilot.pdf`,
@@ -5354,8 +5483,8 @@ Here is my AI assessment: The document contains text sections detailing project 
           html2pdf().from(element).set(opt).save();
           showToast('PDF downloaded successfully!', 'success');
         } else if (format === 'docx') {
-          // Generate Word document (Word XML wrapped in Blob)
-          const element = document.getElementById('copilot-preview-box');
+          // Generate Word document (Word XML wrapped in Blob, target the styled AI content tab)
+          const element = document.getElementById('copilot-ai-tab-content');
           const htmlContent = element.innerHTML;
           
           const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Document</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]--></head><body>";
@@ -5375,7 +5504,7 @@ Here is my AI assessment: The document contains text sections detailing project 
           showToast('Word document downloaded successfully!', 'success');
         } else if (format === 'jpg') {
           // Export preview box as image
-          const element = document.getElementById('copilot-preview-box');
+          const element = document.getElementById('copilot-ai-tab-content');
           html2pdf().from(element).toImg().get('img').then(img => {
             const a = document.createElement('a');
             a.href = img.src;

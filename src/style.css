@@ -1807,3 +1807,29 @@ body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
   transform: scale(0.95);
 }
 
+/* AI Copilot Tab Navigation Buttons */
+.copilot-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all var(--transition-fast);
+}
+
+.copilot-tab-btn:hover {
+  color: var(--accent-purple);
+}
+
+.copilot-tab-btn.active {
+  color: var(--accent-purple);
+  border-bottom-color: var(--accent-purple);
+}
+
