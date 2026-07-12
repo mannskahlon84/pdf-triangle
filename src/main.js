@@ -5308,15 +5308,15 @@ function setupCopilotWorkspace() {
     
     setTimeout(async () => {
       try {
-        const apiKey = localStorage.getItem('copilot_gemini_key') || atob('QVEuQWI4Uk42S19fRVRXc3JzZGF4RUh0cHFzaXZ6R3J4aTZCX0JFVGVFQTV2S21NWDlZcFE=');
+        const customApiKey = localStorage.getItem('copilot_gemini_key');
         let responseText = '';
         
-        if (apiKey) {
-          // Live API Call
-          responseText = await callGeminiLiveAPI(apiKey, prompt, state.copilot.documentText);
+        if (customApiKey && customApiKey.trim().length > 0) {
+          // Use user's custom browser API Key
+          responseText = await callGeminiLiveAPI(customApiKey.trim(), prompt, state.copilot.documentText);
         } else {
-          // Demo Simulation Mode
-          responseText = runDemoSimulation(prompt);
+          // Use site owner's secure serverless Netlify proxy
+          responseText = await callGeminiServerlessProxy(prompt, state.copilot.documentText);
         }
         
         // Remove typing loader
@@ -5366,6 +5366,28 @@ function setupCopilotWorkspace() {
     
     const data = await response.json();
     return data.candidates[0].content.parts[0].text;
+  }
+
+  async function callGeminiServerlessProxy(prompt, docText) {
+    const url = '/.netlify/functions/gemini';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prompt, docText })
+    });
+    
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Serverless function error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    throw new Error('Invalid response structure from serverless API.');
   }
 
   function runDemoSimulation(prompt) {
