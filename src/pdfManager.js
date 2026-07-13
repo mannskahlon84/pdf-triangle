@@ -97,6 +97,25 @@ export class PdfManager {
     
     // Render PDF page to canvas
     await page.render({ canvasContext: context, viewport }).promise;
+
+    // Draw coveredRects to erase original text on the newly rendered canvas
+    if (this.additions[pageIndex].coveredRects && this.additions[pageIndex].coveredRects.length > 0) {
+      const pdfRenderCtx = context;
+      this.additions[pageIndex].coveredRects.forEach(rect => {
+        const bboxX = rect.percentX * canvas.width;
+        const bboxY = rect.percentY * canvas.height;
+        const bboxW = rect.percentW * canvas.width;
+        const bboxH = rect.percentH * canvas.height;
+        
+        pdfRenderCtx.fillStyle = rect.bgColor;
+        pdfRenderCtx.fillRect(
+          Math.max(0, bboxX - 2),
+          Math.max(0, bboxY - 2),
+          Math.min(canvas.width - bboxX + 2, bboxW + 4),
+          Math.min(canvas.height - bboxY + 2, bboxH + 4)
+        );
+      });
+    }
     
     // Set container dimensions
     containerPageDiv.style.width = `${viewport.width}px`;

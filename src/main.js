@@ -24,7 +24,8 @@ const state = {
     isDrawing: false,
     lastDrawX: 0,
     lastDrawY: 0,
-    activeSignatureDataUrl: null
+    activeSignatureDataUrl: null,
+    hasExtractedText: false
   },
   merge: {
     files: [], // list of File objects
@@ -287,6 +288,7 @@ function setupEditorWorkspace() {
     if (!file) return;
     
     state.editor.hasInitializedZoom = false;
+    state.editor.hasExtractedText = false; // Reset text extraction flag for new document
     showLoader('Loading PDF document...');
     try {
       const buffer = await file.arrayBuffer();
@@ -474,11 +476,11 @@ function setupEditorWorkspace() {
   }
 
   async function runEditPdfTextExtraction() {
-    const pageIdx = state.editor.activePage?.pageIndex;
-    if (pageIdx === undefined) return;
+    const activePageIdx = state.editor.activePage?.pageIndex;
+    if (activePageIdx === undefined) return;
     
-    // Avoid double text extraction if text has already been loaded for this page
-    if (state.editor.pdfManager.additions[pageIdx].text.length > 0) {
+    // Avoid double text extraction if text has already been loaded across the document
+    if (state.editor.hasExtractedText) {
       if (modeEditBtn && modeAnnotateBtn) {
         modeEditBtn.classList.add('active');
         modeAnnotateBtn.classList.remove('active');
@@ -488,104 +490,101 @@ function setupEditorWorkspace() {
       return;
     }
     
-    showLoader('Extracting document text layers...');
+    showLoader('Extracting document text layers for all pages...');
     try {
-      const blocks = await state.editor.pdfManager.extractNativeTextBlocks(pageIdx);
-      if (blocks.length === 0) {
-        showToast('No native editable text blocks found on this page.', 'warning');
-        return;
-      }
+      const numPages = state.editor.pdfManager.numPages;
+      let totalBlocks = 0;
       
-      const overlay = state.editor.activePage.annotationOverlay;
-      const overlayRect = overlay.getBoundingClientRect();
-      const pdfRenderCanvas = state.editor.activePage.pdfRenderCanvas;
-      const pdfRenderCtx = pdfRenderCanvas.getContext('2d');
-      
-      let count = 0;
-      const coveredRects = [];
-      
-      blocks.forEach(block => {
-        const bboxX = block.percentX * pdfRenderCanvas.width;
-        const bboxY = block.percentY * pdfRenderCanvas.height;
-        const bboxW = block.percentW * pdfRenderCanvas.width;
-        const bboxH = block.percentH * pdfRenderCanvas.height;
+      for (let pIdx = 0; pIdx < numPages; pIdx++) {
+        // Skip page if it already has text overlays to avoid doubling
+        if (state.editor.pdfManager.additions[pIdx].text.length > 0) continue;
         
-        const pixel = pdfRenderCtx.getImageData(
-          Math.max(0, Math.min(pdfRenderCanvas.width - 1, bboxX - 2)),
-          Math.max(0, Math.min(pdfRenderCanvas.height - 1, bboxY - 2)),
-          1, 1
-        ).data;
-        const r = pixel[0];
-        const g = pixel[1];
-        const b = pixel[2];
-        const a = pixel[3];
+        document.getElementById('spinner-text').textContent = `Extracting text layers: page ${pIdx + 1} of ${numPages}...`;
         
-        // Default to white background color if the extracted pixel is black/dark or transparent
-        let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-        if ((r < 120 && g < 120 && b < 120) || a === 0) {
-          finalBgColor = '#ffffff';
-        }
+        const blocks = await state.editor.pdfManager.extractNativeTextBlocks(pIdx);
+        if (blocks.length === 0) continue;
         
-        // Erase the original native text drawn on the canvas by drawing a solid background rect
-        pdfRenderCtx.fillStyle = finalBgColor;
-        pdfRenderCtx.fillRect(
-          Math.max(0, bboxX - 2),
-          Math.max(0, bboxY - 2),
-          Math.min(pdfRenderCanvas.width - bboxX + 2, bboxW + 4),
-          Math.min(pdfRenderCanvas.height - bboxY + 2, bboxH + 4)
-        );
+        // Render PDF page to an offscreen canvas to detect text backgrounds correctly
+        const page = await state.editor.pdfManager.pdfJsDoc.getPage(pIdx + 1);
+        const viewport = page.getViewport({ scale: 1.5 }); // Match renderPageToContainer scale
         
-        coveredRects.push({
-          percentX: block.percentX,
-          percentY: block.percentY,
-          percentW: block.percentW,
-          percentH: block.percentH,
-          bgColor: finalBgColor
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = viewport.width;
+        tempCanvas.height = viewport.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        await page.render({ canvasContext: tempCtx, viewport }).promise;
+        
+        const coveredRects = [];
+        
+        blocks.forEach(block => {
+          const bboxX = block.percentX * tempCanvas.width;
+          const bboxY = block.percentY * tempCanvas.height;
+          const bboxW = block.percentW * tempCanvas.width;
+          const bboxH = block.percentH * tempCanvas.height;
+          
+          const pixel = tempCtx.getImageData(
+            Math.max(0, Math.min(tempCanvas.width - 1, bboxX - 2)),
+            Math.max(0, Math.min(tempCanvas.height - 1, bboxY - 2)),
+            1, 1
+          ).data;
+          const r = pixel[0];
+          const g = pixel[1];
+          const b = pixel[2];
+          const a = pixel[3];
+          
+          // Default to white background color if the extracted pixel is dark/transparent
+          let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+          if ((r < 120 && g < 120 && b < 120) || a === 0) {
+            finalBgColor = '#ffffff';
+          }
+          
+          coveredRects.push({
+            percentX: block.percentX,
+            percentY: block.percentY,
+            percentW: block.percentW,
+            percentH: block.percentH,
+            bgColor: finalBgColor
+          });
+          
+          const fontSize = Math.max(8, Math.round(block.fontSize * 1.5));
+          
+          const txtObj = {
+            percentX: block.percentX,
+            percentY: block.percentY,
+            percentW: block.percentW,
+            percentH: block.percentH,
+            text: block.text,
+            size: fontSize,
+            color: '#000000',
+            fontFamily: block.fontFamily || "'Inter', sans-serif",
+            isBold: false,
+            isItalic: false,
+            bgEnable: false,
+            bgColor: finalBgColor
+          };
+          
+          state.editor.pdfManager.additions[pIdx].text.push(txtObj);
+          totalBlocks++;
         });
         
-        const fontSize = Math.max(8, Math.round(block.fontSize * 1.5));
-        
-        const txtObj = {
-          percentX: block.percentX,
-          percentY: block.percentY,
-          percentW: block.percentW,
-          percentH: block.percentH,
-          text: block.text,
-          size: fontSize,
-          color: '#000000',
-          fontFamily: block.fontFamily || "'Inter', sans-serif",
-          isBold: false,
-          isItalic: false,
-          bgEnable: false, // background covered directly on canvas now!
-          bgColor: finalBgColor,
-          overlayWidth: overlayRect.width,
-          overlayHeight: overlayRect.height
-        };
-        
-        state.editor.pdfManager.additions[pageIdx].text.push(txtObj);
-        state.editor.pdfManager.renderTextElement(txtObj, overlay, pageIdx);
-        count++;
-      });
-      
-      state.editor.pdfManager.additions[pageIdx].coveredRects = coveredRects;
-      window.saveHistoryState(pageIdx);
-      
-      if (count > 0) {
-        // Toggle mode buttons active classes
-        if (modeEditBtn && modeAnnotateBtn) {
-          modeEditBtn.classList.add('active');
-          modeAnnotateBtn.classList.remove('active');
-        }
-        
-        // Show text styling options sidebar
-        setEditorTool('text');
-        
-        window.saveHistoryState(pageIdx);
-        showToast(`Converted ${count} existing text blocks into editable overlays!`, 'success');
+        state.editor.pdfManager.additions[pIdx].coveredRects = coveredRects;
+        window.saveHistoryState(pIdx);
       }
+      
+      state.editor.hasExtractedText = true;
+      
+      // Reload current editor page to apply local DOM text elements and draw coveredRects canvas
+      await loadEditorPage(activePageIdx);
+      
+      if (modeEditBtn && modeAnnotateBtn) {
+        modeEditBtn.classList.add('active');
+        modeAnnotateBtn.classList.remove('active');
+      }
+      setEditorTool('text');
+      showToast(`Document-wide editing prepared! Converted ${totalBlocks} text blocks into editable overlays.`, 'success');
     } catch (err) {
       console.error(err);
-      showToast('Failed to extract native text.', 'danger');
+      showToast('Failed to extract document text layers.', 'danger');
     } finally {
       hideLoader();
     }
