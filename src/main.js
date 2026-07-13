@@ -538,7 +538,7 @@ function setupEditorWorkspace() {
             finalBgColor = '#ffffff';
           }
           
-          const fontSize = Math.max(8, Math.round(block.fontSize * 1.5));
+          const fontSize = Math.max(8, Math.round(block.fontSize));
           
           const txtObj = {
             percentX: block.percentX,
