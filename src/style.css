@@ -583,7 +583,7 @@ body.fixed-viewport .view-panel.active {
 /* Draggable Add-Text Element */
 .text-element-wrapper {
   border: 1px dashed var(--accent-purple);
-  padding: 4px 8px;
+  padding: 0; /* Removed padding to prevent vertical/horizontal shifting */
   cursor: move;
   transition: border-color var(--transition-fast);
   overflow: visible; /* prevents delete button from clipping */
@@ -612,6 +612,7 @@ body.fixed-viewport .view-panel.active {
   border: none;
   background: transparent;
   min-height: 20px;
+  line-height: 1.0;
 }
 
 /* Right-side drag resizer handle for text boxes */
