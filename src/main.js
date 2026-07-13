@@ -912,6 +912,10 @@ function setupEditorWorkspace() {
 
   // Save changes
   saveBtn.addEventListener('click', async () => {
+    // Force blur active element to sync final text edits
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     commitDrawingCanvas();
     showLoader('Compiling and saving your PDF...');
     try {
@@ -1389,7 +1393,8 @@ window.saveHistoryState = (pageIndex) => {
     canvasDataUrl: page.drawingCanvas.toDataURL(),
     text: copyAdditions(state.editor.pdfManager.additions[pageIndex].text),
     signatures: copyAdditions(state.editor.pdfManager.additions[pageIndex].signatures),
-    formFields: copyAdditions(state.editor.pdfManager.additions[pageIndex].formFields)
+    formFields: copyAdditions(state.editor.pdfManager.additions[pageIndex].formFields),
+    erasedRects: copyAdditions(state.editor.pdfManager.additions[pageIndex].erasedRects)
   };
   
   history.snapshots.push(snapshot);
@@ -1397,7 +1402,7 @@ window.saveHistoryState = (pageIndex) => {
   
   window.updateUndoRedoButtons();
 };
-
+  
 window.restoreHistoryState = (pageIndex, direction) => {
   const history = getHistoryState(pageIndex);
   if (direction === 'undo' && history.index > 0) {
@@ -1418,6 +1423,7 @@ window.restoreHistoryState = (pageIndex, direction) => {
   state.editor.pdfManager.additions[pageIndex].text = copyAdditions(snapshot.text);
   state.editor.pdfManager.additions[pageIndex].signatures = copyAdditions(snapshot.signatures);
   state.editor.pdfManager.additions[pageIndex].formFields = copyAdditions(snapshot.formFields);
+  state.editor.pdfManager.additions[pageIndex].erasedRects = copyAdditions(snapshot.erasedRects || []);
   
   // Restore Drawing Canvas
   const ctx = page.drawingCanvas.getContext('2d');

@@ -65,6 +65,7 @@ export class PdfManager {
         signatures: [],
         formFields: [],
         coveredRects: [],
+        erasedRects: [], // Array to track deleted native text blocks to erase them from output PDF
         drawingBlob: null // Drawing canvas stored as PNG blob URL
       };
     }
@@ -117,6 +118,25 @@ export class PdfManager {
             Math.min(canvas.height - bboxY + 2, bboxH + 4)
           );
         }
+      });
+    }
+    
+    // Draw erasedRects (deleted native text blocks) on browser canvas
+    if (this.additions[pageIndex].erasedRects && this.additions[pageIndex].erasedRects.length > 0) {
+      const pdfRenderCtx = context;
+      this.additions[pageIndex].erasedRects.forEach(rect => {
+        const bboxX = rect.percentX * canvas.width;
+        const bboxY = rect.percentY * canvas.height;
+        const bboxW = rect.percentW * canvas.width;
+        const bboxH = rect.percentH * canvas.height;
+        
+        pdfRenderCtx.fillStyle = rect.bgColor || '#ffffff';
+        pdfRenderCtx.fillRect(
+          Math.max(0, bboxX - 2),
+          Math.max(0, bboxY - 2),
+          Math.min(canvas.width - bboxX + 2, bboxW + 4),
+          Math.min(canvas.height - bboxY + 2, bboxH + 4)
+        );
       });
     }
     
@@ -257,6 +277,12 @@ export class PdfManager {
       e.stopPropagation();
       wrapper.remove();
       this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
+      if (txtObj.coverRect) {
+        if (!this.additions[pageIndex].erasedRects) {
+          this.additions[pageIndex].erasedRects = [];
+        }
+        this.additions[pageIndex].erasedRects.push(txtObj.coverRect);
+      }
       window.saveHistoryState(pageIndex);
     });
     wrapper.appendChild(delBtn);
@@ -276,6 +302,12 @@ export class PdfManager {
       if (!txtObj.text || txtObj.text === 'Click to edit text') {
         wrapper.remove();
         this.additions[pageIndex].text = this.additions[pageIndex].text.filter(t => t !== txtObj);
+        if (txtObj.coverRect) {
+          if (!this.additions[pageIndex].erasedRects) {
+            this.additions[pageIndex].erasedRects = [];
+          }
+          this.additions[pageIndex].erasedRects.push(txtObj.coverRect);
+        }
         window.saveHistoryState(pageIndex);
       } else if (oldVal !== txtObj.text) {
         window.saveHistoryState(pageIndex);
@@ -641,6 +673,25 @@ export class PdfManager {
       const { width: pageWidth, height: pageHeight } = page.getSize();
       const pageAdditions = this.additions[i];
       
+      // 0. Cover erasedRects (deleted native text blocks) with background color
+      if (pageAdditions.erasedRects && pageAdditions.erasedRects.length > 0) {
+        for (const rect of pageAdditions.erasedRects) {
+          const rectColor = hexToRgbColor(rect.bgColor || '#ffffff');
+          const rectW = rect.percentW * pageWidth;
+          const rectH = rect.percentH * pageHeight;
+          const rectX = rect.percentX * pageWidth;
+          const rectY = pageHeight - (rect.percentY * pageHeight) - rectH;
+          
+          page.drawRectangle({
+            x: rectX - 2.5,
+            y: rectY - 2.5,
+            width: rectW + 5,
+            height: rectH + 5,
+            color: rectColor,
+          });
+        }
+      }
+      
       // 1. Embed drawings (if any)
       if (pageAdditions.drawingBlob) {
         const drawingBytes = await fetch(pageAdditions.drawingBlob)
@@ -662,10 +713,10 @@ export class PdfManager {
         const hasBeenEdited = txtObj.originalText === undefined || txtObj.text !== txtObj.originalText;
         if (!hasBeenEdited) continue;
         
-        // 2.1 Draw solid background rectangle cover (only if coverRect is defined for modified text)
-        if (txtObj.coverRect) {
-          const rect = txtObj.coverRect;
-          const rectColor = hexToRgbColor(rect.bgColor || '#ffffff');
+        // 2.1 Draw solid background rectangle cover (only if coverRect is defined or compute fallback coordinates)
+        if (txtObj.coverRect || txtObj.originalText) {
+          const rect = txtObj.coverRect || txtObj; // Fallback to txtObj coordinate parameters
+          const rectColor = hexToRgbColor(rect.bgColor || txtObj.bgColor || '#ffffff');
           const rectW = rect.percentW * pageWidth;
           const rectH = rect.percentH * pageHeight;
           const rectX = rect.percentX * pageWidth;
