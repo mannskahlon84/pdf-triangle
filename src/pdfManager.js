@@ -684,8 +684,8 @@ export class PdfManager {
         
         tempCtx.font = fontStyle;
         
-        // Word wrapping calculations based on resized overlay width
-        const maxCanvasWidth = txtObj.percentW ? (txtObj.percentW * (txtObj.overlayWidth || pageWidth) * scale) : null;
+        // Word wrapping calculations based on resized overlay width in PDF points
+        const maxCanvasWidth = txtObj.percentW ? (txtObj.percentW * pageWidth * scale) : null;
         const lines = [];
         const rawLines = txtObj.text.split('\n');
         
@@ -719,8 +719,9 @@ export class PdfManager {
         const lineHeight = fontSize * 1.35;
         const totalHeight = lineHeight * lines.length;
         
-        tempCanvas.width = finalWidth + 40;
-        tempCanvas.height = totalHeight + 40;
+        const pad = 20; // constant padding to prevent clipping
+        tempCanvas.width = finalWidth + pad * 2;
+        tempCanvas.height = totalHeight + pad * 2;
         
         // Redraw states
         tempCtx.font = fontStyle;
@@ -735,23 +736,18 @@ export class PdfManager {
         // Draw text characters
         tempCtx.fillStyle = txtObj.color || '#000000';
         lines.forEach((line, idx) => {
-          tempCtx.fillText(line, 20, 20 + idx * lineHeight);
+          tempCtx.fillText(line, pad, pad + idx * lineHeight);
         });
         
         const textDataUrl = tempCanvas.toDataURL('image/png');
         const textBytes = await fetch(textDataUrl).then(res => res.arrayBuffer());
         const embeddedTextImg = await outPdf.embedPng(textBytes);
         
-        const scaleWFactor = pageWidth / (txtObj.overlayWidth || pageWidth);
-        const scaleHFactor = pageHeight / (txtObj.overlayHeight || pageHeight);
+        const pdfWidth = tempCanvas.width / scale;
+        const pdfHeight = tempCanvas.height / scale;
         
-        const pdfWidth = (tempCanvas.width / scale) * scaleWFactor;
-        const pdfHeight = (tempCanvas.height / scale) * scaleHFactor;
-        
-        // Pad is 20px on temp canvas at scale = 3. Compute equivalent offsets in PDF points.
-        const pad = 20;
-        const offsetX = (pad / scale) * scaleWFactor;
-        const offsetY = (pad / scale) * scaleHFactor;
+        const offsetX = pad / scale;
+        const offsetY = pad / scale;
         
         const x = txtObj.percentX * pageWidth - offsetX;
         const y = pageHeight - (txtObj.percentY * pageHeight) - pdfHeight + offsetY;
