@@ -98,22 +98,25 @@ export class PdfManager {
     // Render PDF page to canvas
     await page.render({ canvasContext: context, viewport }).promise;
 
-    // Draw coveredRects to erase original text on the newly rendered canvas
-    if (this.additions[pageIndex].coveredRects && this.additions[pageIndex].coveredRects.length > 0) {
+    // Draw coverRects to erase original text on the newly rendered browser canvas
+    if (this.additions[pageIndex].text && this.additions[pageIndex].text.length > 0) {
       const pdfRenderCtx = context;
-      this.additions[pageIndex].coveredRects.forEach(rect => {
-        const bboxX = rect.percentX * canvas.width;
-        const bboxY = rect.percentY * canvas.height;
-        const bboxW = rect.percentW * canvas.width;
-        const bboxH = rect.percentH * canvas.height;
-        
-        pdfRenderCtx.fillStyle = rect.bgColor;
-        pdfRenderCtx.fillRect(
-          Math.max(0, bboxX - 2),
-          Math.max(0, bboxY - 2),
-          Math.min(canvas.width - bboxX + 2, bboxW + 4),
-          Math.min(canvas.height - bboxY + 2, bboxH + 4)
-        );
+      this.additions[pageIndex].text.forEach(txtObj => {
+        if (txtObj.coverRect) {
+          const rect = txtObj.coverRect;
+          const bboxX = rect.percentX * canvas.width;
+          const bboxY = rect.percentY * canvas.height;
+          const bboxW = rect.percentW * canvas.width;
+          const bboxH = rect.percentH * canvas.height;
+          
+          pdfRenderCtx.fillStyle = rect.bgColor || '#ffffff';
+          pdfRenderCtx.fillRect(
+            Math.max(0, bboxX - 2),
+            Math.max(0, bboxY - 2),
+            Math.min(canvas.width - bboxX + 2, bboxW + 4),
+            Math.min(canvas.height - bboxY + 2, bboxH + 4)
+          );
+        }
       });
     }
     
@@ -638,9 +641,30 @@ export class PdfManager {
       const { width: pageWidth, height: pageHeight } = page.getSize();
       const pageAdditions = this.additions[i];
       
-      // 0. Cover original text blocks with background color
-      if (pageAdditions.coveredRects) {
-        for (const rect of pageAdditions.coveredRects) {
+      // 1. Embed drawings (if any)
+      if (pageAdditions.drawingBlob) {
+        const drawingBytes = await fetch(pageAdditions.drawingBlob)
+          .then(res => res.arrayBuffer());
+        const embeddedDraw = await outPdf.embedPng(drawingBytes);
+        page.drawImage(embeddedDraw, {
+          x: 0,
+          y: 0,
+          width: pageWidth,
+          height: pageHeight,
+        });
+      }
+      
+      // 2. Add text annotations as transparent high-res PNG images (only for modified blocks)
+      for (const txtObj of pageAdditions.text) {
+        if (!txtObj.text) continue;
+        
+        // Skip unedited extracted blocks to keep the PDF original and crisp!
+        const hasBeenEdited = txtObj.originalText === undefined || txtObj.text !== txtObj.originalText;
+        if (!hasBeenEdited) continue;
+        
+        // 2.1 Draw solid background rectangle cover (only if coverRect is defined for modified text)
+        if (txtObj.coverRect) {
+          const rect = txtObj.coverRect;
           const rectColor = hexToRgbColor(rect.bgColor || '#ffffff');
           const rectW = rect.percentW * pageWidth;
           const rectH = rect.percentH * pageHeight;
@@ -655,25 +679,8 @@ export class PdfManager {
             color: rectColor,
           });
         }
-      }
-      
-      // 1. Embed drawings (if any)
-      if (pageAdditions.drawingBlob) {
-        const drawingBytes = await fetch(pageAdditions.drawingBlob)
-          .then(res => res.arrayBuffer());
-        const embeddedDraw = await outPdf.embedPng(drawingBytes);
-        page.drawImage(embeddedDraw, {
-          x: 0,
-          y: 0,
-          width: pageWidth,
-          height: pageHeight,
-        });
-      }
-      
-      // 2. Add text annotations as transparent high-res PNG images (supports custom fonts, bold, and italic perfectly)
-      for (const txtObj of pageAdditions.text) {
-        if (!txtObj.text) continue;
         
+        // 2.2 Draw new text characters
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         

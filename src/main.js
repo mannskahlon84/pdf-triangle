@@ -538,14 +538,6 @@ function setupEditorWorkspace() {
             finalBgColor = '#ffffff';
           }
           
-          coveredRects.push({
-            percentX: block.percentX,
-            percentY: block.percentY,
-            percentW: block.percentW,
-            percentH: block.percentH,
-            bgColor: finalBgColor
-          });
-          
           const fontSize = Math.max(8, Math.round(block.fontSize * 1.5));
           
           const txtObj = {
@@ -554,20 +546,27 @@ function setupEditorWorkspace() {
             percentW: block.percentW,
             percentH: block.percentH,
             text: block.text,
+            originalText: block.text, // Store original text to check if edited later
             size: fontSize,
             color: '#000000',
             fontFamily: block.fontFamily || "'Inter', sans-serif",
             isBold: false,
             isItalic: false,
             bgEnable: false,
-            bgColor: finalBgColor
+            bgColor: finalBgColor,
+            coverRect: {
+              percentX: block.percentX,
+              percentY: block.percentY,
+              percentW: block.percentW,
+              percentH: block.percentH,
+              bgColor: finalBgColor
+            }
           };
           
           state.editor.pdfManager.additions[pIdx].text.push(txtObj);
           totalBlocks++;
         });
         
-        state.editor.pdfManager.additions[pIdx].coveredRects = coveredRects;
         window.saveHistoryState(pIdx);
       }
       
