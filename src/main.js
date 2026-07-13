@@ -532,9 +532,9 @@ function setupEditorWorkspace() {
           const b = pixel[2];
           const a = pixel[3];
           
-          // Default to white background color if the extracted pixel is dark/transparent
+          // Default to white background color if the extracted pixel is near white/light grey, dark, or transparent
           let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-          if ((r < 120 && g < 120 && b < 120) || a === 0) {
+          if ((r > 200 && g > 200 && b > 200) || (r < 120 && g < 120 && b < 120) || a === 0) {
             finalBgColor = '#ffffff';
           }
           

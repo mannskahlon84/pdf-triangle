@@ -648,10 +648,10 @@ export class PdfManager {
           const rectY = pageHeight - (rect.percentY * pageHeight) - rectH;
           
           page.drawRectangle({
-            x: rectX - 1,
-            y: rectY - 1,
-            width: rectW + 2,
-            height: rectH + 2,
+            x: rectX - 2.5,
+            y: rectY - 2.5,
+            width: rectW + 5,
+            height: rectH + 5,
             color: rectColor,
           });
         }
@@ -742,11 +742,19 @@ export class PdfManager {
         const textBytes = await fetch(textDataUrl).then(res => res.arrayBuffer());
         const embeddedTextImg = await outPdf.embedPng(textBytes);
         
-        const pdfWidth = (tempCanvas.width / scale) * (pageWidth / (txtObj.overlayWidth || pageWidth));
-        const pdfHeight = (tempCanvas.height / scale) * (pageHeight / (txtObj.overlayHeight || pageHeight));
+        const scaleWFactor = pageWidth / (txtObj.overlayWidth || pageWidth);
+        const scaleHFactor = pageHeight / (txtObj.overlayHeight || pageHeight);
         
-        const x = txtObj.percentX * pageWidth;
-        const y = pageHeight - (txtObj.percentY * pageHeight) - pdfHeight;
+        const pdfWidth = (tempCanvas.width / scale) * scaleWFactor;
+        const pdfHeight = (tempCanvas.height / scale) * scaleHFactor;
+        
+        // Pad is 20px on temp canvas at scale = 3. Compute equivalent offsets in PDF points.
+        const pad = 20;
+        const offsetX = (pad / scale) * scaleWFactor;
+        const offsetY = (pad / scale) * scaleHFactor;
+        
+        const x = txtObj.percentX * pageWidth - offsetX;
+        const y = pageHeight - (txtObj.percentY * pageHeight) - pdfHeight + offsetY;
         
         page.drawImage(embeddedTextImg, {
           x,
