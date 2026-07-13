@@ -240,6 +240,110 @@
               <p>Crop, adjust corners, and apply high-contrast filters to turn photos into scanned PDFs.</p>
               <button class="btn btn-primary">Open Tool</button>
             </div>
+
+            <!-- Remove Pages -->
+            <div class="tool-card" data-tool="remove">
+              <div class="card-icon red"><i data-lucide="file-minus"></i></div>
+              <h3>Remove Pages</h3>
+              <p>Delete specific pages from your PDF document easily.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Extract Pages -->
+            <div class="tool-card" data-tool="extract">
+              <div class="card-icon blue"><i data-lucide="file-output"></i></div>
+              <h3>Extract Pages</h3>
+              <p>Extract specific pages from a PDF into a new PDF document.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Repair PDF -->
+            <div class="tool-card" data-tool="repair">
+              <div class="card-icon green"><i data-lucide="wrench"></i></div>
+              <h3>Repair PDF</h3>
+              <p>Fix damaged, corrupt, or unreadable PDF files.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PPTX to PDF -->
+            <div class="tool-card" data-tool="pptx-to-pdf">
+              <div class="card-icon orange"><i data-lucide="presentation"></i></div>
+              <h3>PPTX to PDF</h3>
+              <p>Convert PowerPoint presentations (.pptx) into PDF documents.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- HTML to PDF -->
+            <div class="tool-card" data-tool="html-to-pdf">
+              <div class="card-icon teal"><i data-lucide="code"></i></div>
+              <h3>HTML to PDF</h3>
+              <p>Convert webpage files or HTML files into PDF documents.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PDF to Word -->
+            <div class="tool-card" data-tool="pdf-to-word">
+              <div class="card-icon blue"><i data-lucide="file-text"></i></div>
+              <h3>PDF to Word</h3>
+              <p>Convert PDF documents to editable Microsoft Word files.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PDF to PowerPoint -->
+            <div class="tool-card" data-tool="pdf-to-powerpoint">
+              <div class="card-icon orange"><i data-lucide="presentation"></i></div>
+              <h3>PDF to PPTX</h3>
+              <p>Convert PDF documents into PowerPoint slide shows.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PDF to Excel -->
+            <div class="tool-card" data-tool="pdf-to-excel">
+              <div class="card-icon emerald"><i data-lucide="sheet"></i></div>
+              <h3>PDF to Excel</h3>
+              <p>Convert PDF tables and matrices into Excel spreadsheets.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PDF to PDF/A -->
+            <div class="tool-card" data-tool="pdf-to-pdf-a">
+              <div class="card-icon indigo"><i data-lucide="archive"></i></div>
+              <h3>PDF to PDF/A</h3>
+              <p>Convert PDF files to ISO standardized PDF/A archive format.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Crop PDF -->
+            <div class="tool-card" data-tool="crop">
+              <div class="card-icon amber"><i data-lucide="crop"></i></div>
+              <h3>Crop PDF</h3>
+              <p>Crop page margins and boundaries in your PDF document.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Redact PDF -->
+            <div class="tool-card" data-tool="redact">
+              <div class="card-icon red"><i data-lucide="eye-off"></i></div>
+              <h3>Redact PDF</h3>
+              <p>Securely black out sensitive text and permanent additions.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- Translate PDF -->
+            <div class="tool-card" data-tool="translate">
+              <div class="card-icon purple"><i data-lucide="languages"></i></div>
+              <h3>Translate PDF</h3>
+              <p>Translate your PDF text to another language locally.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
+            <!-- PDF to Markdown -->
+            <div class="tool-card" data-tool="pdf-to-markdown">
+              <div class="card-icon teal"><i data-lucide="file-code-2"></i></div>
+              <h3>PDF to Markdown</h3>
+              <p>Convert PDF structures, lists, and tables to clean Markdown text.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
           </div>
 
           <!-- PERSISTENT GLOBAL BANNER AD (Leaderboard 728x90 or Responsive) -->
@@ -1526,6 +1630,388 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 19. REMOVE PAGES WORKSPACE -->
+        <section id="remove-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Remove Pages from PDF</h2>
+              <p>Delete specific pages from your PDF file. The original layout remains untouched.</p>
+            </div>
+            <div class="upload-area" id="remove-upload-zone">
+              <i data-lucide="file-minus" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="remove-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="remove-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="remove-filename">document.pdf</h4>
+                  <p id="remove-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <div class="conversion-settings">
+                <div class="form-group">
+                  <label for="remove-pages-input">Pages to Remove (e.g. 1, 3, 5-7)</label>
+                  <input type="text" id="remove-pages-input" placeholder="e.g. 2, 4" style="width:100%;" />
+                </div>
+              </div>
+              <button class="btn btn-danger btn-full" id="remove-submit-btn"><i data-lucide="trash-2"></i> Remove Pages & Download</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 20. EXTRACT PAGES WORKSPACE -->
+        <section id="extract-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Extract Pages from PDF</h2>
+              <p>Extract specific pages from a PDF and save them as a new PDF document.</p>
+            </div>
+            <div class="upload-area" id="extract-upload-zone">
+              <i data-lucide="file-output" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="extract-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="extract-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="extract-filename">document.pdf</h4>
+                  <p id="extract-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <div class="conversion-settings">
+                <div class="form-group">
+                  <label for="extract-pages-input">Pages to Extract (e.g. 1-2, 5, 8-10)</label>
+                  <input type="text" id="extract-pages-input" placeholder="e.g. 1, 3-5" style="width:100%;" />
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="extract-submit-btn"><i data-lucide="file-output"></i> Extract Pages & Download</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 21. REPAIR PDF WORKSPACE -->
+        <section id="repair-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Repair PDF Document</h2>
+              <p>Fix corrupt, damaged, or unreadable PDF files using standard offline rebuild.</p>
+            </div>
+            <div class="upload-area" id="repair-upload-zone">
+              <i data-lucide="wrench" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="repair-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="repair-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="repair-filename">document.pdf</h4>
+                  <p id="repair-filesize">Size: -- KB</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="repair-submit-btn"><i data-lucide="check-circle"></i> Repair & Rebuild PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 22. PPTX TO PDF WORKSPACE -->
+        <section id="pptx-to-pdf-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>PowerPoint to PDF Converter</h2>
+              <p>Convert Microsoft PowerPoint (.pptx) presentation files into standard PDF documents.</p>
+            </div>
+            <div class="upload-area" id="pptx-to-pdf-upload-zone">
+              <i data-lucide="presentation" class="upload-icon"></i>
+              <p>Drag & drop a PPTX file here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pptx-to-pdf-file-input" accept=".pptx" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="pptx-to-pdf-setup">
+              <div class="file-summary-card">
+                <i data-lucide="presentation" class="file-card-icon orange"></i>
+                <div>
+                  <h4 id="pptx-to-pdf-filename">presentation.pptx</h4>
+                  <p id="pptx-to-pdf-filesize">Size: -- KB</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="pptx-to-pdf-submit-btn"><i data-lucide="file-up"></i> Convert to PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 23. HTML TO PDF WORKSPACE -->
+        <section id="html-to-pdf-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>HTML to PDF Converter</h2>
+              <p>Convert HTML webpage files (.html) into standard PDF documents.</p>
+            </div>
+            <div class="upload-area" id="html-to-pdf-upload-zone">
+              <i data-lucide="code" class="upload-icon"></i>
+              <p>Drag & drop an HTML file here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="html-to-pdf-file-input" accept=".html" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="html-to-pdf-setup">
+              <div class="file-summary-card">
+                <i data-lucide="code" class="file-card-icon teal"></i>
+                <div>
+                  <h4 id="html-to-pdf-filename">index.html</h4>
+                  <p id="html-to-pdf-filesize">Size: -- KB</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="html-to-pdf-submit-btn"><i data-lucide="file-up"></i> Convert to PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 24. PDF TO WORD WORKSPACE -->
+        <section id="pdf-to-word-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>PDF to Word Converter</h2>
+              <p>Convert your PDF document into an editable Microsoft Word (.doc) file.</p>
+            </div>
+            <div class="upload-area" id="pdf-to-word-upload-zone">
+              <i data-lucide="file-text" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pdf-to-word-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="pdf-to-word-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="pdf-to-word-filename">document.pdf</h4>
+                  <p id="pdf-to-word-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="pdf-to-word-submit-btn"><i data-lucide="download"></i> Convert & Download Word Doc</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 25. PDF TO POWERPOINT WORKSPACE -->
+        <section id="pdf-to-powerpoint-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>PDF to PowerPoint Converter</h2>
+              <p>Convert your PDF document into a slide show presentation (.pptx) in high quality.</p>
+            </div>
+            <div class="upload-area" id="pdf-to-powerpoint-upload-zone">
+              <i data-lucide="presentation" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pdf-to-powerpoint-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="pdf-to-powerpoint-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="pdf-to-powerpoint-filename">document.pdf</h4>
+                  <p id="pdf-to-powerpoint-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="pdf-to-powerpoint-submit-btn"><i data-lucide="download"></i> Convert & Download PPTX</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 26. PDF TO EXCEL WORKSPACE -->
+        <section id="pdf-to-excel-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>PDF to Excel Converter</h2>
+              <p>Parse tables and structural blocks of text from your PDF into a spreadsheet (.xlsx).</p>
+            </div>
+            <div class="upload-area" id="pdf-to-excel-upload-zone">
+              <i data-lucide="sheet" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pdf-to-excel-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="pdf-to-excel-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="pdf-to-excel-filename">document.pdf</h4>
+                  <p id="pdf-to-excel-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="pdf-to-excel-submit-btn"><i data-lucide="download"></i> Convert & Download Excel</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 27. PDF TO PDF/A WORKSPACE -->
+        <section id="pdf-to-pdf-a-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>PDF to PDF/A Converter</h2>
+              <p>Convert your standard PDF into ISO-compliant PDF/A-3b format for digital archive preservation.</p>
+            </div>
+            <div class="upload-area" id="pdf-to-pdf-a-upload-zone">
+              <i data-lucide="archive" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pdf-to-pdf-a-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="pdf-to-pdf-a-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="pdf-to-pdf-a-filename">document.pdf</h4>
+                  <p id="pdf-to-pdf-a-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="pdf-to-pdf-a-submit-btn"><i data-lucide="download"></i> Convert & Download PDF/A</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 28. CROP PDF WORKSPACE -->
+        <section id="crop-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Crop PDF Margins</h2>
+              <p>Adjust and crop standard margins on all pages of your PDF document.</p>
+            </div>
+            <div class="upload-area" id="crop-upload-zone">
+              <i data-lucide="crop" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="crop-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="crop-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="crop-filename">document.pdf</h4>
+                  <p id="crop-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <div class="conversion-settings">
+                <div class="form-group">
+                  <label for="crop-margin-input">Crop Margin Percentage (%)</label>
+                  <select id="crop-margin-input" style="width:100%;">
+                    <option value="5">Small (5%)</option>
+                    <option value="10" selected>Medium (10%)</option>
+                    <option value="15">Large (15%)</option>
+                    <option value="20">Extra Large (20%)</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="crop-submit-btn"><i data-lucide="crop"></i> Crop & Download PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 29. REDACT PDF WORKSPACE -->
+        <section id="redact-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Redact PDF Content</h2>
+              <p>Securely black out sensitive words, phrases, and text elements in your PDF.</p>
+            </div>
+            <div class="upload-area" id="redact-upload-zone">
+              <i data-lucide="eye-off" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="redact-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="redact-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="redact-filename">document.pdf</h4>
+                  <p id="redact-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <div class="conversion-settings">
+                <div class="form-group">
+                  <label for="redact-text-input">Text Phrase to Redact (Search query)</label>
+                  <input type="text" id="redact-text-input" placeholder="e.g. CONFIDENTIAL or invoice number" style="width:100%;" />
+                </div>
+              </div>
+              <button class="btn btn-danger btn-full" id="redact-submit-btn"><i data-lucide="eye-off"></i> Redact & Download PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 30. TRANSLATE PDF WORKSPACE -->
+        <section id="translate-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>Translate PDF Document</h2>
+              <p>Translate the text content of your document into another language in place.</p>
+            </div>
+            <div class="upload-area" id="translate-upload-zone">
+              <i data-lucide="languages" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="translate-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="translate-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="translate-filename">document.pdf</h4>
+                  <p id="translate-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <div class="conversion-settings">
+                <div class="form-group">
+                  <label for="translate-lang-input">Target Language</label>
+                  <select id="translate-lang-input" style="width:100%;">
+                    <option value="es" selected>Spanish (Español)</option>
+                    <option value="fr">French (Français)</option>
+                    <option value="de">German (Deutsch)</option>
+                    <option value="it">Italian (Italiano)</option>
+                    <option value="pt">Portuguese (Português)</option>
+                    <option value="zh">Chinese (中文)</option>
+                    <option value="ja">Japanese (日本語)</option>
+                    <option value="ar">Arabic (العربية)</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="translate-submit-btn"><i data-lucide="languages"></i> Translate & Download PDF</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 31. PDF TO MARKDOWN WORKSPACE -->
+        <section id="pdf-to-markdown-view" class="view-panel hidden">
+          <div class="tool-container">
+            <div class="tool-header">
+              <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+              <h2>PDF to Markdown Converter</h2>
+              <p>Convert your PDF structures, titles, tables, and lists into a clean Markdown (.md) text file.</p>
+            </div>
+            <div class="upload-area" id="pdf-to-markdown-upload-zone">
+              <i data-lucide="file-code-2" class="upload-icon"></i>
+              <p>Drag & drop a PDF here, or <span class="highlight">browse file</span></p>
+              <input type="file" id="pdf-to-markdown-file-input" accept=".pdf" class="hidden" />
+            </div>
+            <div class="conversion-setup hidden" id="pdf-to-markdown-setup">
+              <div class="file-summary-card">
+                <i data-lucide="file" class="file-card-icon"></i>
+                <div>
+                  <h4 id="pdf-to-markdown-filename">document.pdf</h4>
+                  <p id="pdf-to-markdown-pagecount">Pages: --</p>
+                </div>
+              </div>
+              <button class="btn btn-success btn-full" id="pdf-to-markdown-submit-btn"><i data-lucide="download"></i> Convert & Download Markdown</button>
             </div>
           </div>
         </section>

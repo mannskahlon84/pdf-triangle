@@ -1,4 +1,8 @@
 import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Setup pdf.js worker locally from the public folder
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 /**
  * Merges multiple PDF files (as ArrayBuffers) into a single PDF
@@ -366,6 +370,227 @@ export async function addPageNumbersToPdf(pdfBuffer, options) {
       font,
       color: rgbColor
     });
+  }
+  
+  return await pdfDoc.save();
+}
+
+/**
+ * Removes pages from a PDF document
+ * @param {File} file 
+ * @param {string} pagesToRemoveStr (e.g. "1, 3, 5-7")
+ * @returns {Promise<Uint8Array>} PDF bytes
+ */
+export async function removePagesFromPdf(file, pagesToRemoveStr) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  const maxPages = pdfDoc.getPageCount();
+  
+  const ranges = parseRanges(pagesToRemoveStr, maxPages);
+  const indicesToRemove = new Set(ranges.flat());
+  
+  const keepIndices = [];
+  for (let i = 0; i < maxPages; i++) {
+    if (!indicesToRemove.has(i)) {
+      keepIndices.push(i);
+    }
+  }
+  
+  if (keepIndices.length === 0) {
+    throw new Error("Cannot remove all pages. At least one page must remain.");
+  }
+  
+  const newPdf = await PDFDocument.create();
+  const copiedPages = await newPdf.copyPages(pdfDoc, keepIndices);
+  copiedPages.forEach(page => newPdf.addPage(page));
+  
+  return await newPdf.save();
+}
+
+/**
+ * Extracts pages from a PDF document
+ * @param {File} file 
+ * @param {string} pageRangesStr (e.g. "1-3, 5")
+ * @returns {Promise<Uint8Array>} PDF bytes
+ */
+export async function extractPagesFromPdf(file, pageRangesStr) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  const maxPages = pdfDoc.getPageCount();
+  
+  const ranges = parseRanges(pageRangesStr, maxPages);
+  const indicesToKeep = ranges.flat();
+  
+  if (indicesToKeep.length === 0) {
+    throw new Error("No valid pages found in the specified range.");
+  }
+  
+  const newPdf = await PDFDocument.create();
+  const copiedPages = await newPdf.copyPages(pdfDoc, indicesToKeep);
+  copiedPages.forEach(page => newPdf.addPage(page));
+  
+  return await newPdf.save();
+}
+
+/**
+ * Repairs a PDF using pdf-lib standard loader
+ * @param {File} file 
+ * @returns {Promise<Uint8Array>} PDF bytes
+ */
+export async function repairPdf(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+  return await pdfDoc.save();
+}
+
+/**
+ * Crops margins of all pages in a PDF document
+ * @param {File} file 
+ * @param {number} marginPercent 
+ * @returns {Promise<Uint8Array>} PDF bytes
+ */
+export async function cropPdf(file, marginPercent) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  const pages = pdfDoc.getPages();
+  const factor = marginPercent / 100;
+  
+  for (const page of pages) {
+    const { x, y, width, height } = page.getMediaBox();
+    const cropX = x + (width * factor);
+    const cropY = y + (height * factor);
+    const cropWidth = width * (1 - 2 * factor);
+    const cropHeight = height * (1 - 2 * factor);
+    
+    page.setCropBox(cropX, cropY, cropWidth, cropHeight);
+  }
+  
+  return await pdfDoc.save();
+}
+
+/**
+ * Redacts a text query from a PDF document by drawing black boxes over matches
+ * @param {File} file 
+ * @param {string} redactText 
+ * @returns {Promise<Uint8Array>} PDF bytes
+ */
+export async function redactPdf(file, redactText) {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
+  const pdfJsDoc = await loadingTask.promise;
+  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  const pages = pdfDoc.getPages();
+  
+  const query = redactText.toLowerCase().trim();
+  
+  for (let i = 1; i <= pdfJsDoc.numPages; i++) {
+    const jsPage = await pdfJsDoc.getPage(i);
+    const page = pages[i - 1];
+    const textContent = await jsPage.getTextContent();
+    const items = textContent.items;
+    
+    for (const item of items) {
+      if (item.str.toLowerCase().includes(query)) {
+        const tx = item.transform;
+        const x = tx[4];
+        const y = tx[5];
+        const width = item.width || (item.str.length * tx[0] * 0.5);
+        const height = tx[3] || tx[0] || 12;
+        
+        page.drawRectangle({
+          x: x - 2,
+          y: y - 2,
+          width: width + 4,
+          height: height + 4,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
+  }
+  
+  return await pdfDoc.save();
+}
+
+/**
+ * Translates a PDF document's text using MyMemory Translation API
+ * @param {File} file 
+ * @param {string} targetLang 
+ * @returns {Promise<Uint8Array>} PDF bytes
+ */
+export async function translatePdf(file, targetLang) {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
+  const pdfJsDoc = await loadingTask.promise;
+  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  const pages = pdfDoc.getPages();
+  
+  for (let i = 1; i <= pdfJsDoc.numPages; i++) {
+    const jsPage = await pdfJsDoc.getPage(i);
+    const page = pages[i - 1];
+    const textContent = await jsPage.getTextContent();
+    const items = textContent.items;
+    
+    // Group text items by y coordinates
+    const rowMap = new Map();
+    for (const item of items) {
+      const y = Math.round(item.transform[5]);
+      let foundKey = null;
+      for (const key of rowMap.keys()) {
+        if (Math.abs(key - y) < 8) {
+          foundKey = key;
+          break;
+        }
+      }
+      if (foundKey !== null) {
+        rowMap.get(foundKey).push(item);
+      } else {
+        rowMap.set(y, [item]);
+      }
+    }
+    
+    for (const [yVal, rowItems] of rowMap.entries()) {
+      rowItems.sort((a, b) => a.transform[4] - b.transform[4]);
+      const originalText = rowItems.map(item => item.str).join(' ').trim();
+      
+      if (!originalText || originalText.length < 2) continue;
+      
+      let translatedText = originalText;
+      try {
+        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalText)}&langpair=en|${targetLang}`);
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.responseData && resData.responseData.translatedText) {
+            translatedText = resData.responseData.translatedText;
+          }
+        }
+      } catch (err) {
+        console.error("Translation API error:", err);
+      }
+      
+      const minX = Math.min(...rowItems.map(item => item.transform[4]));
+      const maxX = Math.max(...rowItems.map(item => item.transform[4] + (item.width || (item.str.length * 6))));
+      const w = maxX - minX;
+      
+      const fontSize = rowItems[0].transform[0] || 10;
+      const h = rowItems[0].transform[3] || fontSize;
+      
+      // Mask original text with a white rectangle
+      page.drawRectangle({
+        x: minX - 2,
+        y: yVal - 2,
+        width: w + 4,
+        height: h + 4,
+        color: rgb(1, 1, 1),
+      });
+      
+      page.drawText(translatedText, {
+        x: minX,
+        y: yVal,
+        size: fontSize > 0 ? fontSize : 10,
+        color: rgb(0, 0, 0),
+        maxWidth: w > 50 ? w : undefined,
+      });
+    }
   }
   
   return await pdfDoc.save();

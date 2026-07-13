@@ -2,8 +2,8 @@ import './style.css';
 import { PdfManager } from './pdfManager';
 import { SignaturePad } from './signatureManager';
 import { runOcrOnCanvas } from './ocrManager';
-import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf, encryptPdf, decryptPdf, addPageNumbersToPdf } from './tools/manipulator';
-import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf } from './tools/converters';
+import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf, encryptPdf, decryptPdf, addPageNumbersToPdf, removePagesFromPdf, extractPagesFromPdf, repairPdf, cropPdf, redactPdf, translatePdf } from './tools/manipulator';
+import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf, convertHtmlToPdf, convertPptxToPdf, convertPdfToWord, convertPdfToPowerpoint, convertPdfToExcel, convertPdfToPdfA, convertPdfToMarkdown } from './tools/converters';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees } from 'pdf-lib';
 import * as XLSX from 'xlsx';
@@ -93,6 +93,55 @@ const state = {
     extractedData: null,
     lastResponse: '',
     mode: 'demo'
+  },
+  remove: {
+    file: null,
+    pageCount: 0
+  },
+  extract: {
+    file: null,
+    pageCount: 0
+  },
+  repair: {
+    file: null
+  },
+  pptxToPdf: {
+    file: null
+  },
+  htmlToPdf: {
+    file: null
+  },
+  pdfToWord: {
+    file: null,
+    pageCount: 0
+  },
+  pdfToPowerpoint: {
+    file: null,
+    pageCount: 0
+  },
+  pdfToExcel: {
+    file: null,
+    pageCount: 0
+  },
+  pdfToPdfA: {
+    file: null,
+    pageCount: 0
+  },
+  crop: {
+    file: null,
+    pageCount: 0
+  },
+  redact: {
+    file: null,
+    pageCount: 0
+  },
+  translate: {
+    file: null,
+    pageCount: 0
+  },
+  pdfToMarkdown: {
+    file: null,
+    pageCount: 0
   }
 };
 
@@ -164,6 +213,20 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCopilotWorkspace();
   setupSignatureModal();
   setupOcrModal();
+
+  setupRemoveWorkspace();
+  setupExtractWorkspace();
+  setupRepairWorkspace();
+  setupPptxToPdfWorkspace();
+  setupHtmlToPdfWorkspace();
+  setupPdfToWordWorkspace();
+  setupPdfToPowerpointWorkspace();
+  setupPdfToExcelWorkspace();
+  setupPdfToPdfAWorkspace();
+  setupCropWorkspace();
+  setupRedactWorkspace();
+  setupTranslateWorkspace();
+  setupPdfToMarkdownWorkspace();
 });
 
 // View Routing System
@@ -175,7 +238,14 @@ function handleRouting() {
     viewName = hash.substring(2);
   }
   
-  const validRoutes = ['dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 'batch', 'compare', 'scanner', 'formbuilder', 'copilot'];
+  const validRoutes = [
+    'dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 
+    'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 
+    'batch', 'compare', 'scanner', 'formbuilder', 'copilot',
+    'remove', 'extract', 'repair', 'pptx-to-pdf', 'html-to-pdf', 'pdf-to-word', 
+    'pdf-to-powerpoint', 'pdf-to-excel', 'pdf-to-pdf-a', 'crop', 'redact', 
+    'translate', 'pdf-to-markdown'
+  ];
   if (!validRoutes.includes(viewName)) {
     viewName = 'dashboard';
     window.location.hash = '#/dashboard';
@@ -1310,6 +1380,112 @@ function resetInactiveTools(activeViewName) {
     }
     safeDOM.show('formbuilder-upload-zone');
   }
+
+  // 17. Reset Remove Pages
+  if (activeViewName !== 'remove') {
+    state.remove.file = null;
+    state.remove.pageCount = 0;
+    safeDOM.show('remove-upload-zone');
+    safeDOM.hide('remove-setup');
+    safeDOM.val('remove-pages-input', '');
+  }
+
+  // 18. Reset Extract Pages
+  if (activeViewName !== 'extract') {
+    state.extract.file = null;
+    state.extract.pageCount = 0;
+    safeDOM.show('extract-upload-zone');
+    safeDOM.hide('extract-setup');
+    safeDOM.val('extract-pages-input', '');
+  }
+
+  // 19. Reset Repair PDF
+  if (activeViewName !== 'repair') {
+    state.repair.file = null;
+    safeDOM.show('repair-upload-zone');
+    safeDOM.hide('repair-setup');
+  }
+
+  // 20. Reset PPTX to PDF
+  if (activeViewName !== 'pptx-to-pdf') {
+    state.pptxToPdf.file = null;
+    safeDOM.show('pptx-to-pdf-upload-zone');
+    safeDOM.hide('pptx-to-pdf-setup');
+  }
+
+  // 21. Reset HTML to PDF
+  if (activeViewName !== 'html-to-pdf') {
+    state.htmlToPdf.file = null;
+    safeDOM.show('html-to-pdf-upload-zone');
+    safeDOM.hide('html-to-pdf-setup');
+  }
+
+  // 22. Reset PDF to Word
+  if (activeViewName !== 'pdf-to-word') {
+    state.pdfToWord.file = null;
+    state.pdfToWord.pageCount = 0;
+    safeDOM.show('pdf-to-word-upload-zone');
+    safeDOM.hide('pdf-to-word-setup');
+  }
+
+  // 23. Reset PDF to PowerPoint
+  if (activeViewName !== 'pdf-to-powerpoint') {
+    state.pdfToPowerpoint.file = null;
+    state.pdfToPowerpoint.pageCount = 0;
+    safeDOM.show('pdf-to-powerpoint-upload-zone');
+    safeDOM.hide('pdf-to-powerpoint-setup');
+  }
+
+  // 24. Reset PDF to Excel
+  if (activeViewName !== 'pdf-to-excel') {
+    state.pdfToExcel.file = null;
+    state.pdfToExcel.pageCount = 0;
+    safeDOM.show('pdf-to-excel-upload-zone');
+    safeDOM.hide('pdf-to-excel-setup');
+  }
+
+  // 25. Reset PDF to PDF/A
+  if (activeViewName !== 'pdf-to-pdf-a') {
+    state.pdfToPdfA.file = null;
+    state.pdfToPdfA.pageCount = 0;
+    safeDOM.show('pdf-to-pdf-a-upload-zone');
+    safeDOM.hide('pdf-to-pdf-a-setup');
+  }
+
+  // 26. Reset Crop
+  if (activeViewName !== 'crop') {
+    state.crop.file = null;
+    state.crop.pageCount = 0;
+    safeDOM.show('crop-upload-zone');
+    safeDOM.hide('crop-setup');
+    safeDOM.val('crop-margin-input', '10');
+  }
+
+  // 27. Reset Redact
+  if (activeViewName !== 'redact') {
+    state.redact.file = null;
+    state.redact.pageCount = 0;
+    safeDOM.show('redact-upload-zone');
+    safeDOM.hide('redact-setup');
+    safeDOM.val('redact-text-input', '');
+  }
+
+  // 28. Reset Translate
+  if (activeViewName !== 'translate') {
+    state.translate.file = null;
+    state.translate.pageCount = 0;
+    safeDOM.show('translate-upload-zone');
+    safeDOM.hide('translate-setup');
+    safeDOM.val('translate-lang-input', 'es');
+  }
+
+  // 29. Reset PDF to Markdown
+  if (activeViewName !== 'pdf-to-markdown') {
+    state.pdfToMarkdown.file = null;
+    state.pdfToMarkdown.pageCount = 0;
+    safeDOM.show('pdf-to-markdown-upload-zone');
+    safeDOM.hide('pdf-to-markdown-setup');
+  }
 }
 
 function injectWorkspaceCancelButtons() {
@@ -1327,7 +1503,20 @@ function injectWorkspaceCancelButtons() {
     { id: 'numbering-setup-container', tool: 'numbering' },
     { id: 'batch-setup-container', tool: 'batch' },
     { id: 'compare-results-container', tool: 'compare' },
-    { id: 'scan-editor-container', tool: 'scanner' }
+    { id: 'scan-editor-container', tool: 'scanner' },
+    { id: 'remove-setup', tool: 'remove' },
+    { id: 'extract-setup', tool: 'extract' },
+    { id: 'repair-setup', tool: 'repair' },
+    { id: 'pptx-to-pdf-setup', tool: 'pptx-to-pdf' },
+    { id: 'html-to-pdf-setup', tool: 'html-to-pdf' },
+    { id: 'pdf-to-word-setup', tool: 'pdf-to-word' },
+    { id: 'pdf-to-powerpoint-setup', tool: 'pdf-to-powerpoint' },
+    { id: 'pdf-to-excel-setup', tool: 'pdf-to-excel' },
+    { id: 'pdf-to-pdf-a-setup', tool: 'pdf-to-pdf-a' },
+    { id: 'crop-setup', tool: 'crop' },
+    { id: 'redact-setup', tool: 'redact' },
+    { id: 'translate-setup', tool: 'translate' },
+    { id: 'pdf-to-markdown-setup', tool: 'pdf-to-markdown' }
   ];
 
   setupContainers.forEach(cfg => {
@@ -5547,5 +5736,705 @@ Here is my AI assessment: The document contains text sections detailing project 
       }
     }, 500);
   });
+}
+
+// -------------------------------------------------------------
+// 19. REMOVE PAGES COMPONENT
+// -------------------------------------------------------------
+function setupRemoveWorkspace() {
+  const uploadZone = document.getElementById('remove-upload-zone');
+  const fileInput = document.getElementById('remove-file-input');
+  const submitBtn = document.getElementById('remove-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleRemoveFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleRemoveFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    const pagesStr = document.getElementById('remove-pages-input').value.trim();
+    if (!pagesStr) {
+      showToast('Please specify the page numbers to remove.', 'danger');
+      return;
+    }
+    
+    showLoader('Removing specified pages...');
+    try {
+      const pdfBytes = await removePagesFromPdf(state.remove.file, pagesStr);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.remove.file.name.replace(/\.pdf$/i, '_edited.pdf'));
+      showToast('Pages removed successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Failed to remove pages.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handleRemoveFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.remove.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.remove.pageCount = pdfJs.numPages;
+    document.getElementById('remove-filename').textContent = file.name;
+    document.getElementById('remove-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('remove-upload-zone').classList.add('hidden');
+    document.getElementById('remove-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 20. EXTRACT PAGES COMPONENT
+// -------------------------------------------------------------
+function setupExtractWorkspace() {
+  const uploadZone = document.getElementById('extract-upload-zone');
+  const fileInput = document.getElementById('extract-file-input');
+  const submitBtn = document.getElementById('extract-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleExtractFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleExtractFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    const pagesStr = document.getElementById('extract-pages-input').value.trim();
+    if (!pagesStr) {
+      showToast('Please specify the page numbers to extract.', 'danger');
+      return;
+    }
+    
+    showLoader('Extracting specified pages...');
+    try {
+      const pdfBytes = await extractPagesFromPdf(state.extract.file, pagesStr);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.extract.file.name.replace(/\.pdf$/i, '_extracted.pdf'));
+      showToast('Pages extracted successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Failed to extract pages.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handleExtractFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.extract.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.extract.pageCount = pdfJs.numPages;
+    document.getElementById('extract-filename').textContent = file.name;
+    document.getElementById('extract-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('extract-upload-zone').classList.add('hidden');
+    document.getElementById('extract-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 21. REPAIR PDF COMPONENT
+// -------------------------------------------------------------
+function setupRepairWorkspace() {
+  const uploadZone = document.getElementById('repair-upload-zone');
+  const fileInput = document.getElementById('repair-file-input');
+  const submitBtn = document.getElementById('repair-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleRepairFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleRepairFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Repairing cross-references and structure...');
+    try {
+      const pdfBytes = await repairPdf(state.repair.file);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.repair.file.name.replace(/\.pdf$/i, '_rebuilt.pdf'));
+      showToast('PDF file repaired successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to repair PDF document.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+function handleRepairFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.repair.file = file;
+  document.getElementById('repair-filename').textContent = file.name;
+  document.getElementById('repair-filesize').textContent = `Size: ${(file.size / 1024).toFixed(1)} KB`;
+  document.getElementById('repair-upload-zone').classList.add('hidden');
+  document.getElementById('repair-setup').classList.remove('hidden');
+}
+
+// -------------------------------------------------------------
+// 22. PPTX TO PDF COMPONENT
+// -------------------------------------------------------------
+function setupPptxToPdfWorkspace() {
+  const uploadZone = document.getElementById('pptx-to-pdf-upload-zone');
+  const fileInput = document.getElementById('pptx-to-pdf-file-input');
+  const submitBtn = document.getElementById('pptx-to-pdf-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handlePptxToPdfFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handlePptxToPdfFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Parsing presentation structures and rendering PDF...');
+    try {
+      const pdfBytes = await convertPptxToPdf(state.pptxToPdf.file);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.pptxToPdf.file.name.replace(/\.pptx$/i, '.pdf'));
+      showToast('PowerPoint presentation converted successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Conversion failed. Ensure the PPTX is not corrupt.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+function handlePptxToPdfFile(file) {
+  if (!file.name.endsWith('.pptx')) {
+    showToast('Please upload a Microsoft PowerPoint (.pptx) file.', 'danger');
+    return;
+  }
+  state.pptxToPdf.file = file;
+  document.getElementById('pptx-to-pdf-filename').textContent = file.name;
+  document.getElementById('pptx-to-pdf-filesize').textContent = `Size: ${(file.size / 1024).toFixed(1)} KB`;
+  document.getElementById('pptx-to-pdf-upload-zone').classList.add('hidden');
+  document.getElementById('pptx-to-pdf-setup').classList.remove('hidden');
+}
+
+// -------------------------------------------------------------
+// 23. HTML TO PDF COMPONENT
+// -------------------------------------------------------------
+function setupHtmlToPdfWorkspace() {
+  const uploadZone = document.getElementById('html-to-pdf-upload-zone');
+  const fileInput = document.getElementById('html-to-pdf-file-input');
+  const submitBtn = document.getElementById('html-to-pdf-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleHtmlToPdfFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleHtmlToPdfFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Compiling HTML structures and rendering PDF...');
+    try {
+      const pdfBytes = await convertHtmlToPdf(state.htmlToPdf.file);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.htmlToPdf.file.name.replace(/\.html$/i, '.pdf'));
+      showToast('HTML page converted successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert HTML to PDF.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+function handleHtmlToPdfFile(file) {
+  if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+    showToast('Please upload an HTML file (.html).', 'danger');
+    return;
+  }
+  state.htmlToPdf.file = file;
+  document.getElementById('html-to-pdf-filename').textContent = file.name;
+  document.getElementById('html-to-pdf-filesize').textContent = `Size: ${(file.size / 1024).toFixed(1)} KB`;
+  document.getElementById('html-to-pdf-upload-zone').classList.add('hidden');
+  document.getElementById('html-to-pdf-setup').classList.remove('hidden');
+}
+
+// -------------------------------------------------------------
+// 24. PDF TO WORD COMPONENT
+// -------------------------------------------------------------
+function setupPdfToWordWorkspace() {
+  const uploadZone = document.getElementById('pdf-to-word-upload-zone');
+  const fileInput = document.getElementById('pdf-to-word-file-input');
+  const submitBtn = document.getElementById('pdf-to-word-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handlePdfToWordFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handlePdfToWordFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Extracting text and structural layers...');
+    try {
+      const wordBlob = await convertPdfToWord(state.pdfToWord.file);
+      downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.doc'));
+      showToast('PDF converted to Word document successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert PDF to Word.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handlePdfToWordFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.pdfToWord.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.pdfToWord.pageCount = pdfJs.numPages;
+    document.getElementById('pdf-to-word-filename').textContent = file.name;
+    document.getElementById('pdf-to-word-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('pdf-to-word-upload-zone').classList.add('hidden');
+    document.getElementById('pdf-to-word-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 25. PDF TO POWERPOINT COMPONENT
+// -------------------------------------------------------------
+function setupPdfToPowerpointWorkspace() {
+  const uploadZone = document.getElementById('pdf-to-powerpoint-upload-zone');
+  const fileInput = document.getElementById('pdf-to-powerpoint-file-input');
+  const submitBtn = document.getElementById('pdf-to-powerpoint-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handlePdfToPowerpointFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handlePdfToPowerpointFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Rendering slides and bundling presentation...');
+    try {
+      const pptxBlob = await convertPdfToPowerpoint(state.pdfToPowerpoint.file);
+      downloadBlob(pptxBlob, state.pdfToPowerpoint.file.name.replace(/\.pdf$/i, '.pptx'));
+      showToast('PDF converted to PowerPoint presentation!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert PDF to PPTX.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handlePdfToPowerpointFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.pdfToPowerpoint.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.pdfToPowerpoint.pageCount = pdfJs.numPages;
+    document.getElementById('pdf-to-powerpoint-filename').textContent = file.name;
+    document.getElementById('pdf-to-powerpoint-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('pdf-to-powerpoint-upload-zone').classList.add('hidden');
+    document.getElementById('pdf-to-powerpoint-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 26. PDF TO EXCEL COMPONENT
+// -------------------------------------------------------------
+function setupPdfToExcelWorkspace() {
+  const uploadZone = document.getElementById('pdf-to-excel-upload-zone');
+  const fileInput = document.getElementById('pdf-to-excel-file-input');
+  const submitBtn = document.getElementById('pdf-to-excel-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handlePdfToExcelFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handlePdfToExcelFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Parsing matrix grids and compiling spreadsheets...');
+    try {
+      const excelBytes = await convertPdfToExcel(state.pdfToExcel.file);
+      const blob = new Blob([excelBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      downloadBlob(blob, state.pdfToExcel.file.name.replace(/\.pdf$/i, '.xlsx'));
+      showToast('PDF converted to Excel spreadsheet!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert PDF to Excel.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handlePdfToExcelFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.pdfToExcel.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.pdfToExcel.pageCount = pdfJs.numPages;
+    document.getElementById('pdf-to-excel-filename').textContent = file.name;
+    document.getElementById('pdf-to-excel-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('pdf-to-excel-upload-zone').classList.add('hidden');
+    document.getElementById('pdf-to-excel-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 27. PDF TO PDF/A COMPONENT
+// -------------------------------------------------------------
+function setupPdfToPdfAWorkspace() {
+  const uploadZone = document.getElementById('pdf-to-pdf-a-upload-zone');
+  const fileInput = document.getElementById('pdf-to-pdf-a-file-input');
+  const submitBtn = document.getElementById('pdf-to-pdf-a-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handlePdfToPdfAFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handlePdfToPdfAFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Embedding PDF/A-3b conformance schemas...');
+    try {
+      const pdfBytes = await convertPdfToPdfA(state.pdfToPdfA.file);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.pdfToPdfA.file.name.replace(/\.pdf$/i, '_pdfa.pdf'));
+      showToast('PDF converted to PDF/A archive successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert PDF to PDF/A.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handlePdfToPdfAFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.pdfToPdfA.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.pdfToPdfA.pageCount = pdfJs.numPages;
+    document.getElementById('pdf-to-pdf-a-filename').textContent = file.name;
+    document.getElementById('pdf-to-pdf-a-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('pdf-to-pdf-a-upload-zone').classList.add('hidden');
+    document.getElementById('pdf-to-pdf-a-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 28. CROP PDF COMPONENT
+// -------------------------------------------------------------
+function setupCropWorkspace() {
+  const uploadZone = document.getElementById('crop-upload-zone');
+  const fileInput = document.getElementById('crop-file-input');
+  const submitBtn = document.getElementById('crop-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleCropFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleCropFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    const margin = parseInt(document.getElementById('crop-margin-input').value, 10);
+    showLoader('Cropping page margins...');
+    try {
+      const pdfBytes = await cropPdf(state.crop.file, margin);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.crop.file.name.replace(/\.pdf$/i, '_cropped.pdf'));
+      showToast('Margins cropped successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to crop PDF margins.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handleCropFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.crop.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.crop.pageCount = pdfJs.numPages;
+    document.getElementById('crop-filename').textContent = file.name;
+    document.getElementById('crop-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('crop-upload-zone').classList.add('hidden');
+    document.getElementById('crop-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 29. REDACT PDF COMPONENT
+// -------------------------------------------------------------
+function setupRedactWorkspace() {
+  const uploadZone = document.getElementById('redact-upload-zone');
+  const fileInput = document.getElementById('redact-file-input');
+  const submitBtn = document.getElementById('redact-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleRedactFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleRedactFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    const redactText = document.getElementById('redact-text-input').value.trim();
+    if (!redactText) {
+      showToast('Please input a phrase to redact.', 'danger');
+      return;
+    }
+    
+    showLoader('Redacting matching text layers...');
+    try {
+      const pdfBytes = await redactPdf(state.redact.file, redactText);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.redact.file.name.replace(/\.pdf$/i, '_redacted.pdf'));
+      showToast('Text elements redacted successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to redact PDF elements.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handleRedactFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.redact.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.redact.pageCount = pdfJs.numPages;
+    document.getElementById('redact-filename').textContent = file.name;
+    document.getElementById('redact-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('redact-upload-zone').classList.add('hidden');
+    document.getElementById('redact-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 30. TRANSLATE PDF COMPONENT
+// -------------------------------------------------------------
+function setupTranslateWorkspace() {
+  const uploadZone = document.getElementById('translate-upload-zone');
+  const fileInput = document.getElementById('translate-file-input');
+  const submitBtn = document.getElementById('translate-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleTranslateFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handleTranslateFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    const lang = document.getElementById('translate-lang-input').value;
+    showLoader('Translating text structures (MyMemory)...');
+    try {
+      const pdfBytes = await translatePdf(state.translate.file, lang);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, state.translate.file.name.replace(/\.pdf$/i, `_translated_${lang}.pdf`));
+      showToast('Document translated successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to translate PDF text.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handleTranslateFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.translate.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.translate.pageCount = pdfJs.numPages;
+    document.getElementById('translate-filename').textContent = file.name;
+    document.getElementById('translate-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('translate-upload-zone').classList.add('hidden');
+    document.getElementById('translate-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
+}
+
+// -------------------------------------------------------------
+// 31. PDF TO MARKDOWN COMPONENT
+// -------------------------------------------------------------
+function setupPdfToMarkdownWorkspace() {
+  const uploadZone = document.getElementById('pdf-to-markdown-upload-zone');
+  const fileInput = document.getElementById('pdf-to-markdown-file-input');
+  const submitBtn = document.getElementById('pdf-to-markdown-submit-btn');
+  
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handlePdfToMarkdownFile(file);
+  });
+  
+  setupDragAndDrop(uploadZone, handlePdfToMarkdownFile);
+  
+  submitBtn.addEventListener('click', async () => {
+    showLoader('Parsing document layouts and formatting Markdown...');
+    try {
+      const mdText = await convertPdfToMarkdown(state.pdfToMarkdown.file);
+      const blob = new Blob([mdText], { type: 'text/markdown;charset=utf-8' });
+      downloadBlob(blob, state.pdfToMarkdown.file.name.replace(/\.pdf$/i, '.md'));
+      showToast('PDF converted to Markdown successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert PDF to Markdown.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+async function handlePdfToMarkdownFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    showToast('Please upload a PDF file.', 'danger');
+    return;
+  }
+  state.pdfToMarkdown.file = file;
+  showLoader('Analyzing PDF...');
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdfJs = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    state.pdfToMarkdown.pageCount = pdfJs.numPages;
+    document.getElementById('pdf-to-markdown-filename').textContent = file.name;
+    document.getElementById('pdf-to-markdown-pagecount').textContent = `Total Pages: ${pdfJs.numPages}`;
+    document.getElementById('pdf-to-markdown-upload-zone').classList.add('hidden');
+    document.getElementById('pdf-to-markdown-setup').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load PDF info.', 'danger');
+  } finally {
+    hideLoader();
+  }
 }
 
