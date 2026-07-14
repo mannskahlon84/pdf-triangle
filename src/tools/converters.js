@@ -429,8 +429,28 @@ export async function convertPdfToWord(file) {
       await page.render({ canvasContext: context, viewport }).promise;
       const imgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
       
-      htmlContent += `<div class="page" style="page-break-after:always; margin-bottom:20px; text-align:center;">`;
-      htmlContent += `<img src="${imgDataUrl}" style="max-width:100%; height:auto;" />`;
+      const width = page.getViewport({ scale: 1.0 }).width;
+      const height = page.getViewport({ scale: 1.0 }).height;
+      
+      // Limit dimensions to standard Word printable margins (540pt x 700pt max) to prevent image splits
+      const maxWidth = 540;
+      const maxHeight = 700;
+      let renderWidth = width;
+      let renderHeight = height;
+      
+      if (renderWidth > maxWidth) {
+        const ratio = maxWidth / renderWidth;
+        renderWidth = maxWidth;
+        renderHeight = renderHeight * ratio;
+      }
+      if (renderHeight > maxHeight) {
+        const ratio = maxHeight / renderHeight;
+        renderHeight = maxHeight;
+        renderWidth = renderWidth * ratio;
+      }
+      
+      htmlContent += `<div class="page" style="page-break-after:always; page-break-inside:avoid; margin:10px auto; text-align:center;">`;
+      htmlContent += `<img src="${imgDataUrl}" width="${Math.round(renderWidth)}" height="${Math.round(renderHeight)}" style="width:${Math.round(renderWidth)}px; height:${Math.round(renderHeight)}px; display:block; margin:0 auto;" />`;
       htmlContent += `</div>`;
     }
   }
