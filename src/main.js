@@ -5310,6 +5310,57 @@ function setupCopilotWorkspace() {
     const pLower = prompt.toLowerCase();
     const docName = file ? file.name : 'Document';
     
+    // Spreadsheet intelligent row filtering
+    if (state.copilot.extractedData && Array.isArray(state.copilot.extractedData) && state.copilot.extractedData.length > 0) {
+      const rows = state.copilot.extractedData;
+      const headers = rows[0] || [];
+      
+      const stopWords = ['show', 'me', 'only', 'from', 'the', 'column', 'list', 'select', 'display', 'rows', 'filter', 'matching', 'with', 'nationality', 'position', 'company', 'status'];
+      const keywords = pLower.split(/[\s,]+/g).filter(w => w.length > 2 && !stopWords.includes(w));
+      
+      if (keywords.length > 0) {
+        let matchedRows = [];
+        
+        // 1. Try strict matching: row must contain ALL keywords
+        rows.slice(1).forEach(row => {
+          const rowStr = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+          const matchesAll = keywords.every(kw => rowStr.includes(kw));
+          if (matchesAll) {
+            matchedRows.push(row);
+          }
+        });
+        
+        // 2. Fallback matching: if strict yields nothing, try matching the primary criteria (e.g. nationality 'nepal')
+        if (matchedRows.length === 0) {
+          const primaryKw = keywords[0]; // e.g. "nepal"
+          rows.slice(1).forEach(row => {
+            const rowStr = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+            if (rowStr.includes(primaryKw)) {
+              matchedRows.push(row);
+            }
+          });
+        }
+        
+        if (matchedRows.length > 0) {
+          let tableMd = `# Filtered Spreadsheet Results\n\n`;
+          tableMd += `Found **${matchedRows.length}** row(s) matching your criteria: **${keywords.join(' & ')}**\n\n`;
+          
+          // Header row
+          tableMd += `| ${headers.join(' | ')} |\n`;
+          // Separator row
+          tableMd += `| ${headers.map(() => '---').join(' | ')} |\n`;
+          // Body rows
+          matchedRows.forEach(row => {
+            tableMd += `| ${row.map(cell => cell !== undefined && cell !== null ? String(cell).trim() : '').join(' | ')} |\n`;
+          });
+          
+          return tableMd;
+        } else {
+          return `### No Matching Records Found\n\nI scanned the spreadsheet for **${keywords.join(', ')}** but could not locate any matching records. Please check the spelling or try searching for another column value!`;
+        }
+      }
+    }
+
     const words = docText.match(/[A-Z][a-z]{4,}/g) || [];
     const freq = {};
     words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
@@ -5598,6 +5649,48 @@ function setupCopilotWorkspace() {
     
     let html = markdownText;
     
+    // GFM Table parsing using placeholder isolation to prevent breaking standard escaping
+    const tablePlaceholders = [];
+    const tableRegex = /\|((?:[^\n|]+\|)+)\n\|((?:\s*:-*:\s*|:-*|-*:|-[ -]*)\|)\n((?:\|(?:[^\n|]+\|)+\n*)+)/g;
+    html = html.replace(tableRegex, (match, headerLine, alignLine, bodyRows) => {
+      const headers = headerLine.split('|').map(h => h.trim()).filter(h => h !== '');
+      const alignments = alignLine.split('|').map(a => {
+        a = a.trim();
+        if (a.startsWith(':') && a.endsWith(':')) return 'center';
+        if (a.endsWith(':')) return 'right';
+        return 'left';
+      }).filter(a => a !== '');
+      
+      let tableHtml = `<div style="overflow-x: auto; margin: 1.5rem 0; border: 1px solid ${theme.secondary}40; border-radius: var(--border-radius-sm);"><table style="width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 0.8125rem; text-align: left;">`;
+      
+      // Header
+      tableHtml += `<thead style="background: ${theme.primary}15; border-bottom: 2px solid ${theme.primary}40;"><tr>`;
+      headers.forEach((h, idx) => {
+        const align = alignments[idx] || 'left';
+        tableHtml += `<th style="padding: 0.75rem 1rem; font-weight: 700; color: ${theme.primary}; text-align: ${align};">${h}</th>`;
+      });
+      tableHtml += '</tr></thead><tbody>';
+      
+      // Body
+      const rows = bodyRows.trim().split('\n');
+      rows.forEach((row, rowIdx) => {
+        const cells = row.split('|').map(c => c.trim()).filter((c, idx) => idx > 0 && idx <= headers.length);
+        const bg = rowIdx % 2 === 0 ? 'white' : `${theme.primary}05`;
+        tableHtml += `<tr style="background: ${bg}; border-bottom: 1px solid var(--border-color);">`;
+        cells.forEach((c, idx) => {
+          const align = alignments[idx] || 'left';
+          tableHtml += `<td style="padding: 0.75rem 1rem; color: var(--text-secondary); text-align: ${align};">${c}</td>`;
+        });
+        tableHtml += '</tr>';
+      });
+      
+      tableHtml += '</tbody></table></div>';
+      
+      const placeholder = `__TABLE_PLACEHOLDER_${tablePlaceholders.length}__`;
+      tablePlaceholders.push({ placeholder, content: tableHtml });
+      return placeholder;
+    });
+
     // Escaping html
     html = html
       .replace(/&/g, '&amp;')
@@ -5629,6 +5722,11 @@ function setupCopilotWorkspace() {
     
     // Clean up empty tags
     html = html.replace(/<p><\/p>/g, '');
+    
+    // Re-swap table placeholders back
+    tablePlaceholders.forEach(item => {
+      html = html.replace(item.placeholder, item.content);
+    });
     
     return html;
   }
@@ -5960,7 +6058,8 @@ Here is my AI assessment: The document contains text sections detailing project 
     const matches = response.match(tableRegex);
     
     const pLower = prompt.toLowerCase();
-    const isSpreadsheetPrompt = pLower.includes('split') || pLower.includes('employee') || pLower.includes('table') || pLower.includes('column');
+    const isSpreadsheet = state.copilot.file && ['xlsx', 'xls', 'csv'].includes(state.copilot.file.name.split('.').pop().toLowerCase());
+    const isSpreadsheetPrompt = isSpreadsheet || pLower.includes('split') || pLower.includes('employee') || pLower.includes('table') || pLower.includes('column') || pLower.includes('show') || pLower.includes('filter') || pLower.includes('only') || pLower.includes('select');
     
     if (isSpreadsheetPrompt && matches && matches.length > 2) {
       try {
