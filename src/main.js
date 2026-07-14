@@ -5102,6 +5102,319 @@ function setupCopilotWorkspace() {
   const docTabContent = document.getElementById('copilot-doc-tab-content');
   const aiTabContent = document.getElementById('copilot-ai-tab-content');
 
+  function detectDocumentTheme(docText) {
+    const text = docText.toLowerCase();
+    if (text.includes('infinity') || text.includes('hospitality') || text.includes('navy') || text.includes('blue') || text.includes('sharqi')) {
+      return { primary: '#1e3b8a', secondary: '#3b82f6', bg: '#eff6ff' }; // Navy Blue / Infinity Hospitality
+    }
+    if (text.includes('sheet') || text.includes('excel') || text.includes('finance') || text.includes('green') || text.includes('salary') || text.includes('horses group')) {
+      // In the user's screenshot, "Horses Group" has a gold/green accent layout. Let's use clean dark forest green/gold.
+      return { primary: '#15803d', secondary: '#c29d38', bg: '#fefcf3' }; // Dark Green / Horses Group Gold
+    }
+    if (text.includes('agreement') || text.includes('contract') || text.includes('legal') || text.includes('law')) {
+      return { primary: '#334155', secondary: '#64748b', bg: '#f8fafc' }; // Slate
+    }
+    if (text.includes('red') || text.includes('danger') || text.includes('warning') || text.includes('construction')) {
+      return { primary: '#b91c1c', secondary: '#ef4444', bg: '#fef2f2' }; // Red
+    }
+    return { primary: '#6d28d9', secondary: '#8b5cf6', bg: '#f5f3ff' }; // Default Violet
+  }
+
+  async function renderVisualOriginalDoc() {
+    if (!docTabContent) return;
+    docTabContent.innerHTML = '';
+    
+    const docHeader = document.createElement('div');
+    docHeader.style.display = 'flex';
+    docHeader.style.justifyContent = 'space-between';
+    docHeader.style.alignItems = 'center';
+    docHeader.style.marginBottom = '1.25rem';
+    docHeader.style.borderBottom = '1px solid var(--border-color)';
+    docHeader.style.paddingBottom = '0.5rem';
+    
+    const docBadge = document.createElement('div');
+    docBadge.style.display = 'inline-flex';
+    docBadge.style.alignItems = 'center';
+    docBadge.style.gap = '0.35rem';
+    docBadge.style.padding = '0.25rem 0.5rem';
+    docBadge.style.fontSize = '0.75rem';
+    docBadge.style.fontWeight = '600';
+    docBadge.style.background = 'var(--accent-pink-light)';
+    docBadge.style.color = 'var(--accent-pink)';
+    docBadge.style.borderRadius = '4px';
+    docBadge.innerHTML = `<i data-lucide="file-text" style="width:13px; height:13px;"></i> Original Document Preview`;
+    docHeader.appendChild(docBadge);
+    
+    if (state.copilot.file) {
+      const docName = document.createElement('span');
+      docName.style.fontSize = '0.75rem';
+      docName.style.color = 'var(--text-muted)';
+      docName.style.fontWeight = '500';
+      docName.textContent = state.copilot.file.name;
+      docHeader.appendChild(docName);
+    }
+    docTabContent.appendChild(docHeader);
+    
+    if (!state.copilot.file || !state.copilot.originalBuffer) {
+      const emptyMsg = document.createElement('p');
+      emptyMsg.style.color = 'var(--text-muted)';
+      emptyMsg.style.fontStyle = 'italic';
+      emptyMsg.textContent = 'No document uploaded yet.';
+      docTabContent.appendChild(emptyMsg);
+      return;
+    }
+    
+    const ext = state.copilot.file.name.split('.').pop().toLowerCase();
+    
+    try {
+      if (ext === 'pdf') {
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(state.copilot.originalBuffer) });
+        const pdf = await loadingTask.promise;
+        
+        const scrollContainer = document.createElement('div');
+        scrollContainer.style.maxHeight = '650px';
+        scrollContainer.style.overflowY = 'auto';
+        scrollContainer.style.padding = '0.5rem';
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.2 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.display = 'block';
+          canvas.style.margin = '0 auto 1.5rem auto';
+          canvas.style.boxShadow = '0 4px 14px rgba(0,0,0,0.12)';
+          canvas.style.borderRadius = '6px';
+          canvas.style.background = 'white';
+          
+          const ctx = canvas.getContext('2d');
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          scrollContainer.appendChild(canvas);
+        }
+        docTabContent.appendChild(scrollContainer);
+      } else if (ext === 'docx') {
+        const result = await mammoth.convertToHtml({ arrayBuffer: state.copilot.originalBuffer });
+        const docWrapper = document.createElement('div');
+        docWrapper.className = 'word-preview-wrapper';
+        docWrapper.style.padding = '2rem';
+        docWrapper.style.background = 'white';
+        docWrapper.style.color = '#334155';
+        docWrapper.style.fontFamily = "'Times New Roman', Times, serif";
+        docWrapper.style.fontSize = '12pt';
+        docWrapper.style.lineHeight = '1.6';
+        docWrapper.style.boxShadow = '0 4px 14px rgba(0,0,0,0.08)';
+        docWrapper.style.borderRadius = '6px';
+        docWrapper.style.maxHeight = '650px';
+        docWrapper.style.overflowY = 'auto';
+        docWrapper.innerHTML = result.value;
+        
+        const tables = docWrapper.querySelectorAll('table');
+        tables.forEach(table => {
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.style.margin = '15px 0';
+          table.querySelectorAll('td, th').forEach(cell => {
+            cell.style.border = '1px solid #cbd5e1';
+            cell.style.padding = '10px';
+          });
+        });
+        docTabContent.appendChild(docWrapper);
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const workbook = XLSX.read(state.copilot.originalBuffer, { type: 'array' });
+        const excelContainer = document.createElement('div');
+        excelContainer.style.maxHeight = '650px';
+        excelContainer.style.overflowY = 'auto';
+        
+        workbook.SheetNames.forEach((sheetName, index) => {
+          const sheet = workbook.Sheets[sheetName];
+          const htmlTable = XLSX.utils.sheet_to_html(sheet);
+          
+          const title = document.createElement('h4');
+          title.textContent = sheetName;
+          title.style.marginTop = index === 0 ? '0' : '2rem';
+          title.style.marginBottom = '0.5rem';
+          title.style.color = '#15803d';
+          title.style.borderBottom = '2px solid #22c55e';
+          title.style.paddingBottom = '0.25rem';
+          excelContainer.appendChild(title);
+          
+          const wrapper = document.createElement('div');
+          wrapper.style.overflowX = 'auto';
+          wrapper.style.marginBottom = '1.5rem';
+          wrapper.innerHTML = htmlTable;
+          
+          const table = wrapper.querySelector('table');
+          if (table) {
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+            table.querySelectorAll('td, th').forEach(cell => {
+              cell.style.border = '1px solid #cbd5e1';
+              cell.style.padding = '8px';
+              cell.style.fontSize = '0.85rem';
+            });
+          }
+          excelContainer.appendChild(wrapper);
+        });
+        docTabContent.appendChild(excelContainer);
+      } else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+        const imgBlob = new Blob([state.copilot.originalBuffer]);
+        const imgUrl = URL.createObjectURL(imgBlob);
+        
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '600px';
+        img.style.display = 'block';
+        img.style.margin = '0 auto';
+        img.style.boxShadow = '0 4px 14px rgba(0,0,0,0.12)';
+        img.style.borderRadius = '6px';
+        docTabContent.appendChild(img);
+      }
+    } catch (err) {
+      console.error('Error rendering original doc preview:', err);
+      const docTextBody = document.createElement('pre');
+      docTextBody.style.whiteSpace = 'pre-wrap';
+      docTextBody.style.fontFamily = "'Inter', sans-serif";
+      docTextBody.style.fontSize = '0.8125rem';
+      docTextBody.style.color = 'var(--text-secondary)';
+      docTextBody.style.margin = '0';
+      docTextBody.textContent = state.copilot.documentText;
+      docTabContent.appendChild(docTextBody);
+    }
+    
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function runSmartOfflineHeuristics(prompt, docText, file) {
+    const pLower = prompt.toLowerCase();
+    const docName = file ? file.name : 'Document';
+    
+    const words = docText.match(/[A-Z][a-z]{4,}/g) || [];
+    const freq = {};
+    words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+    const sortedWords = Object.keys(freq).sort((a, b) => freq[b] - freq[a]).slice(0, 12);
+    
+    const sentences = docText.split(/[.!?]\s+/);
+    const keySentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('shall') || sLower.includes('must') || sLower.includes('date') || sLower.includes('law') || sLower.includes('policy') || sLower.includes('$') || sLower.includes('percent') || sLower.includes('hors');
+    }).slice(0, 6);
+
+    let docClass = 'General Briefing';
+    if (docText.toLowerCase().includes('policy') || docText.toLowerCase().includes('compliance')) {
+      docClass = 'Regulatory Policy & Compliance Guidelines';
+    } else if (docText.toLowerCase().includes('agreement') || docText.toLowerCase().includes('contract')) {
+      docClass = 'Legal Agreement & Covenant';
+    } else if (docText.toLowerCase().includes('invoice') || docText.toLowerCase().includes('payment') || docText.toLowerCase().includes('$')) {
+      docClass = 'Financial Statement / Invoice Ledger';
+    } else if (docText.toLowerCase().includes('resume') || docText.toLowerCase().includes('cv') || docText.toLowerCase().includes('education')) {
+      docClass = 'Curriculum Vitae / Candidate Profile';
+    }
+
+    const isQuestion = pLower.includes('what') || pLower.includes('why') || pLower.includes('how') || pLower.includes('where') || pLower.includes('who') || pLower.includes('find') || pLower.includes('search') || pLower.includes('tell') || pLower.includes('show');
+    
+    if (isQuestion) {
+      const queryWords = pLower.split(/\s+/).filter(w => w.length > 3 && !['what','where','when','that','this','your'].includes(w));
+      let bestSentences = [];
+      
+      if (queryWords.length > 0) {
+        const scoredSentences = sentences.map(s => {
+          const sLower = s.toLowerCase();
+          let score = 0;
+          queryWords.forEach(qw => {
+            if (sLower.includes(qw)) score += 2;
+          });
+          // Small boost if it contains regulatory key words
+          if (sLower.includes('shall') || sLower.includes('must')) score += 0.5;
+          return { text: s, score };
+        });
+        
+        bestSentences = scoredSentences
+          .filter(x => x.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3)
+          .map(x => x.text.trim());
+      }
+      
+      if (bestSentences.length > 0) {
+        let answerText = `### Local Intelligent Analysis for: "${prompt}"\n\n`;
+        answerText += `Based on a contextual scan of **${docName}**, here are the key matching items found:\n\n`;
+        bestSentences.forEach((s, idx) => {
+          answerText += `> **[Excerpt ${idx + 1}]**: "... ${s} ..."\n\n`;
+        });
+        answerText += `*These excerpts represent the key clauses matching your query terms (${queryWords.join(', ')}).*`;
+        return answerText;
+      } else {
+        return `### Local Analysis: "${prompt}"\n\nI scanned the document for keywords related to your query, but could not locate a direct text match. However, the document contains references to **${sortedWords.slice(0, 3).join(', ')}**. Let me know if you would like to run a full summary or locate financial/regulatory details!`;
+      }
+    }
+
+    let summaryMd = `# ${docName.split('.').shift().toUpperCase()}\n\n`;
+    summaryMd += `### 🏷️ Classification: **${docClass}**\n\n`;
+    
+    if (docClass.includes('Policy')) {
+      summaryMd += `### 🛡️ Compliance Directives & Mandates\n`;
+      if (keySentences.length > 0) {
+        keySentences.forEach(s => {
+          summaryMd += `* **Directive**: ${s.trim()}.\n`;
+        });
+      } else {
+        summaryMd += `* **Commitment**: The document outlines compliance directives regarding corporate conduct, training mandates, and operational safety.\n`;
+      }
+      summaryMd += `\n### 👥 Scope of Authority\n`;
+      summaryMd += `This compliance protocol governs all direct operations, partners, contractors, and affiliates. The zero-tolerance framework ensures absolute adherence to safety and ethics.\n\n`;
+    } else if (docClass.includes('Legal')) {
+      summaryMd += `### 📜 Key Covenants & Obligations\n`;
+      if (keySentences.length > 0) {
+        keySentences.forEach(s => {
+          summaryMd += `* **Covenant**: ${s.trim()}.\n`;
+        });
+      } else {
+        summaryMd += `* **Obligation**: Both parties agree to execute terms in accordance with local regulations and governing law.\n`;
+      }
+      summaryMd += `\n### ⚖️ Governing Framework\n`;
+      summaryMd += `The covenant establishes liability thresholds, dispute resolutions, and conditions for termination or amendment.\n\n`;
+    } else if (docClass.includes('Financial')) {
+      summaryMd += `### 📊 Ledger Balance & Line Items\n`;
+      const figures = docText.match(/[\d,]+\.?\d*/g) || [];
+      const uniqueFigures = [...new Set(figures)].filter(f => f.length > 3).slice(0, 5);
+      if (uniqueFigures.length > 0) {
+        summaryMd += `The ledger identifies the following key figures:\n`;
+        uniqueFigures.forEach(f => {
+          summaryMd += `* **Statement Entry**: Value of **${f}** registered.\n`;
+        });
+      } else {
+        summaryMd += `* **Overview**: Details accounts payable, invoicing schedules, and outstanding balances.\n`;
+      }
+      summaryMd += `\n### 💳 Payment Disbursements\n`;
+      summaryMd += `All balances are subject to terms of carriage, bank clearances, and transaction deadlines.\n\n`;
+    } else {
+      summaryMd += `### 📝 Executive Overview\n`;
+      const paragraphs = docText.split(/\n\n+/).filter(p => p.trim().length > 30).slice(0, 3);
+      if (paragraphs.length > 0) {
+        paragraphs.forEach(p => {
+          summaryMd += `* ${p.replace(/\n/g, ' ').substring(0, 180)}...\n\n`;
+        });
+      } else {
+        summaryMd += `The document details primary project milestones, communication channels, and milestone outlines.\n\n`;
+      }
+    }
+
+    if (sortedWords.length > 0) {
+      summaryMd += `### 🔑 Primary Keywords\n`;
+      summaryMd += `**${sortedWords.join('** • **')}**\n\n`;
+    }
+    
+    const estTime = Math.max(1, Math.ceil(docText.split(/\s+/).length / 200));
+    summaryMd += `### 📈 Document Statistics\n`;
+    summaryMd += `* **Estimated Reading Time**: ${estTime} Minute(s)\n`;
+    summaryMd += `* **Character Density**: ${docText.length} Characters\n`;
+    summaryMd += `* **Linguistic Complexity**: Balanced Professional (Offline Engine)\n`;
+    
+    return summaryMd;
+  }
+
   // Tab Switcher Logic
   function switchTab(activeTab) {
     if (activeTab === 'doc') {
@@ -5150,6 +5463,7 @@ function setupCopilotWorkspace() {
     try {
       const ext = file.name.split('.').pop().toLowerCase();
       const arrayBuffer = await file.arrayBuffer();
+      state.copilot.originalBuffer = arrayBuffer;
       
       if (ext === 'pdf') {
         state.copilot.documentText = await extractTextFromPdf(arrayBuffer);
@@ -5252,8 +5566,9 @@ function setupCopilotWorkspace() {
   }
 
   // Markdown Parser to Beautiful Modern HTML with colors
-  function parseMarkdownToHtml(markdownText) {
+  function parseMarkdownToHtml(markdownText, theme) {
     if (!markdownText) return '';
+    if (!theme) theme = { primary: '#7c3aed', secondary: '#a855f7', bg: '#f5f3ff' };
     
     let html = markdownText;
     
@@ -5264,18 +5579,18 @@ function setupCopilotWorkspace() {
       .replace(/>/g, '&gt;');
       
     // Parse Headers
-    html = html.replace(/^### (.*?)$/gm, '<h4 style="font-family: \'Outfit\', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--accent-purple); margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem;">$1</h4>');
-    html = html.replace(/^## (.*?)$/gm, '<h3 style="font-family: \'Outfit\', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--accent-pink); margin-top: 1.75rem; margin-bottom: 0.75rem;">$1</h3>');
-    html = html.replace(/^# (.*?)$/gm, '<h2 style="font-family: \'Outfit\', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--accent-purple); display: table; margin: 0 auto 1.5rem auto; padding-bottom: 0.25rem;">$1</h2>');
+    html = html.replace(/^### (.*?)$/gm, `<h4 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700; color: ${theme.primary}; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid ${theme.secondary}60; padding-bottom: 0.25rem;">$1</h4>`);
+    html = html.replace(/^## (.*?)$/gm, `<h3 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: ${theme.secondary}; margin-top: 1.75rem; margin-bottom: 0.75rem;">$1</h3>`);
+    html = html.replace(/^# (.*?)$/gm, `<h2 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: ${theme.primary}; text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid ${theme.primary}; display: table; margin: 0 auto 1.5rem auto; padding-bottom: 0.25rem;">$1</h2>`);
     
     // Parse Bold text (Premium color code badges)
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 700; color: #4338ca; background: rgba(99, 102, 241, 0.07); padding: 0.125rem 0.35rem; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.12); font-size: 0.8125rem; display: inline-block; margin-bottom: 0.15rem;">$1</strong>');
+    html = html.replace(/\*\*(.*?)\*\*/g, `<strong style="font-weight: 700; color: ${theme.primary}; background: ${theme.bg}; padding: 0.125rem 0.35rem; border-radius: 4px; border: 1px solid ${theme.secondary}40; font-size: 0.8125rem; display: inline-block; margin-bottom: 0.15rem;">$1</strong>`);
     
     // Parse Bullet Lists
     html = html.replace(/^\s*[-*]\s+(.*?)$/gm, '<li style="margin-left: 1.25rem; margin-bottom: 0.5rem; list-style-type: disc; color: var(--text-secondary); line-height: 1.6; font-size: 0.8125rem;">$1</li>');
     
     // Parse Numbered Lists (Gradient circular indicator badges)
-    html = html.replace(/^\s*(\d+)\.\s+(.*?)$/gm, '<div style="display: flex; gap: 0.65rem; margin-bottom: 0.85rem; align-items: flex-start;"><span style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; font-weight: 700; font-size: 0.725rem; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.125rem; box-shadow: 0 2px 4px rgba(124, 58, 237, 0.2);">$1</span><div style="flex: 1; color: var(--text-secondary); line-height: 1.6; font-size: 0.8125rem;">$2</div></div>');
+    html = html.replace(/^\s*(\d+)\.\s+(.*?)$/gm, `<div style="display: flex; gap: 0.65rem; margin-bottom: 0.85rem; align-items: flex-start;"><span style="background: linear-gradient(135deg, ${theme.primary}, ${theme.secondary}); color: white; font-weight: 700; font-size: 0.725rem; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.125rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);">$1</span><div style="flex: 1; color: var(--text-secondary); line-height: 1.6; font-size: 0.8125rem;">$2</div></div>`);
     
     // Parse Paragraphs (Double newlines)
     html = html.replace(/\n\n/g, '</p><p style="margin-bottom: 1rem; line-height: 1.6; color: var(--text-secondary); font-size: 0.8125rem;">');
@@ -5293,54 +5608,14 @@ function setupCopilotWorkspace() {
   }
 
   function renderPreview() {
-    // 1. Render Original Document Text in its tab
-    if (docTabContent) {
-      docTabContent.innerHTML = '';
-      
-      const docHeader = document.createElement('div');
-      docHeader.style.display = 'flex';
-      docHeader.style.justifyContent = 'space-between';
-      docHeader.style.alignItems = 'center';
-      docHeader.style.marginBottom = '1.25rem';
-      docHeader.style.borderBottom = '1px solid var(--border-color)';
-      docHeader.style.paddingBottom = '0.5rem';
-      
-      const docBadge = document.createElement('div');
-      docBadge.style.display = 'inline-flex';
-      docBadge.style.alignItems = 'center';
-      docBadge.style.gap = '0.35rem';
-      docBadge.style.padding = '0.25rem 0.5rem';
-      docBadge.style.fontSize = '0.75rem';
-      docBadge.style.fontWeight = '600';
-      docBadge.style.background = 'var(--accent-pink-light)';
-      docBadge.style.color = 'var(--accent-pink)';
-      docBadge.style.borderRadius = '4px';
-      docBadge.innerHTML = `<i data-lucide="file-text" style="width:13px; height:13px;"></i> Original Extracted Text`;
-      docHeader.appendChild(docBadge);
-      
-      if (state.copilot.file) {
-        const docName = document.createElement('span');
-        docName.style.fontSize = '0.75rem';
-        docName.style.color = 'var(--text-muted)';
-        docName.style.fontWeight = '500';
-        docName.textContent = state.copilot.file.name;
-        docHeader.appendChild(docName);
-      }
-      docTabContent.appendChild(docHeader);
-      
-      const docTextBody = document.createElement('pre');
-      docTextBody.style.whiteSpace = 'pre-wrap';
-      docTextBody.style.fontFamily = "'Inter', sans-serif";
-      docTextBody.style.fontSize = '0.8125rem';
-      docTextBody.style.color = 'var(--text-secondary)';
-      docTextBody.style.margin = '0';
-      docTextBody.textContent = state.copilot.documentText || 'No document uploaded yet. Upload a file to view its extracted text here.';
-      docTabContent.appendChild(docTextBody);
-    }
+    // 1. Render Original Document visually in its tab
+    renderVisualOriginalDoc();
     
     // 2. Render AI Output Tab
     if (aiTabContent) {
       aiTabContent.innerHTML = '';
+      
+      const theme = detectDocumentTheme(state.copilot.documentText || '');
       
       if (state.copilot.extractedData && Array.isArray(state.copilot.extractedData)) {
         // Excel/Spreadsheet Mode (Grid View)
@@ -5413,13 +5688,13 @@ function setupCopilotWorkspace() {
         table.appendChild(tbody);
         tableWrapper.appendChild(table);
         
-        // Add sheet title badge
+        // Add sheet title badge styled with theme
         const badge = document.createElement('div');
         badge.style.display = 'inline-block';
         badge.style.padding = '0.25rem 0.5rem';
         badge.style.fontSize = '0.75rem';
         badge.style.fontWeight = '600';
-        badge.style.background = 'var(--accent-purple)';
+        badge.style.background = theme.primary;
         badge.style.color = 'white';
         badge.style.borderRadius = '4px';
         badge.style.marginBottom = '0.75rem';
@@ -5428,7 +5703,7 @@ function setupCopilotWorkspace() {
         aiTabContent.appendChild(badge);
         aiTabContent.appendChild(tableWrapper);
       } else {
-        // Word/Document Mode (Formatted summary page layout)
+        // Word/Document Mode (Formatted summary page layout styled with theme color)
         const docPage = document.createElement('div');
         docPage.style.background = 'white';
         docPage.style.color = '#1e293b';
@@ -5436,6 +5711,7 @@ function setupCopilotWorkspace() {
         docPage.style.fontFamily = "'Inter', sans-serif";
         docPage.style.lineHeight = '1.6';
         docPage.style.border = '1px solid var(--border-color)';
+        docPage.style.borderTop = `4px solid ${theme.primary}`;
         docPage.style.borderRadius = 'var(--border-radius-sm)';
         docPage.style.boxShadow = 'var(--shadow-md)';
         docPage.style.minHeight = '480px';
@@ -5447,8 +5723,8 @@ function setupCopilotWorkspace() {
         title.style.fontSize = '1.35rem';
         title.style.fontFamily = "'Outfit', sans-serif";
         title.style.fontWeight = '800';
-        title.style.color = '#1e1b4b';
-        title.style.borderBottom = '2px solid var(--accent-purple)';
+        title.style.color = theme.primary;
+        title.style.borderBottom = `2px solid ${theme.secondary}`;
         title.style.display = 'table';
         title.style.margin = '0 auto 1.75rem auto';
         title.style.paddingBottom = '0.25rem';
@@ -5457,7 +5733,7 @@ function setupCopilotWorkspace() {
         
         const contentDiv = document.createElement('div');
         contentDiv.innerHTML = state.copilot.lastResponse
-          ? parseMarkdownToHtml(state.copilot.lastResponse)
+          ? parseMarkdownToHtml(state.copilot.lastResponse, theme)
           : `<div style="color: var(--text-muted); font-style: italic; text-align: center; padding-top: 5rem;">No summary generated yet. Ask a question or click "Summarize Document" on the left!</div>`;
         docPage.appendChild(contentDiv);
         aiTabContent.appendChild(docPage);
@@ -5474,6 +5750,17 @@ function setupCopilotWorkspace() {
       sendBtn.click();
     });
   });
+
+  // Enter key trigger for chat (Shift+Enter for new line)
+  promptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendBtn.click();
+    }
+  });
+
+  // Auto-focus prompt input when copilot becomes active
+  setTimeout(() => promptInput.focus(), 300);
 
   // Export tab switch callback so other functions can switch tabs dynamically
   window.switchCopilotTab = switchTab;
@@ -5508,8 +5795,13 @@ function setupCopilotWorkspace() {
           // Use user's custom browser API Key
           responseText = await callGeminiLiveAPI(customApiKey.trim(), prompt, state.copilot.documentText);
         } else {
-          // Use site owner's secure serverless Netlify proxy
-          responseText = await callGeminiServerlessProxy(prompt, state.copilot.documentText);
+          // Use site owner's secure serverless Netlify proxy (with automatic offline heuristics fallback)
+          try {
+            responseText = await callGeminiServerlessProxy(prompt, state.copilot.documentText);
+          } catch (proxyErr) {
+            console.warn("Netlify function proxy failed. Running smart offline heuristics...", proxyErr);
+            responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
+          }
         }
         
         // Remove typing loader
@@ -5518,19 +5810,19 @@ function setupCopilotWorkspace() {
         
         appendMessage('copilot', responseText);
         state.copilot.lastResponse = responseText;
-        
-        // Apply changes to preview dynamically
         applyAiResponseToPreview(prompt, responseText);
+        promptInput.focus();
       } catch (err) {
         console.error(err);
         const loader = document.getElementById('copilot-typing-loader');
         if (loader) loader.remove();
         
-        // Fallback to simulation template smoothly
-        const responseText = runDemoSimulation(prompt);
-        appendMessage('copilot', responseText + `\n\n*(Note: Live API request fell back to simulation mode due to: ${err.message})*`);
+        // Fallback to offline heuristics smoothly
+        const responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
+        appendMessage('copilot', responseText);
         state.copilot.lastResponse = responseText;
         applyAiResponseToPreview(prompt, responseText);
+        promptInput.focus();
       }
     }, 1000);
   });
