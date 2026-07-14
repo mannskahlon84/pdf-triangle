@@ -28,13 +28,74 @@
           </svg>
           <span class="logo-text">PDF <span class="highlight">Triangle</span></span>
         </div>
+        
+        <nav class="header-nav">
+          <a href="#/merge" class="nav-item">MERGE PDF</a>
+          <a href="#/split" class="nav-item">SPLIT PDF</a>
+          <a href="#/compress" class="nav-item">COMPRESS PDF</a>
+          
+          <div class="nav-dropdown">
+            <button class="nav-dropdown-btn">
+              CONVERT PDF <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+            </button>
+            <div class="nav-dropdown-content">
+              <div class="dropdown-group">
+                <div class="dropdown-group-title">Convert to PDF</div>
+                <a href="#/word-to-pdf"><i data-lucide="file-text"></i> Word to PDF</a>
+                <a href="#/excel-to-pdf"><i data-lucide="file-spreadsheet"></i> Excel to PDF</a>
+                <a href="#/pptx-to-pdf"><i data-lucide="presentation"></i> PowerPoint to PDF</a>
+                <a href="#/jpg-to-pdf"><i data-lucide="image"></i> JPG to PDF</a>
+                <a href="#/html-to-pdf"><i data-lucide="code"></i> HTML to PDF</a>
+              </div>
+              <div class="dropdown-group">
+                <div class="dropdown-group-title">Convert from PDF</div>
+                <a href="#/pdf-to-word"><i data-lucide="file-word"></i> PDF to Word</a>
+                <a href="#/pdf-to-powerpoint"><i data-lucide="presentation"></i> PDF to PowerPoint</a>
+                <a href="#/pdf-to-excel"><i data-lucide="file-excel"></i> PDF to Excel</a>
+                <a href="#/pdf-to-jpg"><i data-lucide="image"></i> PDF to JPG</a>
+                <a href="#/pdf-to-pdf-a"><i data-lucide="shield"></i> PDF to PDF/A</a>
+                <a href="#/pdf-to-markdown"><i data-lucide="file-code"></i> PDF to Markdown</a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="nav-dropdown">
+            <button class="nav-dropdown-btn">
+              ALL PDF TOOLS <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+            </button>
+            <div class="nav-dropdown-content two-columns">
+              <div class="dropdown-group">
+                <div class="dropdown-group-title">Organize & Edit</div>
+                <a href="#/organize"><i data-lucide="layout-grid"></i> Organize Pages</a>
+                <a href="#/editor"><i data-lucide="signature"></i> Edit & Sign PDF</a>
+                <a href="#/watermark"><i data-lucide="stamp"></i> Watermark PDF</a>
+                <a href="#/numbering"><i data-lucide="binary"></i> Page Numbers</a>
+                <a href="#/crop"><i data-lucide="crop"></i> Crop PDF</a>
+              </div>
+              <div class="dropdown-group">
+                <div class="dropdown-group-title">Optimize & Secure</div>
+                <a href="#/security"><i data-lucide="lock"></i> Protect / Unlock</a>
+                <a href="#/repair"><i data-lucide="wrench"></i> Repair PDF</a>
+                <a href="#/redact"><i data-lucide="eye-off"></i> Redact PDF</a>
+                <a href="#/translate"><i data-lucide="languages"></i> Translate PDF</a>
+                <a href="#/copilot"><i data-lucide="bot"></i> AI Copilot Chat</a>
+                <a href="#/compare"><i data-lucide="columns-2"></i> Compare PDFs</a>
+                <a href="#/scanner"><i data-lucide="scan"></i> Document Scanner</a>
+                <a href="#/formbuilder"><i data-lucide="check-square"></i> Fill & Sign Forms</a>
+              </div>
+            </div>
+          </div>
+        </nav>
+        
         <div class="header-actions">
-          <a id="apk-download-btn" href="/pdf-triangle.apk" download class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.375rem; text-decoration: none; font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); border: 1px solid var(--border-color); background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--border-radius-sm);">
-            <i data-lucide="smartphone" style="width: 16px; height: 16px; margin-right: 2px;"></i> Download APK (Android)
+          <a id="apk-download-btn" href="/pdf-triangle.apk" download class="btn btn-secondary nav-action-btn" style="display: inline-flex; align-items: center; gap: 0.375rem; text-decoration: none; font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); border: 1px solid var(--border-color); background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--border-radius-sm);">
+            <i data-lucide="smartphone" style="width: 16px; height: 16px; margin-right: 2px;"></i> Download APK
           </a>
           <button id="back-to-dashboard" class="btn btn-secondary hidden">
             <i data-lucide="layout-dashboard"></i> Dashboard
           </button>
+          <a href="#" class="nav-login-btn">Login</a>
+          <a href="#" class="btn btn-primary nav-signup-btn">Sign up</a>
           <button id="theme-toggle" class="btn-icon" aria-label="Toggle Theme">
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
