@@ -1486,6 +1486,26 @@ function resetInactiveTools(activeViewName) {
     safeDOM.show('pdf-to-markdown-upload-zone');
     safeDOM.hide('pdf-to-markdown-setup');
   }
+
+  // 30. Reset AI Copilot
+  if (activeViewName !== 'copilot') {
+    state.copilot.file = null;
+    state.copilot.documentText = '';
+    state.copilot.extractedData = null;
+    state.copilot.lastResponse = '';
+    state.copilot.originalBuffer = null;
+    
+    safeDOM.show('copilot-upload-zone');
+    safeDOM.hide('copilot-preview-container');
+    safeDOM.hide('copilot-toolbar-tabs');
+    safeDOM.disable('copilot-download-btn', true);
+    safeDOM.html('copilot-chat-history', `
+      <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--border-radius-sm); font-size: 0.8125rem; color: var(--text-secondary); border-left: 3px solid var(--accent-purple);">
+        <p><strong>Copilot:</strong> Hello! Upload your document, then write a query or request a summary in the input below. I can reformat tables, extract data, translate, or summarize into Word, Excel, or PDF formats!</p>
+      </div>
+    `);
+    safeDOM.val('copilot-prompt-input', '');
+  }
 }
 
 function injectWorkspaceCancelButtons() {
@@ -5433,13 +5453,17 @@ function setupCopilotWorkspace() {
   tabDocBtn.addEventListener('click', () => switchTab('doc'));
   tabAiBtn.addEventListener('click', () => switchTab('ai'));
 
-  // Load saved API Key
-  apiKeyInput.value = localStorage.getItem('copilot_gemini_key') || '';
+  // Load saved API Key (safeguarded)
+  if (apiKeyInput) {
+    apiKeyInput.value = localStorage.getItem('copilot_gemini_key') || '';
+  }
   
-  saveKeyBtn.addEventListener('click', () => {
-    localStorage.setItem('copilot_gemini_key', apiKeyInput.value.trim());
-    showToast('Gemini API Key saved locally.', 'success');
-  });
+  if (saveKeyBtn && apiKeyInput) {
+    saveKeyBtn.addEventListener('click', () => {
+      localStorage.setItem('copilot_gemini_key', apiKeyInput.value.trim());
+      showToast('Gemini API Key saved locally.', 'success');
+    });
+  }
 
   // Upload actions
   uploadZone.addEventListener('click', () => fileInput.click());
@@ -5458,7 +5482,7 @@ function setupCopilotWorkspace() {
     state.copilot.extractedData = null;
     state.copilot.lastResponse = ''; // Reset last AI response
     
-    showLoader('Analyzing and extracting text...');
+    showLoader('Loading document preview...');
     
     try {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -5513,6 +5537,8 @@ function setupCopilotWorkspace() {
       // Update UI state
       uploadZone.classList.add('hidden');
       previewContainer.classList.remove('hidden');
+      const toolbarTabs = document.getElementById('copilot-toolbar-tabs');
+      if (toolbarTabs) toolbarTabs.classList.remove('hidden');
       downloadBtn.disabled = false;
       
       // Add system message
@@ -5759,6 +5785,12 @@ function setupCopilotWorkspace() {
     }
   });
 
+  // Auto-expand input height as user types (Extendable input)
+  promptInput.addEventListener('input', () => {
+    promptInput.style.height = 'auto';
+    promptInput.style.height = Math.min(200, promptInput.scrollHeight) + 'px';
+  });
+
   // Auto-focus prompt input when copilot becomes active
   setTimeout(() => promptInput.focus(), 300);
 
@@ -5772,6 +5804,7 @@ function setupCopilotWorkspace() {
     
     appendMessage('user', prompt);
     promptInput.value = '';
+    promptInput.style.height = '60px';
     
     // Add typing message
     const loaderMsg = document.createElement('div');
