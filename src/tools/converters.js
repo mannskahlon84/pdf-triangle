@@ -380,34 +380,59 @@ export async function convertPdfToWord(file) {
   
   let htmlContent = '';
   
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+  
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const items = textContent.items;
     
-    // Sort text items in reading order (top-to-bottom, left-to-right)
-    items.sort((a, b) => {
-      if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
-        return a.transform[4] - b.transform[4];
+    if (items && items.length > 0) {
+      // Sort text items in reading order (top-to-bottom, left-to-right)
+      items.sort((a, b) => {
+        if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
+          return a.transform[4] - b.transform[4];
+        }
+        return b.transform[5] - a.transform[5];
+      });
+      
+      let pageText = '';
+      let lastY = null;
+      for (const item of items) {
+        const currentY = item.transform[5];
+        if (lastY !== null && Math.abs(currentY - lastY) > 8) {
+          pageText += '<br/>';
+        }
+        pageText += escapeHtml(item.str) + ' ';
+        lastY = currentY;
       }
-      return b.transform[5] - a.transform[5];
-    });
-    
-    let pageText = '';
-    let lastY = null;
-    for (const item of items) {
-      const currentY = item.transform[5];
-      if (lastY !== null && Math.abs(currentY - lastY) > 8) {
-        pageText += '<br/>';
-      }
-      pageText += item.str + ' ';
-      lastY = currentY;
+      
+      htmlContent += `<div class="page" style="page-break-after:always; margin-bottom:20px;">`;
+      htmlContent += `<p style="font-family:Arial, sans-serif; font-size:11pt; line-height:1.6; color:#333333;">${pageText}</p>`;
+      htmlContent += `</div>`;
+    } else {
+      // Scanned PDF / Image-only page fallback: Render page to canvas and embed as image in Word
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const viewport = page.getViewport({ scale: 1.5 });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      
+      await page.render({ canvasContext: context, viewport }).promise;
+      const imgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      
+      htmlContent += `<div class="page" style="page-break-after:always; margin-bottom:20px; text-align:center;">`;
+      htmlContent += `<img src="${imgDataUrl}" style="max-width:100%; height:auto;" />`;
+      htmlContent += `</div>`;
     }
-    
-    htmlContent += `<div class="page" style="page-break-after:always; margin-bottom:20px;">`;
-    htmlContent += `<h2>Page ${i}</h2>`;
-    htmlContent += `<p style="font-family:Arial, sans-serif; font-size:11pt; line-height:1.6;">${pageText}</p>`;
-    htmlContent += `</div>`;
   }
   
   const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Document</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]--></head><body>";
