@@ -1838,7 +1838,7 @@ body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
 .header-nav {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   height: 100%;
 }
 
@@ -1846,10 +1846,10 @@ body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
   color: var(--text-primary);
   text-decoration: none;
   font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  letter-spacing: 0.03em;
-  padding: 0.5rem 0.625rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--border-radius-sm);
   transition: all var(--transition-fast);
   text-transform: uppercase;
@@ -1858,6 +1858,13 @@ body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
 .nav-item:hover {
   color: var(--accent-purple);
   background-color: var(--bg-primary);
+}
+
+/* Icons inside nav elements */
+.nav-item i, .nav-item svg, .nav-dropdown-btn i, .nav-dropdown-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  vertical-align: middle;
 }
 
 /* Dropdown Menu Container */
@@ -1874,14 +1881,14 @@ body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
   border: none;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  letter-spacing: 0.03em;
-  padding: 0.5rem 0.625rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
   transition: all var(--transition-fast);
   text-transform: uppercase;
 }
