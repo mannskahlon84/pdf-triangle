@@ -5315,7 +5315,17 @@ function setupCopilotWorkspace() {
       const rows = state.copilot.extractedData;
       const headers = rows[0] || [];
       
-      const stopWords = ['show', 'me', 'only', 'from', 'the', 'column', 'list', 'select', 'display', 'rows', 'filter', 'matching', 'with', 'nationality', 'position', 'company', 'status'];
+      const stopWords = [
+        'show', 'me', 'only', 'from', 'the', 'column', 'list', 'select', 'display', 'rows', 'filter', 'matching', 'with', 
+        'nationality', 'position', 'company', 'status', 'how', 'many', 'who', 'what', 'where', 'why', 'we', 'have', 'has', 
+        'had', 'do', 'does', 'did', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'a', 'an', 'and', 'or', 'but', 'if', 
+        'then', 'else', 'to', 'in', 'on', 'at', 'by', 'for', 'about', 'against', 'between', 'into', 'through', 'during', 
+        'before', 'after', 'above', 'below', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'once', 
+        'here', 'there', 'when', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 
+        'not', 'own', 'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', 'employee', 'employees', 
+        'people', 'person', 'record', 'records', 'row', 'rows', 'data', 'sheet', 'table', 'tell', 'count', 'number', 'of', 'us',
+        'get', 'find', 'search', 'give'
+      ];
       const keywords = pLower.split(/[\s,]+/g).filter(w => w.length > 2 && !stopWords.includes(w));
       
       if (keywords.length > 0) {
@@ -5342,8 +5352,15 @@ function setupCopilotWorkspace() {
         }
         
         if (matchedRows.length > 0) {
+          const isCountRequest = pLower.includes('how many') || pLower.includes('count') || pLower.includes('number of');
           let tableMd = `# Filtered Spreadsheet Results\n\n`;
-          tableMd += `Found **${matchedRows.length}** row(s) matching your criteria: **${keywords.join(' & ')}**\n\n`;
+          
+          if (isCountRequest) {
+            tableMd += `### 📊 Summary Answer\n`;
+            tableMd += `There are **${matchedRows.length}** employee(s) matching your request (**${keywords.join(' & ')}**).\n\n`;
+          }
+          
+          tableMd += `Found **${matchedRows.length}** row(s) matching your criteria:\n\n`;
           
           // Header row
           tableMd += `| ${headers.join(' | ')} |\n`;
