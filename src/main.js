@@ -142,6 +142,19 @@ const state = {
   pdfToMarkdown: {
     file: null,
     pageCount: 0
+  },
+  formbuilder: {
+    file: null,
+    pdfBytes: null,
+    pdfDoc: null,
+    numPages: 0,
+    currentPageIndex: 0,
+    zoom: 1.0,
+    mode: 'edit',
+    activeTool: 'text',
+    fontColor: '#000000',
+    fields: [],
+    selectedFieldId: null
   }
 };
 
@@ -1377,8 +1390,13 @@ function resetInactiveTools(activeViewName) {
   if (activeViewName !== 'formbuilder') {
     if (state.formbuilder) {
       state.formbuilder.file = null;
+      state.formbuilder.pdfBytes = null;
+      state.formbuilder.pdfDoc = null;
+      state.formbuilder.fields = [];
+      state.formbuilder.selectedFieldId = null;
     }
-    safeDOM.show('formbuilder-upload-zone');
+    safeDOM.show('formbuilder-upload-container');
+    safeDOM.hide('formbuilder-workspace-container');
   }
 
   // 17. Reset Remove Pages
@@ -4958,6 +4976,51 @@ function gaussElimination(A) {
 function setupFormbuilderWorkspace() {
   const uploadZone = document.getElementById('formbuilder-upload-zone');
   const fileInput = document.getElementById('formbuilder-file-input');
+  const uploadContainer = document.getElementById('formbuilder-upload-container');
+  const workspaceContainer = document.getElementById('formbuilder-workspace-container');
+  const canvas = document.getElementById('formbuilder-canvas');
+  const overlayContainer = document.getElementById('formbuilder-overlay-container');
+  
+  // Navigation elements
+  const prevBtn = document.getElementById('formbuilder-prev-page');
+  const nextBtn = document.getElementById('formbuilder-next-page');
+  const currentPageLabel = document.getElementById('formbuilder-current-page');
+  const totalPagesLabel = document.getElementById('formbuilder-total-pages');
+  const zoomInBtn = document.getElementById('formbuilder-zoom-in');
+  const zoomOutBtn = document.getElementById('formbuilder-zoom-out');
+  const zoomLabel = document.getElementById('formbuilder-zoom-label');
+  const uploadTriggerBtn = document.getElementById('formbuilder-upload-trigger-btn');
+  
+  // Toggles and tools
+  const modeFillBtn = document.getElementById('formbuilder-mode-fill');
+  const modeEditBtn = document.getElementById('formbuilder-mode-edit');
+  const clearFieldsBtn = document.getElementById('fb-clear-fields-btn');
+  
+  const toolBtns = {
+    draw: document.getElementById('fb-tool-draw'),
+    text: document.getElementById('fb-tool-text'),
+    checkbox: document.getElementById('fb-tool-checkbox'),
+    radio: document.getElementById('fb-tool-radio'),
+    dropdown: document.getElementById('fb-tool-dropdown'),
+    file: document.getElementById('fb-tool-file')
+  };
+  
+  const fontColorPicker = document.getElementById('fb-font-color-picker');
+  
+  // Properties panel elements
+  const noFieldSelectedMsg = document.getElementById('fb-no-field-selected');
+  const propertiesForm = document.getElementById('fb-properties-form');
+  const propNameInput = document.getElementById('fb-prop-name');
+  const propDefaultInput = document.getElementById('fb-prop-default');
+  const propDefaultContainer = document.getElementById('fb-prop-default-container');
+  const propDefaultLabel = document.getElementById('fb-prop-default-label');
+  const propReadonly = document.getElementById('fb-prop-readonly');
+  const propRequired = document.getElementById('fb-prop-required');
+  const propMultiline = document.getElementById('fb-prop-multiline');
+  const propMultilineContainer = document.getElementById('fb-prop-multiline-container');
+  const propIndicator = document.getElementById('fb-prop-indicator');
+  const deleteFieldBtn = document.getElementById('fb-delete-field-btn');
+  const downloadPdfBtn = document.getElementById('fb-download-pdf-btn');
   
   uploadZone.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async (e) => {
@@ -4966,6 +5029,10 @@ function setupFormbuilderWorkspace() {
   });
   
   setupDragAndDrop(uploadZone, handleFormbuilderFile);
+  
+  if (uploadTriggerBtn) {
+    uploadTriggerBtn.addEventListener('click', () => fileInput.click());
+  }
   
   async function handleFormbuilderFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
@@ -4986,57 +5053,539 @@ function setupFormbuilderWorkspace() {
         throw new Error('Unsupported file format. Please upload PDF, Word, Excel, or Image files.');
       }
       
-      // Load converted/uploaded PDF directly into Editor PdfManager
-      await state.editor.pdfManager.loadPdf(pdfBytes);
-      state.editor.pdfManager.file = file;
+      state.formbuilder.file = file;
+      state.formbuilder.pdfBytes = pdfBytes;
       
-      // Populate metadata info in Editor sidebar
-      document.getElementById('meta-info-name').textContent = file.name;
-      document.getElementById('meta-info-pages').textContent = state.editor.pdfManager.numPages;
-      document.getElementById('meta-info-size').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) });
+      const pdf = await loadingTask.promise;
+      state.formbuilder.pdfDoc = pdf;
+      state.formbuilder.numPages = pdf.numPages;
+      state.formbuilder.currentPageIndex = 0;
+      state.formbuilder.fields = [];
+      state.formbuilder.selectedFieldId = null;
       
-      const meta = state.editor.pdfManager.metadata;
-      document.getElementById('meta-title-input').value = meta.title || '';
-      document.getElementById('meta-author-input').value = meta.author || '';
-      document.getElementById('meta-subject-input').value = meta.subject || '';
-      document.getElementById('meta-creator-input').value = meta.creator || '';
-      document.getElementById('meta-producer-input').value = meta.producer || '';
+      uploadContainer.classList.add('hidden');
+      workspaceContainer.classList.remove('hidden');
       
-      // Hide Empty State and show Active Page
-      document.getElementById('editor-empty-state').classList.add('hidden');
-      document.getElementById('zoom-wrapper').classList.remove('hidden');
-      document.getElementById('active-page-container').classList.remove('hidden');
+      totalPagesLabel.textContent = pdf.numPages;
       
-      // Enable main action buttons
-      document.getElementById('editor-save-btn').disabled = false;
-      document.getElementById('editor-print-btn').disabled = false;
-      document.getElementById('editor-rotate-btn').disabled = false;
-      document.getElementById('editor-close-btn').disabled = false;
-      document.getElementById('ocr-page-btn').disabled = false;
-      document.getElementById('editor-edit-pdf-text-btn').disabled = false;
+      await loadFormbuilderPage(0);
+      showToast('Document loaded successfully! Click Edit Form to add fields.', 'success');
       
-      // Render first page and thumbnails
-      await loadEditorPage(0);
-      await generateEditorThumbnails();
-      
-      // Switch view routing to editor
-      window.location.hash = '#/editor';
-      
-      // Set tool to formfield automatically and activate its button
-      document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
-      const formfieldBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="formfield"]');
-      if (formfieldBtn) formfieldBtn.classList.add('active');
-      setEditorTool('formfield');
-      
-      showToast('Document loaded! Add interactive form fields in the sidebar.', 'success');
+      if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       console.error(err);
-      showToast(err.message || 'Failed to convert document.', 'danger');
+      showToast(err.message || 'Failed to load document.', 'danger');
     } finally {
       hideLoader();
-      fileInput.value = ''; // clear input
+      fileInput.value = '';
     }
   }
+  
+  async function loadFormbuilderPage(pageIndex) {
+    if (!state.formbuilder.pdfDoc) return;
+    state.formbuilder.currentPageIndex = pageIndex;
+    currentPageLabel.textContent = pageIndex + 1;
+    
+    const page = await state.formbuilder.pdfDoc.getPage(pageIndex + 1);
+    const viewport = page.getViewport({ scale: state.formbuilder.zoom * 1.5 });
+    
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // Scale canvas wrapper visually
+    const wrapper = document.getElementById('formbuilder-canvas-wrapper');
+    wrapper.style.width = `${viewport.width / 1.5}px`;
+    wrapper.style.height = `${viewport.height / 1.5}px`;
+    
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    
+    renderFormbuilderOverlay();
+  }
+  
+  function renderFormbuilderOverlay() {
+    overlayContainer.innerHTML = '';
+    
+    const pageFields = state.formbuilder.fields.filter(f => f.pageIndex === state.formbuilder.currentPageIndex);
+    
+    pageFields.forEach(field => {
+      const fieldDiv = document.createElement('div');
+      fieldDiv.className = `fb-field-element ${field.type}`;
+      if (field.id === state.formbuilder.selectedFieldId && state.formbuilder.mode === 'edit') {
+        fieldDiv.classList.add('active');
+      }
+      
+      // Calculate coordinates from percentages
+      const containerWidth = overlayContainer.clientWidth;
+      const containerHeight = overlayContainer.clientHeight;
+      
+      fieldDiv.style.left = `${field.x * containerWidth}px`;
+      fieldDiv.style.top = `${field.y * containerHeight}px`;
+      fieldDiv.style.width = `${field.width * containerWidth}px`;
+      fieldDiv.style.height = `${field.height * containerHeight}px`;
+      
+      if (state.formbuilder.mode === 'edit') {
+        // Dragging and Resizing elements
+        fieldDiv.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('resize-handle')) return;
+          e.stopPropagation();
+          selectField(field.id);
+          
+          const startX = e.clientX;
+          const startY = e.clientY;
+          const startLeft = field.x * containerWidth;
+          const startTop = field.y * containerHeight;
+          
+          function onMouseMove(moveEvent) {
+            const dx = moveEvent.clientX - startX;
+            const dy = moveEvent.clientY - startY;
+            
+            let newLeft = Math.max(0, Math.min(containerWidth - (field.width * containerWidth), startLeft + dx));
+            let newTop = Math.max(0, Math.min(containerHeight - (field.height * containerHeight), startTop + dy));
+            
+            field.x = newLeft / containerWidth;
+            field.y = newTop / containerHeight;
+            
+            fieldDiv.style.left = `${newLeft}px`;
+            fieldDiv.style.top = `${newTop}px`;
+          }
+          
+          function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          }
+          
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+        
+        // Corner resize handles
+        ['tl', 'tr', 'bl', 'br'].forEach(pos => {
+          const handle = document.createElement('div');
+          handle.className = `resize-handle ${pos}`;
+          fieldDiv.appendChild(handle);
+          
+          handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startXRatio = field.x;
+            const startYRatio = field.y;
+            const startW = field.width * containerWidth;
+            const startH = field.height * containerHeight;
+            const startL = field.x * containerWidth;
+            const startT = field.y * containerHeight;
+            
+            function onMouseMove(moveEvent) {
+              const dx = moveEvent.clientX - startX;
+              const dy = moveEvent.clientY - startY;
+              
+              let newL = startL;
+              let newT = startT;
+              let newW = startW;
+              let newH = startH;
+              
+              if (pos.includes('l')) {
+                newL = Math.max(0, Math.min(startL + startW - 16, startL + dx));
+                newW = startW + (startL - newL);
+              } else {
+                newW = Math.max(16, Math.min(containerWidth - startL, startW + dx));
+              }
+              
+              if (pos.includes('t')) {
+                newT = Math.max(0, Math.min(startT + startH - 16, startT + dy));
+                newH = startH + (startT - newT);
+              } else {
+                newH = Math.max(16, Math.min(containerHeight - startT, startH + dy));
+              }
+              
+              field.x = newL / containerWidth;
+              field.y = newT / containerHeight;
+              field.width = newW / containerWidth;
+              field.height = newH / containerHeight;
+              
+              fieldDiv.style.left = `${newL}px`;
+              fieldDiv.style.top = `${newT}px`;
+              fieldDiv.style.width = `${newW}px`;
+              fieldDiv.style.height = `${newH}px`;
+            }
+            
+            function onMouseUp() {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          });
+        });
+      } else {
+        // Fill Mode rendering standard HTML interactive elements
+        if (field.type === 'text') {
+          if (field.multiline) {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'fb-input';
+            textarea.value = field.value || '';
+            textarea.style.color = field.color || '#000000';
+            textarea.style.resize = 'none';
+            textarea.readOnly = field.readonly;
+            textarea.required = field.required;
+            textarea.addEventListener('input', (e) => { field.value = e.target.value; });
+            fieldDiv.appendChild(textarea);
+          } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'fb-input';
+            input.value = field.value || '';
+            input.style.color = field.color || '#000000';
+            input.readOnly = field.readonly;
+            input.required = field.required;
+            input.addEventListener('input', (e) => { field.value = e.target.value; });
+            fieldDiv.appendChild(input);
+          }
+        } else if (field.type === 'checkbox') {
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.className = 'fb-checkbox';
+          input.checked = field.value === 'true';
+          input.disabled = field.readonly;
+          input.required = field.required;
+          input.addEventListener('change', (e) => { field.value = e.target.checked ? 'true' : 'false'; });
+          fieldDiv.appendChild(input);
+        } else if (field.type === 'radio') {
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.className = 'fb-radio';
+          input.name = field.name;
+          input.checked = field.value === 'true';
+          input.disabled = field.readonly;
+          input.required = field.required;
+          input.addEventListener('change', (e) => { 
+            // Reset other radios in same group
+            state.formbuilder.fields.forEach(f => {
+              if (f.type === 'radio' && f.name === field.name) f.value = 'false';
+            });
+            field.value = 'true';
+          });
+          fieldDiv.appendChild(input);
+        } else if (field.type === 'dropdown') {
+          const select = document.createElement('select');
+          select.className = 'fb-select';
+          select.disabled = field.readonly;
+          select.required = field.required;
+          
+          const options = field.options || ['Select Option', 'Option 1', 'Option 2', 'Option 3'];
+          options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            if (field.value === opt) option.selected = true;
+            select.appendChild(option);
+          });
+          
+          select.addEventListener('change', (e) => { field.value = e.target.value; });
+          fieldDiv.appendChild(select);
+        } else if (field.type === 'file') {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.className = 'fb-input';
+          input.style.fontSize = '0.7rem';
+          input.disabled = field.readonly;
+          input.required = field.required;
+          fieldDiv.appendChild(input);
+        } else if (field.type === 'draw') {
+          const drawDiv = document.createElement('div');
+          drawDiv.style.width = '100%';
+          drawDiv.style.height = '100%';
+          drawDiv.style.display = 'flex';
+          drawDiv.style.alignItems = 'center';
+          drawDiv.style.justifyContent = 'center';
+          drawDiv.style.fontSize = '0.75rem';
+          drawDiv.style.color = '#333333';
+          drawDiv.innerHTML = '<span style="font-family:\'Great Vibes\', cursive; font-size:1.2rem;">Signature</span>';
+          fieldDiv.appendChild(drawDiv);
+        }
+      }
+      
+      overlayContainer.appendChild(fieldDiv);
+    });
+  }
+  
+  // Click on overlay container to create a field in Edit Mode
+  overlayContainer.addEventListener('mousedown', (e) => {
+    if (state.formbuilder.mode !== 'edit') return;
+    if (e.target !== overlayContainer) return;
+    
+    const rect = overlayContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    const xRatio = clickX / rect.width;
+    const yRatio = clickY / rect.height;
+    
+    // Set default sizing
+    let wRatio = 0.18;
+    let hRatio = 0.04;
+    
+    if (state.formbuilder.activeTool === 'checkbox' || state.formbuilder.activeTool === 'radio') {
+      wRatio = 0.04;
+      hRatio = 0.04;
+    }
+    
+    const newField = {
+      id: 'fb-field-' + Math.random().toString(36).substring(2, 9),
+      type: state.formbuilder.activeTool,
+      pageIndex: state.formbuilder.currentPageIndex,
+      x: Math.max(0, Math.min(1.0 - wRatio, xRatio - wRatio/2)),
+      y: Math.max(0, Math.min(1.0 - hRatio, yRatio - hRatio/2)),
+      width: wRatio,
+      height: hRatio,
+      name: `${state.formbuilder.activeTool.charAt(0).toUpperCase() + state.formbuilder.activeTool.slice(1)}FormField ${state.formbuilder.fields.length + 1}`,
+      value: state.formbuilder.activeTool === 'checkbox' || state.formbuilder.activeTool === 'radio' ? 'false' : '',
+      readonly: false,
+      required: false,
+      multiline: false,
+      indicator: false,
+      color: state.formbuilder.fontColor,
+      options: ['Select Option', 'Yes', 'No', 'N/A']
+    };
+    
+    state.formbuilder.fields.push(newField);
+    selectField(newField.id);
+  });
+  
+  function selectField(id) {
+    state.formbuilder.selectedFieldId = id;
+    renderFormbuilderOverlay();
+    
+    const field = state.formbuilder.fields.find(f => f.id === id);
+    if (!field) {
+      noFieldSelectedMsg.classList.remove('hidden');
+      propertiesForm.classList.add('hidden');
+      return;
+    }
+    
+    noFieldSelectedMsg.classList.add('hidden');
+    propertiesForm.classList.remove('hidden');
+    
+    propNameInput.value = field.name || '';
+    propDefaultInput.value = field.value || '';
+    propReadonly.checked = field.readonly || false;
+    propRequired.checked = field.required || false;
+    propMultiline.checked = field.multiline || false;
+    propIndicator.checked = field.indicator || false;
+    
+    // Toggle multiline based on text field type
+    if (field.type === 'text') {
+      propMultilineContainer.classList.remove('hidden');
+      propDefaultContainer.classList.remove('hidden');
+      propDefaultLabel.textContent = 'Default Value';
+    } else if (field.type === 'dropdown') {
+      propMultilineContainer.classList.add('hidden');
+      propDefaultContainer.classList.remove('hidden');
+      propDefaultLabel.textContent = 'Comma-separated Options';
+      propDefaultInput.value = (field.options || []).join(', ');
+    } else {
+      propMultilineContainer.classList.add('hidden');
+      propDefaultContainer.classList.add('hidden');
+    }
+  }
+  
+  // Properties panel inputs bind
+  propNameInput.addEventListener('input', (e) => {
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field) field.name = e.target.value;
+  });
+  
+  propDefaultInput.addEventListener('input', (e) => {
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field) {
+      if (field.type === 'dropdown') {
+        field.options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+      } else {
+        field.value = e.target.value;
+      }
+      renderFormbuilderOverlay();
+    }
+  });
+  
+  propReadonly.addEventListener('change', (e) => {
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field) field.readonly = e.target.checked;
+  });
+  
+  propRequired.addEventListener('change', (e) => {
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field) field.required = e.target.checked;
+  });
+  
+  propMultiline.addEventListener('change', (e) => {
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field) {
+      field.multiline = e.target.checked;
+      renderFormbuilderOverlay();
+    }
+  });
+  
+  propIndicator.addEventListener('change', (e) => {
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field) field.indicator = e.target.checked;
+  });
+  
+  deleteFieldBtn.addEventListener('click', () => {
+    const id = state.formbuilder.selectedFieldId;
+    state.formbuilder.fields = state.formbuilder.fields.filter(f => f.id !== id);
+    selectField(null);
+  });
+  
+  // Toggle modes Fill vs Edit
+  modeFillBtn.addEventListener('click', () => {
+    state.formbuilder.mode = 'fill';
+    modeFillBtn.classList.add('active');
+    modeEditBtn.classList.remove('active');
+    workspaceContainer.setAttribute('data-mode', 'fill');
+    selectField(null);
+  });
+  
+  modeEditBtn.addEventListener('click', () => {
+    state.formbuilder.mode = 'edit';
+    modeEditBtn.classList.add('active');
+    modeFillBtn.classList.remove('active');
+    workspaceContainer.setAttribute('data-mode', 'edit');
+    renderFormbuilderOverlay();
+  });
+  
+  // Toolbar Buttons
+  Object.keys(toolBtns).forEach(tool => {
+    toolBtns[tool].addEventListener('click', () => {
+      Object.keys(toolBtns).forEach(t => toolBtns[t].classList.remove('active'));
+      toolBtns[tool].classList.add('active');
+      state.formbuilder.activeTool = tool;
+    });
+  });
+  
+  // Color Picker change
+  fontColorPicker.addEventListener('input', (e) => {
+    const color = e.target.value;
+    state.formbuilder.fontColor = color;
+    document.getElementById('fb-tool-color').style.color = color;
+    
+    // Write color to currently selected field if it is text
+    const field = state.formbuilder.fields.find(f => f.id === state.formbuilder.selectedFieldId);
+    if (field && field.type === 'text') {
+      field.color = color;
+      renderFormbuilderOverlay();
+    }
+  });
+  
+  // Clear all fields
+  clearFieldsBtn.addEventListener('click', () => {
+    state.formbuilder.fields = [];
+    selectField(null);
+  });
+  
+  // Navigation Event listeners
+  prevBtn.addEventListener('click', () => {
+    if (state.formbuilder.currentPageIndex > 0) {
+      loadFormbuilderPage(state.formbuilder.currentPageIndex - 1);
+    }
+  });
+  
+  nextBtn.addEventListener('click', () => {
+    if (state.formbuilder.currentPageIndex < state.formbuilder.numPages - 1) {
+      loadFormbuilderPage(state.formbuilder.currentPageIndex + 1);
+    }
+  });
+  
+  zoomInBtn.addEventListener('click', () => {
+    if (state.formbuilder.zoom < 2.0) {
+      state.formbuilder.zoom = parseFloat((state.formbuilder.zoom + 0.15).toFixed(2));
+      zoomLabel.textContent = `${Math.round(state.formbuilder.zoom * 100)}%`;
+      loadFormbuilderPage(state.formbuilder.currentPageIndex);
+    }
+  });
+  
+  zoomOutBtn.addEventListener('click', () => {
+    if (state.formbuilder.zoom > 0.6) {
+      state.formbuilder.zoom = parseFloat((state.formbuilder.zoom - 0.15).toFixed(2));
+      zoomLabel.textContent = `${Math.round(state.formbuilder.zoom * 100)}%`;
+      loadFormbuilderPage(state.formbuilder.currentPageIndex);
+    }
+  });
+  
+  // Download Form PDF
+  downloadPdfBtn.addEventListener('click', async () => {
+    showLoader('Compiling form fields and generating PDF...');
+    try {
+      const { PDFDocument: LibPDF } = await import('pdf-lib');
+      const doc = await LibPDF.load(state.formbuilder.pdfBytes);
+      const form = doc.getForm();
+      
+      for (const field of state.formbuilder.fields) {
+        const page = doc.getPage(field.pageIndex);
+        const { width: pWidth, height: pHeight } = page.getSize();
+        
+        // Map top-left HTML percentage bounds to bottom-left PDF coordinate bounds
+        const x = field.x * pWidth;
+        const y = (1.0 - field.y - field.height) * pHeight;
+        const w = field.width * pWidth;
+        const h = field.height * pHeight;
+        
+        if (field.type === 'text') {
+          const tf = form.createTextField(field.name);
+          tf.setText(field.value || '');
+          if (field.multiline) tf.enableMultiline();
+          if (field.readonly) tf.enableReadOnly();
+          if (field.required) tf.enableRequired();
+          tf.addToPage(page, { x, y, width: w, height: h });
+        } else if (field.type === 'checkbox') {
+          const cb = form.createCheckBox(field.name);
+          if (field.value === 'true') cb.check();
+          if (field.readonly) cb.enableReadOnly();
+          if (field.required) cb.enableRequired();
+          cb.addToPage(page, { x, y, width: w, height: h });
+        } else if (field.type === 'radio') {
+          let rg;
+          try {
+            rg = form.getRadioGroup(field.name);
+          } catch {
+            rg = form.createRadioGroup(field.name);
+          }
+          rg.addOptionToPage('Option', page, { x, y, width: w, height: h });
+          if (field.value === 'true') rg.select('Option');
+        } else if (field.type === 'dropdown') {
+          const dd = form.createDropdown(field.name);
+          dd.setOptions(field.options || ['Option 1', 'Option 2', 'Option 3']);
+          if (field.value) dd.select(field.value);
+          if (field.readonly) dd.enableReadOnly();
+          if (field.required) dd.enableRequired();
+          dd.addToPage(page, { x, y, width: w, height: h });
+        } else if (field.type === 'file') {
+          const tf = form.createTextField(field.name);
+          tf.setText('File Upload attachment placeholder');
+          tf.enableReadOnly();
+          tf.addToPage(page, { x, y, width: w, height: h });
+        } else if (field.type === 'draw') {
+          const tf = form.createTextField(field.name);
+          tf.setText('Signature line');
+          tf.enableReadOnly();
+          tf.addToPage(page, { x, y, width: w, height: h });
+        }
+      }
+      
+      const outBytes = await doc.save();
+      downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), state.formbuilder.file.name.replace(/\.pdf$/i, '_form.pdf'));
+      showToast('Interactive form PDF downloaded successfully!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to compile interactive form elements.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  });
 }
 
 function initHomepageCarousel() {
@@ -5619,6 +6168,16 @@ function setupCopilotWorkspace() {
       renderPreview();
       
       showToast('Document loaded successfully!', 'success');
+      
+      // Automatically trigger a creative dynamic summary of the document
+      setTimeout(() => {
+        const promptInput = document.getElementById('copilot-prompt-input');
+        const sendBtn = document.getElementById('copilot-send-btn');
+        if (promptInput && sendBtn) {
+          promptInput.value = "Summarize this document. Analyze the type of document (e.g. device allocation form, invoice, spreadsheet, contract, letter) and generate a highly creative, custom-tailored summary matching its exact content. Highlight key details, names, dates, lists, and signature sections. Do not use generic summary headers.";
+          sendBtn.click();
+        }
+      }, 500);
     } catch (err) {
       console.error(err);
       showToast(err.message || 'Failed to load document.', 'danger');
@@ -5654,7 +6213,24 @@ function setupCopilotWorkspace() {
     msg.style.alignSelf = isBot ? 'flex-start' : 'flex-end';
     msg.style.maxWidth = '90%';
     
-    msg.innerHTML = `<strong>${sender === 'user' ? 'You' : 'Copilot'}:</strong> ${text.replace(/\n/g, '<br>')}`;
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    
+    let displayText = text;
+    if (text.startsWith("Summarize this document. Analyze the type")) {
+      displayText = "Summarize this document";
+    }
+    
+    const contentHtml = isBot ? parseMarkdownToHtml(displayText) : escapeHtml(displayText);
+    
+    msg.innerHTML = `<strong>${sender === 'user' ? 'You' : (sender === 'system' ? 'System' : 'Copilot')}:</strong> ${contentHtml}`;
     chatHistory.appendChild(msg);
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }

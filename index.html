@@ -1562,14 +1562,133 @@
         </section>
 
         <!-- 17. MAKE EDITABLE FORMS WORKSPACE -->
-        <section id="formbuilder-view" class="view-panel hidden">
-          <div class="tool-container">
+        <section id="formbuilder-view" class="view-panel hidden" style="padding:0; height:calc(100vh - 70px);">
+          
+          <!-- Form Builder App Workspace -->
+          <div class="formbuilder-workspace hidden" id="formbuilder-workspace-container" data-mode="edit" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; background: var(--bg-primary);">
+            
+            <!-- Sub-header Ribbon -->
+            <div class="formbuilder-sub-header" style="height: 52px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; flex-shrink: 0; transition: background-color var(--transition-normal), border-color var(--transition-normal);">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="formbuilder-toggle-group" style="display: flex; background: var(--bg-primary); border: 1px solid var(--border-color); padding: 2px; border-radius: var(--border-radius-sm);">
+                  <button class="formbuilder-toggle-btn" id="formbuilder-mode-fill" style="padding: 0.35rem 1rem; font-size: 0.8125rem; font-weight: 600; border: none; background: transparent; cursor: pointer; border-radius: var(--border-radius-sm); color: var(--text-secondary); transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.35rem;"><i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Fill Form</button>
+                  <button class="formbuilder-toggle-btn active" id="formbuilder-mode-edit" style="padding: 0.35rem 1rem; font-size: 0.8125rem; font-weight: 600; border: none; background: transparent; cursor: pointer; border-radius: var(--border-radius-sm); color: var(--text-secondary); transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.35rem;"><i data-lucide="file-edit" style="width: 14px; height: 14px;"></i> Edit Form</button>
+                </div>
+              </div>
+              
+              <!-- Zoom / Page Info -->
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button class="btn-icon" id="formbuilder-prev-page"><i data-lucide="chevron-left"></i></button>
+                <span style="font-size: 0.8125rem; font-weight: 600; min-width: 60px; text-align: center; color: var(--text-primary);"><span id="formbuilder-current-page">1</span> / <span id="formbuilder-total-pages">1</span></span>
+                <button class="btn-icon" id="formbuilder-next-page"><i data-lucide="chevron-right"></i></button>
+                
+                <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 0.5rem;"></div>
+                
+                <button class="btn-icon" id="formbuilder-zoom-out"><i data-lucide="minus"></i></button>
+                <span style="font-size: 0.8125rem; font-weight: 600; min-width: 40px; text-align: center; color: var(--text-primary);" id="formbuilder-zoom-label">100%</span>
+                <button class="btn-icon" id="formbuilder-zoom-in"><i data-lucide="plus"></i></button>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="btn btn-secondary" id="formbuilder-upload-trigger-btn" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;"><i data-lucide="upload-cloud"></i> Upload Another</button>
+                <a href="#/dashboard" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+              </div>
+            </div>
+            
+            <!-- Toolbar for Form Fields design -->
+            <div class="formbuilder-toolbar" style="height: 48px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0 1rem; flex-shrink: 0; transition: background-color var(--transition-normal), border-color var(--transition-normal);">
+              <button class="formbuilder-tool-btn" id="fb-tool-draw" title="Freehand Drawing / Signature"><i data-lucide="pen-tool"></i></button>
+              <button class="formbuilder-tool-btn active" id="fb-tool-text" title="Text Input Field"><i data-lucide="type"></i></button>
+              
+              <!-- Color picker trigger -->
+              <div style="position: relative; display: inline-flex;">
+                <button class="formbuilder-tool-btn" id="fb-tool-color" title="Field Font Color" style="color: #e53e3e;"><strong style="font-size: 1.1rem; line-height: 1;">T</strong></button>
+                <input type="color" id="fb-font-color-picker" value="#000000" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" />
+              </div>
+              
+              <button class="formbuilder-tool-btn" id="fb-tool-checkbox" title="Checkbox Field"><i data-lucide="check-square"></i></button>
+              <button class="formbuilder-tool-btn" id="fb-tool-radio" title="Radio Button Field"><i data-lucide="circle-dot"></i></button>
+              <button class="formbuilder-tool-btn" id="fb-tool-dropdown" title="Dropdown Select List"><i data-lucide="list"></i></button>
+              <button class="formbuilder-tool-btn" id="fb-tool-file" title="Upload File Field"><i data-lucide="file-up"></i></button>
+              
+              <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 0.5rem;"></div>
+              
+              <button class="btn btn-secondary" id="fb-clear-fields-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; height: 28px; line-height: 1;"><i data-lucide="trash-2"></i> Clear All</button>
+            </div>
+            
+            <!-- Main Content Area: PDF Center & Properties Sidebar -->
+            <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
+              
+              <!-- PDF Page Rendering Container -->
+              <div class="formbuilder-viewport" id="formbuilder-viewport-container" style="flex: 1; overflow: auto; display: flex; align-items: flex-start; justify-content: center; padding: 2rem; background: var(--bg-primary); position: relative;">
+                <!-- Wrapper for canvas and overlays -->
+                <div id="formbuilder-canvas-wrapper" style="position: relative; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border-radius: 8px; background: white;">
+                  <canvas id="formbuilder-canvas" style="display: block; border-radius: 8px;"></canvas>
+                  <!-- Form Overlay Container -->
+                  <div id="formbuilder-overlay-container" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: auto;"></div>
+                </div>
+              </div>
+              
+              <!-- Properties panel on the right -->
+              <aside class="formbuilder-properties-sidebar" style="width: 280px; flex-shrink: 0; border-left: 1px solid var(--border-color); background: var(--bg-secondary); display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: 1.25rem; transition: background-color var(--transition-normal), border-color var(--transition-normal);">
+                
+                <!-- Field Properties Block -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto;">
+                  <h3 style="font-family: var(--font-display); font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;"><i data-lucide="settings" style="width: 14px; height: 14px;"></i> Properties</h3>
+                  
+                  <div id="fb-no-field-selected" style="color: var(--text-muted); font-style: italic; font-size: 0.8125rem; text-align: center; margin-top: 2rem;">
+                    No field selected. Click on an existing field or select a tool and click on the page to create one.
+                  </div>
+                  
+                  <div id="fb-properties-form" class="hidden" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                      <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Field Name*</label>
+                      <input type="text" id="fb-prop-name" style="width: 100%; padding: 0.45rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: var(--bg-primary); color: var(--text-primary);" />
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem;" id="fb-prop-default-container">
+                      <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);" id="fb-prop-default-label">Default Value</label>
+                      <input type="text" id="fb-prop-default" style="width: 100%; padding: 0.45rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: var(--bg-primary); color: var(--text-primary);" />
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                      <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Properties</span>
+                      
+                      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" id="fb-prop-readonly" style="cursor: pointer;" /> Read Only
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" id="fb-prop-required" style="cursor: pointer;" /> Required
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer; color: var(--text-secondary);" id="fb-prop-multiline-container">
+                        <input type="checkbox" id="fb-prop-multiline" style="cursor: pointer;" /> Multiline
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" id="fb-prop-indicator" style="cursor: pointer;" /> Include Field Indicator
+                      </label>
+                    </div>
+                    
+                    <button class="btn btn-secondary" id="fb-delete-field-btn" style="color: #e53e3e; border-color: #feb2b2; background: #fff5f5; width: 100%; margin-top: 1rem; height: 34px;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Delete Field</button>
+                  </div>
+                </div>
+                
+                <!-- Action / Download block at bottom -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: auto; display: flex; flex-direction: column; gap: 0.75rem;">
+                  <button class="btn btn-primary" id="fb-download-pdf-btn" style="background: #e53e3e; border: none; font-weight: 700; width: 100%; height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; color: white;"><i data-lucide="download"></i> Download PDF</button>
+                </div>
+              </aside>
+              
+            </div>
+            
+          </div>
+          
+          <!-- Upload State Panel -->
+          <div class="tool-container" id="formbuilder-upload-container">
             <div class="tool-header">
               <a href="#/dashboard" class="back-dashboard-link"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
               <h2>Make Editable Forms</h2>
               <p>Upload a PDF, Word document (.docx), Excel sheet (.xlsx), or image file to start designing a fillable interactive PDF form.</p>
             </div>
-
             <div class="upload-area" id="formbuilder-upload-zone">
               <i data-lucide="file-signature" class="upload-icon" style="color: var(--accent-pink);"></i>
               <p>Drag & drop PDF, Word, Excel, or images here, or <span class="highlight" style="color: var(--accent-pink);">browse file</span></p>
