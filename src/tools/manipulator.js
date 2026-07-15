@@ -155,7 +155,12 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
     const { width, height } = page.getSize();
     let cx = 0;
     let cy = 0;
-    const rad = (rotation * Math.PI) / 180;
+    
+    // HTML5 Canvas rotation is clockwise for positive values (because Y goes down).
+    // pdf-lib rotation is counter-clockwise for positive values (because Y goes up).
+    // To match the visual preview, we must invert the rotation angle.
+    const pdfRotation = -rotation;
+    const rad = (pdfRotation * Math.PI) / 180;
     
     if (type === 'text') {
       const textWidth = font.widthOfTextAtSize(text, fontSize);
@@ -197,7 +202,7 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
         font,
         color: rgb(r, g, b),
         opacity,
-        rotate: degrees(rotation)
+        rotate: degrees(pdfRotation)
       });
     } else if (type === 'image' && embeddedImage) {
       const dims = embeddedImage.scale(imageScale);
@@ -230,7 +235,7 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
         width: dims.width,
         height: dims.height,
         opacity,
-        rotate: degrees(rotation)
+        rotate: degrees(pdfRotation)
       });
     }
   }
