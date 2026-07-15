@@ -3713,14 +3713,33 @@ function setupWatermarkWorkspace() {
     if (!file) return;
     
     state.watermark.imageFile = file;
-    state.watermark.imageMime = file.type;
+    state.watermark.imageMime = 'image/png'; // We normalize to PNG
     
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      state.watermark.imageBuffer = evt.target.result;
-      updateWatermarkPreview();
+    const imgUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1500; // Limit max resolution to prevent huge PDF files and weird scaling
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = w;
+      tempCanvas.height = h;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      
+      tempCanvas.toBlob(blob => {
+        blob.arrayBuffer().then(buffer => {
+          state.watermark.imageBuffer = buffer;
+          updateWatermarkPreview();
+        });
+      }, 'image/png');
+      URL.revokeObjectURL(imgUrl);
     };
-    reader.readAsArrayBuffer(file);
+    img.src = imgUrl;
   });
   
   // Apply & Download PDF
@@ -3830,10 +3849,12 @@ async function updateWatermarkPreview() {
     
     ctx.save();
     ctx.globalAlpha = opacity;
+    // The preview PDF page is scaled to 0.8, so we must scale the watermark dimensions by 0.8 to match exactly.
+    const previewScale = 0.8;
     
     if (type === 'text') {
       const text = document.getElementById('watermark-text').value || 'CONFIDENTIAL';
-      const fontSize = parseInt(document.getElementById('watermark-font-size').value, 10) || 60;
+      const fontSize = (parseInt(document.getElementById('watermark-font-size').value, 10) || 60) * previewScale;
       const color = document.getElementById('watermark-color').value || '#ff0000';
       const rotation = parseInt(document.getElementById('watermark-rotation').value, 10) || -45;
       
@@ -3844,27 +3865,27 @@ async function updateWatermarkPreview() {
       const textWidth = metrics.width;
       const textHeight = fontSize; // estimate height
       
-      let x = 0;
-      let y = 0;
+      let cx = 0;
+      let cy = 0;
       
       if (position === 'center') {
-        x = canvas.width / 2;
-        y = canvas.height / 2;
+        cx = canvas.width / 2;
+        cy = canvas.height / 2;
       } else if (position === 'top-left') {
-        x = textWidth / 2 + 40;
-        y = textHeight + 40;
+        cx = textWidth / 2 + 40 * previewScale;
+        cy = textHeight + 40 * previewScale;
       } else if (position === 'top-right') {
-        x = canvas.width - textWidth / 2 - 40;
-        y = textHeight + 40;
+        cx = canvas.width - textWidth / 2 - 40 * previewScale;
+        cy = textHeight + 40 * previewScale;
       } else if (position === 'bottom-left') {
-        x = textWidth / 2 + 40;
-        y = canvas.height - 40;
+        cx = textWidth / 2 + 40 * previewScale;
+        cy = canvas.height - 40 * previewScale;
       } else if (position === 'bottom-right') {
-        x = canvas.width - textWidth / 2 - 40;
-        y = canvas.height - 40;
+        cx = canvas.width - textWidth / 2 - 40 * previewScale;
+        cy = canvas.height - 40 * previewScale;
       }
       
-      ctx.translate(x, y);
+      ctx.translate(cx, cy);
       ctx.rotate((rotation * Math.PI) / 180);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -3879,27 +3900,28 @@ async function updateWatermarkPreview() {
         const img = new Image();
         img.onload = () => {
           const scale = parseFloat(document.getElementById('watermark-image-scale').value) / 100;
-          const w = img.width * scale;
-          const h = img.height * scale;
+          const w = img.width * scale * previewScale;
+          const h = img.height * scale * previewScale;
           
           let cx = 0;
           let cy = 0;
+          const pad = 40 * previewScale;
           
           if (position === 'center') {
             cx = canvas.width / 2;
             cy = canvas.height / 2;
           } else if (position === 'top-left') {
-            cx = w / 2 + 40;
-            cy = h / 2 + 40;
+            cx = w / 2 + pad;
+            cy = h / 2 + pad;
           } else if (position === 'top-right') {
-            cx = canvas.width - w / 2 - 40;
-            cy = h / 2 + 40;
+            cx = canvas.width - w / 2 - pad;
+            cy = h / 2 + pad;
           } else if (position === 'bottom-left') {
-            cx = w / 2 + 40;
-            cy = canvas.height - h / 2 - 40;
+            cx = w / 2 + pad;
+            cy = canvas.height - h / 2 - pad;
           } else if (position === 'bottom-right') {
-            cx = canvas.width - w / 2 - 40;
-            cy = canvas.height - h / 2 - 40;
+            cx = canvas.width - w / 2 - pad;
+            cy = canvas.height - h / 2 - pad;
           }
           
           const rotation = parseInt(document.getElementById('watermark-rotation').value, 10) || 0;

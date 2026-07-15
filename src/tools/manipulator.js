@@ -153,29 +153,36 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
   
   for (const page of pages) {
     const { width, height } = page.getSize();
-    let x = 0;
-    let y = 0;
+    let cx = 0;
+    let cy = 0;
+    const rad = (rotation * Math.PI) / 180;
     
     if (type === 'text') {
       const textWidth = font.widthOfTextAtSize(text, fontSize);
       const textHeight = font.heightAtSize(fontSize);
       
       if (position === 'center') {
-        x = (width - textWidth) / 2;
-        y = (height - textHeight) / 2;
+        cx = width / 2;
+        cy = height / 2;
       } else if (position === 'top-left') {
-        x = 40;
-        y = height - textHeight - 40;
+        cx = 40 + textWidth / 2;
+        cy = height - 40 - textHeight / 2;
       } else if (position === 'top-right') {
-        x = width - textWidth - 40;
-        y = height - textHeight - 40;
+        cx = width - 40 - textWidth / 2;
+        cy = height - 40 - textHeight / 2;
       } else if (position === 'bottom-left') {
-        x = 40;
-        y = 40;
+        cx = 40 + textWidth / 2;
+        cy = 40 + textHeight / 2;
       } else if (position === 'bottom-right') {
-        x = width - textWidth - 40;
-        y = 40;
+        cx = width - 40 - textWidth / 2;
+        cy = 40 + textHeight / 2;
       }
+      
+      // Calculate bottom-left coordinates so that the center of the text lands on (cx, cy) after rotation
+      const dx = (textWidth / 2) * Math.cos(rad) - (textHeight / 2) * Math.sin(rad);
+      const dy = (textWidth / 2) * Math.sin(rad) + (textHeight / 2) * Math.cos(rad);
+      const x = cx - dx;
+      const y = cy - dy;
       
       // Parse Color Hex (#ff0000 -> rgb)
       const hex = color.replace('#', '');
@@ -196,21 +203,26 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
       const dims = embeddedImage.scale(imageScale);
       
       if (position === 'center') {
-        x = (width - dims.width) / 2;
-        y = (height - dims.height) / 2;
+        cx = width / 2;
+        cy = height / 2;
       } else if (position === 'top-left') {
-        x = 40;
-        y = height - dims.height - 40;
+        cx = 40 + dims.width / 2;
+        cy = height - 40 - dims.height / 2;
       } else if (position === 'top-right') {
-        x = width - dims.width - 40;
-        y = height - dims.height - 40;
+        cx = width - 40 - dims.width / 2;
+        cy = height - 40 - dims.height / 2;
       } else if (position === 'bottom-left') {
-        x = 40;
-        y = 40;
+        cx = 40 + dims.width / 2;
+        cy = 40 + dims.height / 2;
       } else if (position === 'bottom-right') {
-        x = width - dims.width - 40;
-        y = 40;
+        cx = width - 40 - dims.width / 2;
+        cy = 40 + dims.height / 2;
       }
+      
+      const dx = (dims.width / 2) * Math.cos(rad) - (dims.height / 2) * Math.sin(rad);
+      const dy = (dims.width / 2) * Math.sin(rad) + (dims.height / 2) * Math.cos(rad);
+      const x = cx - dx;
+      const y = cy - dy;
       
       page.drawImage(embeddedImage, {
         x,
