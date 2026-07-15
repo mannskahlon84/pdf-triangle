@@ -5766,42 +5766,34 @@ function setupCopilotWorkspace() {
         }
         docTabContent.appendChild(scrollContainer);
       } else if (ext === 'docx') {
-        const docWrapper = document.createElement('div');
-        docWrapper.className = 'word-preview-wrapper';
-        docWrapper.style.padding = '2rem';
-        docWrapper.style.background = 'white';
-        docWrapper.style.color = '#334155';
-        docWrapper.style.fontFamily = "'Times New Roman', Times, serif";
-        docWrapper.style.fontSize = '12pt';
-        docWrapper.style.lineHeight = '1.6';
-        docWrapper.style.boxShadow = '0 4px 14px rgba(0,0,0,0.08)';
-        docWrapper.style.borderRadius = '6px';
-        docWrapper.style.maxHeight = '650px';
-        docWrapper.style.overflowY = 'auto';
-        docWrapper.style.textAlign = 'left';
+        const container = document.createElement('div');
+        container.className = 'word-preview-container-wrapper';
+        
+        const a4page = document.createElement('div');
+        a4page.className = 'word-a4-page';
         
         if (state.copilot.isModified) {
-          docWrapper.innerHTML = state.copilot.documentText
+          a4page.innerHTML = state.copilot.documentText
             .split('\n')
             .map(line => {
               const trimmed = line.trim();
               if (trimmed.startsWith('*') || trimmed.startsWith('-')) {
-                return `<li style="margin-left: 1.25rem; margin-bottom: 0.35rem; list-style-type: disc; color: #334155;">${trimmed.replace(/^[\s*-]+/, '').trim()}</li>`;
+                return `<li style="margin-left: 1.5rem; margin-bottom: 0.5rem; list-style-type: disc; color: #1e293b;">${trimmed.replace(/^[\s*-]+/, '').trim()}</li>`;
               }
               if (trimmed.length === 0) return '';
               
               if (trimmed.toUpperCase() === trimmed && trimmed.length > 3) {
-                return `<h3 style="color: #1e3a8a; border-bottom: 1px solid #e2e8f0; margin-top: 1.5rem; margin-bottom: 0.5rem; padding-bottom: 0.25rem; font-family:'Outfit', sans-serif; font-weight: 700; font-size: 1.15rem;">${trimmed}</h3>`;
+                return `<h3 style="margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: bold; color: #111827; font-size: 14pt;">${trimmed}</h3>`;
               }
-              return `<p style="margin-bottom: 0.75rem; color: #334155;">${trimmed}</p>`;
+              return `<p style="margin-bottom: 0.85rem; color: #1e293b;">${trimmed}</p>`;
             })
             .join('');
         } else {
           const result = await mammoth.convertToHtml({ arrayBuffer: state.copilot.originalBuffer });
-          docWrapper.innerHTML = result.value;
+          a4page.innerHTML = result.value;
         }
         
-        const tables = docWrapper.querySelectorAll('table');
+        const tables = a4page.querySelectorAll('table');
         tables.forEach(table => {
           table.style.width = '100%';
           table.style.borderCollapse = 'collapse';
@@ -5811,65 +5803,101 @@ function setupCopilotWorkspace() {
             cell.style.padding = '10px';
           });
         });
-        docTabContent.appendChild(docWrapper);
+        
+        container.appendChild(a4page);
+        docTabContent.appendChild(container);
       } else if (ext === 'xlsx' || ext === 'xls') {
-        const excelContainer = document.createElement('div');
-        excelContainer.style.maxHeight = '650px';
-        excelContainer.style.overflowY = 'auto';
+        const container = document.createElement('div');
+        container.className = 'excel-sheet-grid-wrapper';
         
         if (state.copilot.isModified && state.copilot.extractedData) {
-          // Render the filtered rows
-          const wrapper = document.createElement('div');
-          wrapper.style.overflowX = 'auto';
-          wrapper.style.marginBottom = '1.5rem';
+          const tabHeader = document.createElement('div');
+          tabHeader.className = 'excel-sheet-grid-tab-header';
+          tabHeader.textContent = 'Sheet1 (Filtered)';
+          container.appendChild(tabHeader);
           
-          let tableHtml = `<table style="width:100%; border-collapse:collapse; font-size:0.8125rem;">`;
+          let tableHtml = `<table class="excel-sheet-grid">`;
+          
+          const headers = state.copilot.extractedData[0] || [];
+          tableHtml += `<tr><th></th>`;
+          headers.forEach((_, colIdx) => {
+            let colName = '';
+            let tempIdx = colIdx;
+            while (tempIdx >= 0) {
+              colName = String.fromCharCode((tempIdx % 26) + 65) + colName;
+              tempIdx = Math.floor(tempIdx / 26) - 1;
+            }
+            tableHtml += `<th>${colName}</th>`;
+          });
+          tableHtml += `</tr>`;
+          
           state.copilot.extractedData.forEach((row, rowIdx) => {
-            const rowBg = rowIdx === 0 ? '#f1f5f9' : 'white';
-            const cellWeight = rowIdx === 0 ? '700' : '400';
-            tableHtml += `<tr style="background:${rowBg}; border-bottom:1px solid #cbd5e1;">`;
-            row.forEach(cell => {
-              tableHtml += `<td style="padding:8px; border:1px solid #cbd5e1; font-weight:${cellWeight};">${cell !== undefined ? cell : ''}</td>`;
+            tableHtml += `<tr>`;
+            tableHtml += `<td>${rowIdx + 1}</td>`;
+            headers.forEach((_, colIdx) => {
+              const val = row[colIdx];
+              tableHtml += `<td>${val !== undefined ? val : ''}</td>`;
             });
             tableHtml += `</tr>`;
           });
+          
           tableHtml += `</table>`;
-          wrapper.innerHTML = tableHtml;
-          excelContainer.appendChild(wrapper);
+          
+          const gridWrapper = document.createElement('div');
+          gridWrapper.style.overflowX = 'auto';
+          gridWrapper.innerHTML = tableHtml;
+          container.appendChild(gridWrapper);
         } else {
           const workbook = XLSX.read(state.copilot.originalBuffer, { type: 'array' });
           workbook.SheetNames.forEach((sheetName, index) => {
             const sheet = workbook.Sheets[sheetName];
-            const htmlTable = XLSX.utils.sheet_to_html(sheet);
-          
-          const title = document.createElement('h4');
-          title.textContent = sheetName;
-          title.style.marginTop = index === 0 ? '0' : '2rem';
-          title.style.marginBottom = '0.5rem';
-          title.style.color = '#15803d';
-          title.style.borderBottom = '2px solid #22c55e';
-          title.style.paddingBottom = '0.25rem';
-          excelContainer.appendChild(title);
-          
-          const wrapper = document.createElement('div');
-          wrapper.style.overflowX = 'auto';
-          wrapper.style.marginBottom = '1.5rem';
-          wrapper.innerHTML = htmlTable;
-          
-          const table = wrapper.querySelector('table');
-          if (table) {
-            table.style.width = '100%';
-            table.style.borderCollapse = 'collapse';
-            table.querySelectorAll('td, th').forEach(cell => {
-              cell.style.border = '1px solid #cbd5e1';
-              cell.style.padding = '8px';
-              cell.style.fontSize = '0.85rem';
+            const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+            const tabHeader = document.createElement('div');
+            tabHeader.className = 'excel-sheet-grid-tab-header';
+            tabHeader.textContent = sheetName;
+            if (index > 0) tabHeader.style.marginTop = '20px';
+            container.appendChild(tabHeader);
+            
+            let tableHtml = `<table class="excel-sheet-grid">`;
+            
+            let maxCols = 0;
+            rawRows.forEach(row => {
+              if (row.length > maxCols) maxCols = row.length;
             });
-          }
-          excelContainer.appendChild(wrapper);
-        });
+            if (maxCols === 0) maxCols = 5;
+            
+            tableHtml += `<tr><th></th>`;
+            for (let c = 0; c < maxCols; c++) {
+              let colName = '';
+              let tempIdx = c;
+              while (tempIdx >= 0) {
+                colName = String.fromCharCode((tempIdx % 26) + 65) + colName;
+                tempIdx = Math.floor(tempIdx / 26) - 1;
+              }
+              tableHtml += `<th>${colName}</th>`;
+            }
+            tableHtml += `</tr>`;
+            
+            rawRows.forEach((row, rowIdx) => {
+              tableHtml += `<tr>`;
+              tableHtml += `<td>${rowIdx + 1}</td>`;
+              for (let c = 0; c < maxCols; c++) {
+                const val = row[c];
+                tableHtml += `<td>${val !== undefined ? val : ''}</td>`;
+              }
+              tableHtml += `</tr>`;
+            });
+            
+            tableHtml += `</table>`;
+            
+            const gridWrapper = document.createElement('div');
+            gridWrapper.style.overflowX = 'auto';
+            gridWrapper.innerHTML = tableHtml;
+            container.appendChild(gridWrapper);
+          });
         }
-        docTabContent.appendChild(excelContainer);
+        docTabContent.appendChild(container);
       } else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
         const imgBlob = new Blob([state.copilot.originalBuffer]);
         const imgUrl = URL.createObjectURL(imgBlob);
@@ -6332,7 +6360,8 @@ function setupCopilotWorkspace() {
     };
     reader.readAsDataURL(file);
     
-    showLoader('Loading document preview...');
+    state.copilot.isInitialAnalyzing = true;
+    showLoader('Visualizing the document...');
     
     try {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -6414,8 +6443,9 @@ function setupCopilotWorkspace() {
     } catch (err) {
       console.error(err);
       showToast(err.message || 'Failed to load document.', 'danger');
-    } finally {
+      state.copilot.isInitialAnalyzing = false;
       hideLoader();
+    } finally {
       fileInput.value = '';
     }
   }
@@ -6764,24 +6794,23 @@ function setupCopilotWorkspace() {
           // Use user's custom browser API Key
           responseText = await callGeminiLiveAPI(customApiKey.trim(), prompt, state.copilot.documentText);
         } else {
-          // Use site owner's secure serverless Netlify Azure Copilot proxy (with automatic offline heuristics fallback)
+          // Use site owner's secure serverless Netlify proxy (with automatic offline heuristics fallback)
           try {
-            const isFirstPrompt = !state.copilot.hasRunAzureAnalysis;
-            const fileDataToSend = isFirstPrompt ? state.copilot.base64Data : null;
-            
-            responseText = await callAzureServerlessProxy(prompt, state.copilot.documentText, state.copilot.file?.name, fileDataToSend);
-            
-            if (isFirstPrompt && state.copilot.base64Data) {
-              state.copilot.hasRunAzureAnalysis = true;
-            }
+            responseText = await callGeminiServerlessProxy(prompt, state.copilot.documentText);
           } catch (proxyErr) {
-            console.warn("Netlify Azure proxy failed. Running smart offline heuristics...", proxyErr);
+            console.warn("Netlify function proxy failed. Running smart offline heuristics...", proxyErr);
             responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
           }
         }
         
         // Extract updated document text if generated by AI
         responseText = processCopilotResponse(responseText);
+        
+        // Hide the initial visualization loading modal if active
+        if (state.copilot.isInitialAnalyzing) {
+          state.copilot.isInitialAnalyzing = false;
+          hideLoader();
+        }
         
         // Remove typing loader
         const loader = document.getElementById('copilot-typing-loader');
@@ -6799,6 +6828,12 @@ function setupCopilotWorkspace() {
         // Fallback to offline heuristics smoothly
         let responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
         responseText = processCopilotResponse(responseText);
+        
+        // Hide the initial visualization loading modal if active
+        if (state.copilot.isInitialAnalyzing) {
+          state.copilot.isInitialAnalyzing = false;
+          hideLoader();
+        }
         
         appendMessage('copilot', responseText);
         state.copilot.lastResponse = responseText;
@@ -6834,29 +6869,26 @@ function setupCopilotWorkspace() {
     return data.candidates[0].content.parts[0].text;
   }
 
-  async function callAzureServerlessProxy(prompt, docText, fileName, fileData) {
-    const url = '/.netlify/functions/azure-copilot';
+  async function callGeminiServerlessProxy(prompt, docText) {
+    const url = '/.netlify/functions/gemini';
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ fileName, fileData, prompt, docText })
+      body: JSON.stringify({ prompt, docText })
     });
     
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Azure Serverless Error: ${response.status}`);
+      throw new Error(errData.error || `Serverless function error: ${response.status}`);
     }
     
     const data = await response.json();
-    if (data.choices && data.choices[0].message) {
-      if (data.extractedText) {
-        state.copilot.documentText = data.extractedText;
-      }
-      return data.choices[0].message.content;
+    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+      return data.candidates[0].content.parts[0].text;
     }
-    throw new Error('Invalid response structure from Azure Copilot API.');
+    throw new Error('Invalid response structure from serverless API.');
   }
 
   function runDemoSimulation(prompt) {

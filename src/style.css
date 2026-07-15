@@ -2127,4 +2127,101 @@ body:not(.dark-mode) .mode-toggle-btn:hover:not(.active) {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* realistic Word A4 page simulation styles */
+.word-preview-container-wrapper {
+  background: #f1f5f9;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  max-height: 650px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.word-a4-page {
+  background: white;
+  width: 100%;
+  max-width: 800px;
+  min-height: 1050px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 4rem 3.5rem;
+  color: #1e293b;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.6;
+  text-align: justify;
+  border: 1px solid #cbd5e1;
+  box-sizing: border-box;
+}
+
+.word-a4-page h1, .word-a4-page h2, .word-a4-page h3 {
+  font-family: 'Times New Roman', Times, serif;
+  color: #111827;
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.word-a4-page p {
+  margin-bottom: 0.85rem;
+}
+
+/* realistic Excel sheet grid layout styles */
+.excel-sheet-grid-wrapper {
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  max-height: 600px;
+  background: #f8fafc;
+  padding: 8px;
+}
+
+.excel-sheet-grid-tab-header {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  font-size: 0.8125rem;
+  color: #15803d;
+  font-weight: 600;
+  border-bottom: 3px solid #22c55e;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.excel-sheet-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-size: 11px;
+  color: #334155;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.excel-sheet-grid th {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  user-select: none;
+}
+
+.excel-sheet-grid td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  min-width: 90px;
+  white-space: nowrap;
+}
+
+.excel-sheet-grid tr td:first-child {
+  background: #f1f5f9;
+  color: #64748b;
+  text-align: center;
+  border-right: 1px solid #cbd5e1;
+  min-width: 45px;
+  font-weight: 600;
+  user-select: none;
+}
+
 
