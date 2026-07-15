@@ -714,10 +714,10 @@ export class PdfManager {
         const hasBeenEdited = txtObj.originalText === undefined || txtObj.text !== txtObj.originalText;
         if (!hasBeenEdited) continue;
         
-        // 2.1 Draw solid background rectangle cover (only if coverRect is defined or compute fallback coordinates)
+        // 2.1 Draw solid background rectangle cover (to ERASE original text)
         if (txtObj.coverRect || txtObj.originalText) {
           const rect = txtObj.coverRect || txtObj; // Fallback to txtObj coordinate parameters
-          const rectColor = hexToRgbColor(rect.bgColor || txtObj.bgColor || '#ffffff');
+          const rectColor = hexToRgbColor(rect.bgColor || '#ffffff');
           const rectW = rect.percentW * pageWidth;
           const rectH = rect.percentH * pageHeight;
           const rectX = rect.percentX * pageWidth;
@@ -728,6 +728,23 @@ export class PdfManager {
             y: rectY - 2.5,
             width: rectW + 5,
             height: rectH + 5,
+            color: rectColor,
+          });
+        }
+        
+        // 2.1.5 Draw USER'S background fill if bgEnable is true
+        if (txtObj.bgEnable && txtObj.bgColor) {
+          const rectColor = hexToRgbColor(txtObj.bgColor);
+          const rectW = txtObj.percentW * pageWidth;
+          const rectH = txtObj.percentH * pageHeight;
+          const rectX = txtObj.percentX * pageWidth;
+          const rectY = pageHeight - (txtObj.percentY * pageHeight) - rectH;
+          
+          page.drawRectangle({
+            x: rectX,
+            y: rectY,
+            width: rectW,
+            height: rectH,
             color: rectColor,
           });
         }
@@ -785,12 +802,6 @@ export class PdfManager {
         // Redraw states
         tempCtx.font = fontStyle;
         tempCtx.textBaseline = 'top';
-        
-        // Draw background fill color if enabled
-        if (txtObj.bgEnable && txtObj.bgColor) {
-          tempCtx.fillStyle = txtObj.bgColor;
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        }
         
         // Draw text characters
         tempCtx.fillStyle = txtObj.color || '#000000';
