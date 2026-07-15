@@ -6468,7 +6468,7 @@ function setupCopilotWorkspace() {
       downloadBtn.disabled = false;
       
       // Add system message
-      appendMessage('system', `Successfully loaded document: "${file.name}" (${state.copilot.documentText.length} characters of text extracted). Ask me to summarize it or reformat details!`);
+      appendMessage('system', `Successfully loaded document: "${file.name}" (${state.copilot.documentText.length} characters of text extracted). I am ready to answer your questions or edit the document!`);
       
       // Force Original Document tab active first when uploaded
       switchTab('doc');
@@ -6478,15 +6478,9 @@ function setupCopilotWorkspace() {
       
       showToast('Document loaded successfully!', 'success');
       
-      // Automatically trigger a creative dynamic summary of the document
-      setTimeout(() => {
-        const promptInput = document.getElementById('copilot-prompt-input');
-        const sendBtn = document.getElementById('copilot-send-btn');
-        if (promptInput && sendBtn) {
-          promptInput.value = "Summarize this document. Analyze the type of document (e.g. device allocation form, invoice, spreadsheet, contract, letter) and generate a highly creative, custom-tailored summary matching its exact content. Highlight key details, names, dates, lists, and signature sections. Do not use generic summary headers.";
-          sendBtn.click();
-        }
-      }, 500);
+      // Document is fully loaded and visualised
+      state.copilot.isInitialAnalyzing = false;
+      hideLoader();
     } catch (err) {
       console.error(err);
       showToast(err.message || 'Failed to load document.', 'danger');
@@ -6540,7 +6534,7 @@ function setupCopilotWorkspace() {
     
     const contentHtml = isBot ? parseMarkdownToHtml(displayText) : escapeHtml(displayText);
     
-    msg.innerHTML = `<strong>${sender === 'user' ? 'You' : (sender === 'system' ? 'System' : 'Copilot')}:</strong> ${contentHtml}`;
+    msg.innerHTML = `<strong>${sender === 'user' ? 'You' : (sender === 'system' ? 'System' : 'Gemini')}:</strong> ${contentHtml}`;
     chatHistory.appendChild(msg);
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
@@ -6828,29 +6822,56 @@ function setupCopilotWorkspace() {
     loaderMsg.style.borderRadius = 'var(--border-radius-sm)';
     loaderMsg.style.fontSize = '0.8125rem';
     loaderMsg.style.borderLeft = '3px solid var(--accent-purple)';
-    loaderMsg.innerHTML = '<strong>Copilot:</strong> <em>Thinking...</em>';
+    loaderMsg.innerHTML = '<strong>Gemini:</strong> <em>Thinking...</em>';
     chatHistory.appendChild(loaderMsg);
     chatHistory.scrollTop = chatHistory.scrollHeight;
     
     setTimeout(async () => {
       try {
-        const customApiKey = localStorage.getItem('copilot_gemini_key');
-        let responseText = '';
+        // Use site owner's secure backend middleware API
+        const responseData = await callGeminiSecureBackend(prompt, state.copilot.documentText);
+        let responseText = responseData.response;
         
-        if (customApiKey && customApiKey.trim().length > 0) {
-          // Use user's custom browser API Key
-          responseText = await callGeminiLiveAPI(customApiKey.trim(), prompt, state.copilot.documentText);
-        } else {
-          // Use site owner's secure serverless Netlify proxy (with automatic offline heuristics fallback)
-          try {
-            responseText = await callGeminiServerlessProxy(prompt, state.copilot.documentText);
-          } catch (proxyErr) {
-            console.warn("Netlify function proxy failed. Running smart offline heuristics...", proxyErr);
-            responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
+        if (responseData.updatedBase64) {
+          // Convert base64 back to ArrayBuffer
+          const binaryString = window.atob(responseData.updatedBase64);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
+          state.copilot.originalBuffer = bytes.buffer;
+          state.copilot.base64Data = responseData.updatedBase64;
+          state.copilot.isModified = true;
+          
+          // Re-extract document text for further chat context
+          try {
+            const ext = state.copilot.file.name.split('.').pop().toLowerCase();
+            if (ext === 'xlsx' || ext === 'xls') {
+               const workbook = XLSX.read(bytes.buffer, { type: 'array' });
+               const sheetName = workbook.SheetNames[0];
+               const sheet = workbook.Sheets[sheetName];
+               state.copilot.extractedData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+               
+               let textRep = '';
+               workbook.SheetNames.forEach(name => {
+                 textRep += `--- Sheet: ${name} ---\n` + XLSX.utils.sheet_to_csv(workbook.Sheets[name]) + '\n';
+               });
+               state.copilot.documentText = textRep;
+            } else if (ext === 'docx') {
+               const result = await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
+               state.copilot.documentText = result.value;
+            }
+          } catch(e) {
+            console.error("Failed to re-extract text from modified buffer", e);
+          }
+          
+          // Force UI to re-render the exact document preview
+          renderVisualOriginalDoc();
         }
         
-        // Extract updated document text if generated by AI
+        // No longer relying on [UPDATED_DOCUMENT_TEXT] extraction for Word/Excel as the backend modifies files natively
+        // We still keep the processing for backward compatibility or simple text updates if the AI generates it
         responseText = processCopilotResponse(responseText);
         
         // Hide the initial visualization loading modal if active
@@ -6872,70 +6893,39 @@ function setupCopilotWorkspace() {
         const loader = document.getElementById('copilot-typing-loader');
         if (loader) loader.remove();
         
-        // Fallback to offline heuristics smoothly
-        let responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
-        responseText = processCopilotResponse(responseText);
-        
         // Hide the initial visualization loading modal if active
         if (state.copilot.isInitialAnalyzing) {
           state.copilot.isInitialAnalyzing = false;
           hideLoader();
         }
         
-        appendMessage('copilot', responseText);
-        state.copilot.lastResponse = responseText;
-        applyAiResponseToPreview(prompt, responseText);
+        let errorMsg = `⚠️ **AI Gemini Disconnected**\n\nI couldn't process your request because I don't have access to my AI brain. ${err.message}\n\nTo enable full natural language processing and live document editing, please click the **⚙️ Config** button in the sidebar and enter your Gemini API Key.`;
+        
+        appendMessage('copilot', errorMsg);
+        state.copilot.lastResponse = errorMsg;
         promptInput.focus();
       }
     }, 1000);
   });
 
-  async function callGeminiLiveAPI(apiKey, prompt, docText) {
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
+  async function callGeminiSecureBackend(prompt, docText) {
+    const filename = state.copilot.file ? state.copilot.file.name : '';
+    const fileBase64 = state.copilot.base64Data || '';
+    
+    const response = await fetch('/.netlify/functions/gemini', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: `You are an AI document copilot. Here is the extracted text content of the user's document:\n\n${docText}\n\nExecute the following instruction and respond. If requested to format data in a table, output a markdown table. If the user asks to modify, edit, format, append, or insert text in the document, you MUST output the updated, full document text inside a block starting with [UPDATED_DOCUMENT_TEXT] and ending with [/UPDATED_DOCUMENT_TEXT] at the end of your response. This allows us to parse and update the file in real-time.\n\n${prompt}` }
-            ]
-          }
-        ]
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  }
-
-  async function callGeminiServerlessProxy(prompt, docText) {
-    const url = '/.netlify/functions/gemini';
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ prompt, docText })
+      body: JSON.stringify({ prompt, docText, filename, fileBase64 })
     });
     
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Serverless function error: ${response.status}`);
+      throw new Error(errData.error || `Secure backend error: ${response.status}`);
     }
     
-    const data = await response.json();
-    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-      return data.candidates[0].content.parts[0].text;
-    }
-    throw new Error('Invalid response structure from serverless API.');
+    return await response.json();
   }
 
   function runDemoSimulation(prompt) {
@@ -7039,49 +7029,68 @@ Here is my AI assessment: The document contains text sections detailing project 
           const ws = XLSX.utils.aoa_to_sheet(data);
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Copilot Result");
-          XLSX.writeFile(wb, `${docName}_copilot.xlsx`);
+          XLSX.writeFile(wb, `${docName}_gemini.xlsx`);
           showToast('Excel workbook downloaded successfully!', 'success');
         } else if (format === 'pdf') {
-          // Generate PDF using html2pdf (target the styled AI content tab)
-          const element = document.getElementById('copilot-ai-tab-content');
-          const opt = {
-            margin:       10,
-            filename:     `${docName}_copilot.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          };
-          html2pdf().from(element).set(opt).save();
-          showToast('PDF downloaded successfully!', 'success');
+          if (state.copilot.isModified && state.copilot.file.name.toLowerCase().endsWith('.pdf')) {
+            const blob = new Blob([state.copilot.originalBuffer], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${docName}_gemini.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Modified PDF downloaded successfully!', 'success');
+          } else {
+            // Generate PDF using html2pdf (target the styled AI content tab)
+            const element = document.getElementById('copilot-ai-tab-content');
+            const opt = {
+              margin:       10,
+              filename:     `${docName}_gemini.pdf`,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2 },
+              jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(opt).save();
+            showToast('PDF summary downloaded successfully!', 'success');
+          }
         } else if (format === 'docx') {
-          // If the document is modified by AI, download the updated original document preview content. Otherwise, download the AI summary.
-          const element = state.copilot.isModified 
-            ? document.getElementById('copilot-doc-tab-content') 
-            : document.getElementById('copilot-ai-tab-content');
-          const htmlContent = element.innerHTML;
-          
-          const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Document</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]--></head><body>";
-          const footer = "</body></html>";
-          const source = header + htmlContent + footer;
-          
-          const blob = new Blob(['\ufeff' + source], {
-            type: 'application/msword'
-          });
-          
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${docName}_copilot.doc`;
-          a.click();
-          URL.revokeObjectURL(url);
-          showToast('Word document downloaded successfully!', 'success');
+          if (state.copilot.isModified && state.copilot.file.name.toLowerCase().endsWith('.docx')) {
+            const blob = new Blob([state.copilot.originalBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${docName}_gemini.docx`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Modified Word document downloaded successfully!', 'success');
+          } else {
+            const element = document.getElementById('copilot-ai-tab-content');
+            const htmlContent = element.innerHTML;
+            
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Document</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]--></head><body>";
+            const footer = "</body></html>";
+            const source = header + htmlContent + footer;
+            
+            const blob = new Blob(['\ufeff' + source], {
+              type: 'application/msword'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${docName}_gemini.doc`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Word document downloaded successfully!', 'success');
+          }
         } else if (format === 'jpg') {
           // Export preview box as image
           const element = document.getElementById('copilot-ai-tab-content');
           html2pdf().from(element).toImg().get('img').then(img => {
             const a = document.createElement('a');
             a.href = img.src;
-            a.download = `${docName}_copilot.jpg`;
+            a.download = `${docName}_gemini.jpg`;
             a.click();
             showToast('Image downloaded successfully!', 'success');
           });
