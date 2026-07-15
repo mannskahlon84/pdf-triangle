@@ -621,7 +621,7 @@ function setupEditorWorkspace() {
           
           // Default to white background color if the extracted pixel is near white/light grey, dark, or transparent
           let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-          if ((r > 200 && g > 200 && b > 200) || (r < 120 && g < 120 && b < 120) || a === 0) {
+          if ((r > 200 && g > 200 && b > 200) || a === 0) {
             finalBgColor = '#ffffff';
           }
           
@@ -832,7 +832,8 @@ function setupEditorWorkspace() {
     if (window.activeTextElement) {
       const { el, txtObj } = window.activeTextElement;
       txtObj.size = val;
-      el.style.fontSize = `${val}px`;
+      const currentZoom = window.state?.editor?.zoomLevel || 1.2;
+      el.style.fontSize = `${val * currentZoom}px`;
     }
   });
   
