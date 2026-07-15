@@ -10,7 +10,6 @@ import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import html2pdf from 'html2pdf.js';
 import PizZip from 'pizzip';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Configure pdf.js worker globally from the local public folder (prevents CORS and CDN loading issues)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -6920,6 +6919,9 @@ function setupCopilotWorkspace() {
     } else if (ext === 'xlsx' || ext === 'xls') {
       systemInstruction += `If the user asks to modify the spreadsheet (e.g., add columns, filter rows, change data), you must generate the complete updated spreadsheet data as a 2D JSON array (array of rows, where each row is an array of cells). Output ONLY the JSON block wrapped in \`\`\`json ... \`\`\` and a brief summary of what you did outside the block.`;
     } else if (ext === 'pdf') {
+      systemInstruction += `If the user asks to edit text inside a PDF, you must respond EXACTLY with: "Direct text editing isn't supported inside static PDF formats. However, I can execute this edit by converting it to an editable Word document for you, or I can generate a brand-new, modified PDF version for you to download."\nIf they ask for PDF operations like page rotation or extraction, output a JSON command wrapped in \`\`\`json like {"action": "rotate", "degrees": 90} or {"action": "extract", "pages": [1, 2]}.`;
+    }
+
     const payload = {
       contents: [
         {
