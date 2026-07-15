@@ -5939,20 +5939,94 @@ function setupCopilotWorkspace() {
     }).slice(0, 6);
 
     let docClass = 'General Briefing';
-    if (docText.toLowerCase().includes('policy') || docText.toLowerCase().includes('compliance')) {
-      docClass = 'Regulatory Policy & Compliance Guidelines';
-    } else if (docText.toLowerCase().includes('agreement') || docText.toLowerCase().includes('contract')) {
-      docClass = 'Legal Agreement & Covenant';
-    } else if (docText.toLowerCase().includes('invoice') || docText.toLowerCase().includes('payment') || docText.toLowerCase().includes('$')) {
-      docClass = 'Financial Statement / Invoice Ledger';
-    } else if (docText.toLowerCase().includes('resume') || docText.toLowerCase().includes('cv') || docText.toLowerCase().includes('education')) {
+    const textLower = docText.toLowerCase();
+    
+    // Check CV/Resume first to avoid currency symbols or salary keywords misclassifying as Financial Ledger
+    if (textLower.includes('resume') || textLower.includes('cv ') || textLower.includes('curriculum vitae') || textLower.includes('education') || textLower.includes('skills') || textLower.includes('experience') || textLower.includes('qualification')) {
       docClass = 'Curriculum Vitae / Candidate Profile';
+    } else if (textLower.includes('policy') || textLower.includes('compliance')) {
+      docClass = 'Regulatory Policy & Compliance Guidelines';
+    } else if (textLower.includes('agreement') || textLower.includes('contract')) {
+      docClass = 'Legal Agreement & Covenant';
+    } else if (textLower.includes('invoice') || textLower.includes('payment') || textLower.includes('$') || textLower.includes('ledger') || textLower.includes('balance')) {
+      docClass = 'Financial Statement / Invoice Ledger';
     }
 
-    const isQuestion = pLower.includes('what') || pLower.includes('why') || pLower.includes('how') || pLower.includes('where') || pLower.includes('who') || pLower.includes('find') || pLower.includes('search') || pLower.includes('tell') || pLower.includes('show');
+    // Trigger question answering if prompt asks details or contains action words like summary/skills/extract/list
+    const isQuestion = pLower.includes('what') || pLower.includes('why') || pLower.includes('how') || pLower.includes('where') || pLower.includes('who') || pLower.includes('find') || pLower.includes('search') || pLower.includes('tell') || pLower.includes('show') || pLower.includes('skills') || pLower.includes('experience') || pLower.includes('education') || pLower.includes('extract') || pLower.includes('list') || pLower.includes('make');
     
     if (isQuestion) {
-      const queryWords = pLower.split(/\s+/).filter(w => w.length > 3 && !['what','where','when','that','this','your'].includes(w));
+      // 1. Core Skills Extraction Special Handler
+      if (pLower.includes('skills')) {
+        let skillsList = [];
+        const commonSkills = ['javascript', 'python', 'html', 'css', 'react', 'node', 'java', 'c#', 'sql', 'project management', 'excel', 'finance', 'git', 'docker', 'aws', 'communication', 'leadership', 'design', 'german', 'english', 'sap', 'scrum', 'agile', 'sales', 'marketing'];
+        commonSkills.forEach(s => {
+          if (textLower.includes(s)) {
+            skillsList.push(s.toUpperCase());
+          }
+        });
+        
+        let ans = `### 🛠️ Extracted Skills from: "${docName}"\n\n`;
+        if (skillsList.length > 0) {
+          ans += `Based on an offline scan of the document, the following core skills/technologies were identified:\n\n`;
+          skillsList.forEach(s => {
+            ans += `* **${s}**\n`;
+          });
+          ans += `\n*This list was generated offline based on matching keywords in the document text.*`;
+        } else {
+          const matchingSentences = sentences.filter(s => s.toLowerCase().includes('skill') || s.toLowerCase().includes('expert') || s.toLowerCase().includes('proficient')).slice(0, 4);
+          if (matchingSentences.length > 0) {
+            ans += `Here are the excerpts detailing skills/competencies:\n\n`;
+            matchingSentences.forEach((s, idx) => {
+              ans += `> **[Excerpt ${idx + 1}]**: "... ${s.trim()} ..."\n\n`;
+            });
+          } else {
+            ans += `I scanned the document but could not find explicit skills keywords. Here is a baseline excerpt of the document content:\n\n> *"${docText.substring(0, 250)}..."*`;
+          }
+        }
+        return ans;
+      }
+
+      // 2. Education Extraction Special Handler
+      if (pLower.includes('education') || pLower.includes('university') || pLower.includes('degree')) {
+        let ans = `### 🎓 Extracted Education from: "${docName}"\n\n`;
+        const matchingSentences = sentences.filter(s => {
+          const sl = s.toLowerCase();
+          return sl.includes('university') || sl.includes('college') || sl.includes('degree') || sl.includes('bachelor') || sl.includes('master') || sl.includes('study') || sl.includes('school');
+        }).slice(0, 4);
+        
+        if (matchingSentences.length > 0) {
+          ans += `Based on a scan of the document, the following education details were identified:\n\n`;
+          matchingSentences.forEach(s => {
+            ans += `* **Details**: ${s.trim()}.\n`;
+          });
+        } else {
+          ans += `I scanned the document but did not detect standard education credentials (degree, university, college).`;
+        }
+        return ans;
+      }
+
+      // 3. Experience Extraction Special Handler
+      if (pLower.includes('experience') || pLower.includes('work') || pLower.includes('job') || pLower.includes('history')) {
+        let ans = `### 💼 Extracted Experience from: "${docName}"\n\n`;
+        const matchingSentences = sentences.filter(s => {
+          const sl = s.toLowerCase();
+          return sl.includes('manager') || sl.includes('developer') || sl.includes('engineer') || sl.includes('work') || sl.includes('experience') || sl.includes('role') || sl.includes('position');
+        }).slice(0, 4);
+        
+        if (matchingSentences.length > 0) {
+          ans += `Here is the career and experience timeline identified:\n\n`;
+          matchingSentences.forEach(s => {
+            ans += `* **Details**: ${s.trim()}.\n`;
+          });
+        } else {
+          ans += `I scanned the document but did not find explicit job/experience references.`;
+        }
+        return ans;
+      }
+
+      // General Question Excerpt Matcher
+      const queryWords = pLower.split(/\s+/).filter(w => w.length > 3 && !['what','where','when','that','this','your','about'].includes(w));
       let bestSentences = [];
       
       if (queryWords.length > 0) {
@@ -5962,7 +6036,6 @@ function setupCopilotWorkspace() {
           queryWords.forEach(qw => {
             if (sLower.includes(qw)) score += 2;
           });
-          // Small boost if it contains regulatory key words
           if (sLower.includes('shall') || sLower.includes('must')) score += 0.5;
           return { text: s, score };
         });
@@ -6026,6 +6099,44 @@ function setupCopilotWorkspace() {
       }
       summaryMd += `\n### 💳 Payment Disbursements\n`;
       summaryMd += `All balances are subject to terms of carriage, bank clearances, and transaction deadlines.\n\n`;
+    } else if (docClass.includes('Curriculum') || docClass.includes('Candidate')) {
+      summaryMd += `### 👤 Candidate Overview\n`;
+      let name = "Candidate";
+      const nameMatch = docText.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+      if (nameMatch) {
+        name = nameMatch[1];
+      }
+      summaryMd += `The profile describes **${name}**'s career history, academic training, and core competencies.\n\n`;
+      
+      summaryMd += `### 🛠️ Core Skills & Expertise\n`;
+      const skillsList = [];
+      const commonSkills = ['javascript', 'python', 'html', 'css', 'react', 'node', 'java', 'c#', 'sql', 'project management', 'excel', 'finance', 'git', 'docker', 'aws', 'communication', 'leadership', 'design', 'german', 'english', 'sap', 'scrum', 'agile', 'sales', 'marketing'];
+      commonSkills.forEach(s => {
+        if (textLower.includes(s)) {
+          skillsList.push(s.toUpperCase());
+        }
+      });
+      
+      if (skillsList.length > 0) {
+        summaryMd += `The candidate possesses validated expertise in: **${skillsList.join('**, **')}**.\n`;
+      } else {
+        summaryMd += `* **Expertise**: General professional skills, technical expertise, and role-specific competencies.\n`;
+      }
+      
+      summaryMd += `\n### 🎓 Education & Career Milestones\n`;
+      const eduMilestones = sentences.filter(s => {
+        const sL = s.toLowerCase();
+        return sL.includes('university') || sL.includes('college') || sL.includes('degree') || sL.includes('bachelor') || sL.includes('master') || sL.includes('school') || sL.includes('manager') || sL.includes('developer') || sL.includes('engineer');
+      }).slice(0, 4);
+      
+      if (eduMilestones.length > 0) {
+        eduMilestones.forEach(m => {
+          summaryMd += `* ${m.trim()}.\n`;
+        });
+      } else {
+        summaryMd += `* Outlines past academic milestones and professional experience entries.\n`;
+      }
+      summaryMd += `\n`;
     } else {
       summaryMd += `### 📝 Executive Overview\n`;
       const paragraphs = docText.split(/\n\n+/).filter(p => p.trim().length > 30).slice(0, 3);
