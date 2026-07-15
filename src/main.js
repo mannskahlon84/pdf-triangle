@@ -92,7 +92,10 @@ const state = {
     documentText: '',
     extractedData: null,
     lastResponse: '',
-    mode: 'demo'
+    mode: 'demo',
+    base64Data: null,
+    hasRunAzureAnalysis: false,
+    isModified: false
   },
   remove: {
     file: null,
@@ -6317,7 +6320,17 @@ function setupCopilotWorkspace() {
     state.copilot.file = file;
     state.copilot.documentText = '';
     state.copilot.extractedData = null;
-    state.copilot.lastResponse = ''; // Reset last AI response
+    state.copilot.lastResponse = '';
+    state.copilot.base64Data = null;
+    state.copilot.hasRunAzureAnalysis = false;
+    state.copilot.isModified = false;
+    
+    // Convert file to base64 for Azure Document Intelligence analysis
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      state.copilot.base64Data = e.target.result.split(',')[1];
+    };
+    reader.readAsDataURL(file);
     
     showLoader('Loading document preview...');
     
@@ -6751,11 +6764,18 @@ function setupCopilotWorkspace() {
           // Use user's custom browser API Key
           responseText = await callGeminiLiveAPI(customApiKey.trim(), prompt, state.copilot.documentText);
         } else {
-          // Use site owner's secure serverless Netlify proxy (with automatic offline heuristics fallback)
+          // Use site owner's secure serverless Netlify Azure Copilot proxy (with automatic offline heuristics fallback)
           try {
-            responseText = await callGeminiServerlessProxy(prompt, state.copilot.documentText);
+            const isFirstPrompt = !state.copilot.hasRunAzureAnalysis;
+            const fileDataToSend = isFirstPrompt ? state.copilot.base64Data : null;
+            
+            responseText = await callAzureServerlessProxy(prompt, state.copilot.documentText, state.copilot.file?.name, fileDataToSend);
+            
+            if (isFirstPrompt && state.copilot.base64Data) {
+              state.copilot.hasRunAzureAnalysis = true;
+            }
           } catch (proxyErr) {
-            console.warn("Netlify function proxy failed. Running smart offline heuristics...", proxyErr);
+            console.warn("Netlify Azure proxy failed. Running smart offline heuristics...", proxyErr);
             responseText = runSmartOfflineHeuristics(prompt, state.copilot.documentText, state.copilot.file);
           }
         }
@@ -6814,26 +6834,29 @@ function setupCopilotWorkspace() {
     return data.candidates[0].content.parts[0].text;
   }
 
-  async function callGeminiServerlessProxy(prompt, docText) {
-    const url = '/.netlify/functions/gemini';
+  async function callAzureServerlessProxy(prompt, docText, fileName, fileData) {
+    const url = '/.netlify/functions/azure-copilot';
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ prompt, docText })
+      body: JSON.stringify({ fileName, fileData, prompt, docText })
     });
     
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Serverless function error: ${response.status}`);
+      throw new Error(errData.error || `Azure Serverless Error: ${response.status}`);
     }
     
     const data = await response.json();
-    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-      return data.candidates[0].content.parts[0].text;
+    if (data.choices && data.choices[0].message) {
+      if (data.extractedText) {
+        state.copilot.documentText = data.extractedText;
+      }
+      return data.choices[0].message.content;
     }
-    throw new Error('Invalid response structure from serverless API.');
+    throw new Error('Invalid response structure from Azure Copilot API.');
   }
 
   function runDemoSimulation(prompt) {
