@@ -5961,8 +5961,56 @@ function setupCopilotWorkspace() {
     // 2. Spreadsheet filtration offline simulation
     const isSpreadsheet = file && ['xlsx', 'xls', 'csv'].includes(file.name.split('.').pop().toLowerCase());
     if (isSpreadsheet && state.copilot.extractedData && Array.isArray(state.copilot.extractedData) && state.copilot.extractedData.length > 0) {
+      const headers = state.copilot.extractedData[0] || [];
+      
+      // Check for blank/missing/empty/without column queries (e.g. without middle name)
+      if (pLower.includes('without') || pLower.includes('no ') || pLower.includes('empty') || pLower.includes('blank') || pLower.includes('missing') || pLower.includes('except')) {
+        let targetColIdx = -1;
+        let targetColName = '';
+        
+        // Find matching header name in prompt
+        for (let c = 0; c < headers.length; c++) {
+          const hName = String(headers[c]).toLowerCase();
+          if (hName.length > 2 && pLower.includes(hName)) {
+            targetColIdx = c;
+            targetColName = headers[c];
+            break;
+          }
+        }
+        
+        // Fallback for concatenated or simplified column names (e.g. "middlename" vs "Middle Name")
+        if (targetColIdx === -1) {
+          for (let c = 0; c < headers.length; c++) {
+            const hNameClean = String(headers[c]).toLowerCase().replace(/[^a-z0-9]/g, '');
+            const promptClean = pLower.replace(/[^a-z0-9]/g, '');
+            if (hNameClean.length > 2 && promptClean.includes(hNameClean)) {
+              targetColIdx = c;
+              targetColName = headers[c];
+              break;
+            }
+          }
+        }
+
+        if (targetColIdx !== -1) {
+          const filteredRows = [headers];
+          let count = 0;
+          for (let r = 1; r < state.copilot.extractedData.length; r++) {
+            const cellVal = String(state.copilot.extractedData[r][targetColIdx] || '').trim();
+            if (cellVal === '' || cellVal.toLowerCase() === 'n/a' || cellVal.toLowerCase() === 'null') {
+              filteredRows.push(state.copilot.extractedData[r]);
+              count++;
+            }
+          }
+          state.copilot.extractedData = filteredRows;
+          state.copilot.isModified = true;
+          
+          let response = `### Spreadsheet Filter: Employees Without "${targetColName}"\n\nI have scanned the column **"${targetColName}"** and found **${count}** employee records with blank, missing, or empty entries.\n\nThe Excel grid preview on the left has been refreshed to display only these **${count}** employee(s). You can download this filtered sheet by clicking "Download Result"!`;
+          return response;
+        }
+      }
+      
+      // Standard filter heuristics (age, country)
       if (pLower.includes('below 30') || pLower.includes('under 30') || pLower.includes('age < 30') || pLower.includes('less than 30')) {
-        const headers = state.copilot.extractedData[0];
         const ageColIdx = headers.findIndex(h => String(h).toLowerCase().includes('age'));
         if (ageColIdx !== -1) {
           const filteredRows = [headers];
@@ -5981,7 +6029,6 @@ function setupCopilotWorkspace() {
       }
       
       if (pLower.includes('kenya') || pLower.includes('country')) {
-        const headers = state.copilot.extractedData[0];
         const countryColIdx = headers.findIndex(h => String(h).toLowerCase().includes('country') || String(h).toLowerCase().includes('nation'));
         if (countryColIdx !== -1) {
           const filteredRows = [headers];
