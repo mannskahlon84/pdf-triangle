@@ -52,12 +52,10 @@ exports.handler = async function(event, context) {
     }
 
     const payload = {
-      system_instruction: {
-        parts: [{ text: systemInstruction }]
-      },
       contents: [
         {
           parts: [
+            { text: systemInstruction },
             { text: `DOCUMENT TEXT CONTENT:\n${docText || 'Empty'}` },
             { text: `USER REQUEST:\n${prompt}` }
           ]
