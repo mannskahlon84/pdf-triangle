@@ -3795,9 +3795,18 @@ async function handleWatermarkFile(file) {
   }
 }
 
+let isWatermarkPreviewRendering = false;
+let watermarkPreviewPending = false;
+
 // Visual Preview Rendering (HTML5 Canvas)
 async function updateWatermarkPreview() {
   if (!state.watermark.file) return;
+  
+  if (isWatermarkPreviewRendering) {
+    watermarkPreviewPending = true;
+    return;
+  }
+  isWatermarkPreviewRendering = true;
   
   const canvas = document.getElementById('watermark-canvas');
   const ctx = canvas.getContext('2d');
@@ -3873,27 +3882,31 @@ async function updateWatermarkPreview() {
           const w = img.width * scale;
           const h = img.height * scale;
           
-          let x = 0;
-          let y = 0;
+          let cx = 0;
+          let cy = 0;
           
           if (position === 'center') {
-            x = (canvas.width - w) / 2;
-            y = (canvas.height - h) / 2;
+            cx = canvas.width / 2;
+            cy = canvas.height / 2;
           } else if (position === 'top-left') {
-            x = 40;
-            y = 40;
+            cx = w / 2 + 40;
+            cy = h / 2 + 40;
           } else if (position === 'top-right') {
-            x = canvas.width - w - 40;
-            y = 40;
+            cx = canvas.width - w / 2 - 40;
+            cy = h / 2 + 40;
           } else if (position === 'bottom-left') {
-            x = 40;
-            y = canvas.height - h - 40;
+            cx = w / 2 + 40;
+            cy = canvas.height - h / 2 - 40;
           } else if (position === 'bottom-right') {
-            x = canvas.width - w - 40;
-            y = canvas.height - h - 40;
+            cx = canvas.width - w / 2 - 40;
+            cy = canvas.height - h / 2 - 40;
           }
           
-          ctx.drawImage(img, x, y, w, h);
+          const rotation = parseInt(document.getElementById('watermark-rotation').value, 10) || 0;
+          
+          ctx.translate(cx, cy);
+          ctx.rotate((rotation * Math.PI) / 180);
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
           URL.revokeObjectURL(imgUrl);
           resolve();
         };
@@ -3904,6 +3917,12 @@ async function updateWatermarkPreview() {
     ctx.restore();
   } catch (err) {
     console.error('Preview error:', err);
+  } finally {
+    isWatermarkPreviewRendering = false;
+    if (watermarkPreviewPending) {
+      watermarkPreviewPending = false;
+      updateWatermarkPreview();
+    }
   }
 }
 

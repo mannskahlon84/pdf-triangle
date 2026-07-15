@@ -217,7 +217,8 @@ export async function addWatermarkToPdf(pdfBuffer, options) {
         y,
         width: dims.width,
         height: dims.height,
-        opacity
+        opacity,
+        rotate: degrees(rotation)
       });
     }
   }
