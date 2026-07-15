@@ -5662,9 +5662,7 @@ function setupCopilotWorkspace() {
   const downloadBtn = document.getElementById('copilot-download-btn');
   const outputFormatSelect = document.getElementById('copilot-output-format');
   
-  const apiKeyInput = document.getElementById('copilot-api-key');
-  const saveKeyBtn = document.getElementById('copilot-save-key-btn');
-  
+
   const chatHistory = document.getElementById('copilot-chat-history');
   const promptInput = document.getElementById('copilot-prompt-input');
   const sendBtn = document.getElementById('copilot-send-btn');
@@ -6370,17 +6368,7 @@ function setupCopilotWorkspace() {
   tabDocBtn.addEventListener('click', () => switchTab('doc'));
   tabAiBtn.addEventListener('click', () => switchTab('ai'));
 
-  // Load saved API Key (safeguarded)
-  if (apiKeyInput) {
-    apiKeyInput.value = localStorage.getItem('copilot_gemini_key') || '';
-  }
-  
-  if (saveKeyBtn && apiKeyInput) {
-    saveKeyBtn.addEventListener('click', () => {
-      localStorage.setItem('copilot_gemini_key', apiKeyInput.value.trim());
-      showToast('Gemini API Key saved locally.', 'success');
-    });
-  }
+
 
   // Upload actions
   uploadZone.addEventListener('click', () => fileInput.click());
@@ -6901,7 +6889,7 @@ function setupCopilotWorkspace() {
           hideLoader();
         }
         
-        let errorMsg = `⚠️ **AI Gemini Disconnected**\n\nI couldn't process your request because I don't have access to my AI brain. ${err.message}\n\nTo enable full natural language processing and live document editing, please click the **⚙️ Config** button in the sidebar and enter your Gemini API Key.`;
+        let errorMsg = `⚠️ **AI Summary/Gemini Disconnected**\n\nI couldn't process your request because the proxy backend encountered an error: ${err.message}`;
         
         appendMessage('copilot', errorMsg);
         state.copilot.lastResponse = errorMsg;
@@ -6932,25 +6920,37 @@ function setupCopilotWorkspace() {
     } else if (ext === 'xlsx' || ext === 'xls') {
       systemInstruction += `If the user asks to modify the spreadsheet (e.g., add columns, filter rows, change data), you must generate the complete updated spreadsheet data as a 2D JSON array (array of rows, where each row is an array of cells). Output ONLY the JSON block wrapped in \`\`\`json ... \`\`\` and a brief summary of what you did outside the block.`;
     } else if (ext === 'pdf') {
-      systemInstruction += `If the user asks to edit text inside a PDF, you must respond EXACTLY with: "Direct text editing isn't supported inside static PDF formats. However, I can execute this edit by converting it to an editable Word document for you, or I can generate a brand-new, modified PDF version for you to download."\nIf they ask for PDF operations like page rotation or extraction, output a JSON command wrapped in \`\`\`json like {"action": "rotate", "degrees": 90} or {"action": "extract", "pages": [1, 2]}.`;
-    }
-
-    const localKey = localStorage.getItem('copilot_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
-    if (!localKey || localKey.length < 10) {
-      throw new Error('Please click the Config ⚙️ button to enter a valid Gemini API Key first.');
-    }
-
-    const genAI = new GoogleGenerativeAI(localKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
-
-    const promptParts = [
-      systemInstruction,
-      `DOCUMENT TEXT CONTENT:\n${docText || 'Empty'}`,
-      `USER REQUEST:\n${prompt}`
-    ];
+    const payload = {
+      contents: [
+        {
+          parts: [
+            { text: systemInstruction },
+            { text: `DOCUMENT TEXT CONTENT:\n${docText || 'Empty'}` },
+            { text: `USER REQUEST:\n${prompt}` }
+          ]
+        }
+      ]
+    };
     
-    const result = await model.generateContent(promptParts);
-    let aiResponse = result.response.text();
+    const response = await fetch('/.netlify/functions/chat-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ payload })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Secure backend error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let aiResponse = data.response;
+    
+    if (!aiResponse) {
+      throw new Error('Invalid response structure from backend proxy.');
+    }
 
     let updatedBase64 = null;
     const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
