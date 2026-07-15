@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import html2pdf from 'html2pdf.js';
 import PizZip from 'pizzip';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Configure pdf.js worker globally from the local public folder (prevents CORS and CDN loading issues)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -6934,46 +6935,22 @@ function setupCopilotWorkspace() {
       systemInstruction += `If the user asks to edit text inside a PDF, you must respond EXACTLY with: "Direct text editing isn't supported inside static PDF formats. However, I can execute this edit by converting it to an editable Word document for you, or I can generate a brand-new, modified PDF version for you to download."\nIf they ask for PDF operations like page rotation or extraction, output a JSON command wrapped in \`\`\`json like {"action": "rotate", "degrees": 90} or {"action": "extract", "pages": [1, 2]}.`;
     }
 
-    const payload = {
-      contents: [
-        {
-          parts: [
-            { text: systemInstruction },
-            { text: `DOCUMENT TEXT CONTENT:\n${docText || 'Empty'}` },
-            { text: `USER REQUEST:\n${prompt}` }
-          ]
-        }
-      ]
-    };
-    
-    let url = '/api/gemini';
     const localKey = localStorage.getItem('copilot_gemini_key');
-    if (localKey && localKey.length > 10) {
-       url = `https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${localKey}`;
+    if (!localKey || localKey.length < 10) {
+      throw new Error('Please click the Config ⚙️ button to enter a valid Gemini API Key first.');
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    const genAI = new GoogleGenerativeAI(localKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Secure backend error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    let aiResponse = '';
-    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-      aiResponse = data.candidates[0].content.parts[0].text;
-    } else if (data.response) {
-      aiResponse = data.response;
-    } else {
-      throw new Error('Invalid response structure from Gemini API.');
-    }
+    const promptParts = [
+      systemInstruction,
+      `DOCUMENT TEXT CONTENT:\n${docText || 'Empty'}`,
+      `USER REQUEST:\n${prompt}`
+    ];
+    
+    const result = await model.generateContent(promptParts);
+    let aiResponse = result.response.text();
 
     let updatedBase64 = null;
     const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
