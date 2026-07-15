@@ -9,6 +9,7 @@ import { PDFDocument, degrees } from 'pdf-lib';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import html2pdf from 'html2pdf.js';
+import PizZip from 'pizzip';
 
 // Configure pdf.js worker globally from the local public folder (prevents CORS and CDN loading issues)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -6908,24 +6909,121 @@ function setupCopilotWorkspace() {
     }, 1000);
   });
 
+  function _arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  }
+
   async function callGeminiSecureBackend(prompt, docText) {
     const filename = state.copilot.file ? state.copilot.file.name : '';
     const fileBase64 = state.copilot.base64Data || '';
+    const ext = filename ? filename.split('.').pop().toLowerCase() : '';
+
+    let systemInstruction = `You are an AI Document Assistant for the AI Gemini platform. You analyze files (PDF, Word, Excel, Images) and provide detailed, professional summaries, table extracts, or answers based ONLY on the user's explicit formatting instructions. Do NOT use generic or hardcoded summary rules. Dynamically mold your response to exactly what the user asks (e.g., bullet points, email format, markdown tables).\n\n`;
+
+    if (ext === 'docx') {
+      systemInstruction += `If the user asks to edit or modify the text in the Word document, you must generate a JSON object with a "replacements" array containing "search" and "replace" keys. For example: {"replacements": [{"search": "old name", "replace": "new name"}]}. Output ONLY the JSON block wrapped in \`\`\`json ... \`\`\` and a brief summary of what you did outside the block.`;
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      systemInstruction += `If the user asks to modify the spreadsheet (e.g., add columns, filter rows, change data), you must generate the complete updated spreadsheet data as a 2D JSON array (array of rows, where each row is an array of cells). Output ONLY the JSON block wrapped in \`\`\`json ... \`\`\` and a brief summary of what you did outside the block.`;
+    } else if (ext === 'pdf') {
+      systemInstruction += `If the user asks to edit text inside a PDF, you must respond EXACTLY with: "Direct text editing isn't supported inside static PDF formats. However, I can execute this edit by converting it to an editable Word document for you, or I can generate a brand-new, modified PDF version for you to download."\nIf they ask for PDF operations like page rotation or extraction, output a JSON command wrapped in \`\`\`json like {"action": "rotate", "degrees": 90} or {"action": "extract", "pages": [1, 2]}.`;
+    }
+
+    const payload = {
+      contents: [
+        {
+          parts: [
+            { text: systemInstruction },
+            { text: `DOCUMENT TEXT CONTENT:\n${docText || 'Empty'}` },
+            { text: `USER REQUEST:\n${prompt}` }
+          ]
+        }
+      ]
+    };
     
-    const response = await fetch('/.netlify/functions/gemini', {
+    let url = '/api/gemini';
+    const localKey = localStorage.getItem('copilot_gemini_key');
+    if (localKey && localKey.length > 10) {
+       url = `https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${localKey}`;
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ prompt, docText, filename, fileBase64 })
+      body: JSON.stringify(payload)
     });
-    
+
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
       throw new Error(errData.error || `Secure backend error: ${response.status}`);
     }
-    
-    return await response.json();
+
+    const data = await response.json();
+    let aiResponse = '';
+    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+      aiResponse = data.candidates[0].content.parts[0].text;
+    } else if (data.response) {
+      aiResponse = data.response;
+    } else {
+      throw new Error('Invalid response structure from Gemini API.');
+    }
+
+    let updatedBase64 = null;
+    const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch && fileBase64) {
+      try {
+        const cmd = JSON.parse(jsonMatch[1]);
+        if (ext === 'docx' && cmd.replacements) {
+           const zip = new PizZip(state.copilot.originalBuffer);
+           let xml = zip.file("word/document.xml").asText();
+           for (const rep of cmd.replacements) {
+             xml = xml.split(rep.search).join(rep.replace);
+           }
+           zip.file("word/document.xml", xml);
+           const newBlob = zip.generate({ type: "nodebuffer" });
+           updatedBase64 = _arrayBufferToBase64(newBlob);
+           state.copilot.originalBuffer = newBlob;
+        } else if ((ext === 'xlsx' || ext === 'xls') && Array.isArray(cmd)) {
+           const ws = XLSX.utils.aoa_to_sheet(cmd);
+           const wb = XLSX.utils.book_new();
+           XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+           const newBuffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+           updatedBase64 = _arrayBufferToBase64(newBuffer);
+           state.copilot.originalBuffer = newBuffer;
+        } else if (ext === 'pdf' && cmd.action) {
+           const pdfDoc = await PDFDocument.load(state.copilot.originalBuffer);
+           if (cmd.action === 'rotate' && cmd.degrees) {
+             const pages = pdfDoc.getPages();
+             pages.forEach(page => page.setRotation(degrees(page.getRotation().angle + cmd.degrees)));
+           } else if (cmd.action === 'extract' && cmd.pages) {
+             const newPdf = await PDFDocument.create();
+             const copiedPages = await newPdf.copyPages(pdfDoc, cmd.pages.map(p => p - 1));
+             copiedPages.forEach(page => newPdf.addPage(page));
+             const newBytes = await newPdf.save();
+             updatedBase64 = _arrayBufferToBase64(newBytes);
+             state.copilot.originalBuffer = newBytes;
+             aiResponse = aiResponse.replace(/```json\n([\s\S]*?)\n```/, '').trim();
+             return { response: aiResponse, updatedBase64 };
+           }
+           const newBytes = await pdfDoc.save();
+           updatedBase64 = _arrayBufferToBase64(newBytes);
+           state.copilot.originalBuffer = newBytes;
+        }
+        
+        aiResponse = aiResponse.replace(/```json\n([\s\S]*?)\n```/, '').trim();
+      } catch (e) {
+        console.error("Failed to parse or apply JSON command locally", e);
+      }
+    }
+
+    return { response: aiResponse, updatedBase64 };
   }
 
   function runDemoSimulation(prompt) {
