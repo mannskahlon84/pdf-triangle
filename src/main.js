@@ -1540,7 +1540,7 @@ function injectWorkspaceCancelButtons() {
     { id: 'pdf-to-jpg-setup', tool: 'pdf-to-jpg' },
     { id: 'word-setup-container', tool: 'word-to-pdf' },
     { id: 'excel-setup-container', tool: 'excel-to-pdf' },
-    { id: 'watermark-layout', tool: 'watermark' },
+    { id: 'watermark-sidebar-options', tool: 'watermark' },
     { id: 'compress-setup-container', tool: 'compress' },
     { id: 'security-setup-container', tool: 'security' },
     { id: 'numbering-setup-container', tool: 'numbering' },
