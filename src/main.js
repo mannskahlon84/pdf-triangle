@@ -6935,7 +6935,7 @@ function setupCopilotWorkspace() {
       systemInstruction += `If the user asks to edit text inside a PDF, you must respond EXACTLY with: "Direct text editing isn't supported inside static PDF formats. However, I can execute this edit by converting it to an editable Word document for you, or I can generate a brand-new, modified PDF version for you to download."\nIf they ask for PDF operations like page rotation or extraction, output a JSON command wrapped in \`\`\`json like {"action": "rotate", "degrees": 90} or {"action": "extract", "pages": [1, 2]}.`;
     }
 
-    const localKey = localStorage.getItem('copilot_gemini_key');
+    const localKey = localStorage.getItem('copilot_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
     if (!localKey || localKey.length < 10) {
       throw new Error('Please click the Config ⚙️ button to enter a valid Gemini API Key first.');
     }
