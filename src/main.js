@@ -258,7 +258,7 @@ function handleRouting() {
   const validRoutes = [
     'dashboard', 'editor', 'merge', 'split', 'organize', 'jpg-to-pdf', 'pdf-to-jpg', 
     'word-to-pdf', 'excel-to-pdf', 'watermark', 'compress', 'security', 'numbering', 
-    'batch', 'compare', 'scanner', 'formbuilder', 'copilot',
+    'batch', 'compare', 'scanner', 'formbuilder', 'copilot', 'auto-edit',
     'remove', 'extract', 'repair', 'pptx-to-pdf', 'html-to-pdf', 'pdf-to-word', 
     'pdf-to-powerpoint', 'pdf-to-excel', 'pdf-to-pdf-a', 'crop', 'redact', 
     'translate', 'pdf-to-markdown'
@@ -7924,3 +7924,72 @@ async function handlePdfToMarkdownFile(file) {
   }
 }
 
+// ==========================================
+// AI Auto-Editor (DOCX) Logic
+// ==========================================
+const autoEditUploadZone = document.getElementById('autoedit-upload-zone');
+const autoEditFileInput = document.getElementById('autoedit-file-input');
+const autoEditSubmitBtn = document.getElementById('autoedit-submit-btn');
+
+autoEditUploadZone.addEventListener('click', () => autoEditFileInput.click());
+autoEditFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) handleAutoEditFile(file);
+});
+
+setupDragAndDrop(autoEditUploadZone, handleAutoEditFile);
+
+async function handleAutoEditFile(file) {
+  if (!file.name.endsWith('.docx')) {
+    showToast('Please upload a Microsoft Word (.docx) file.', 'danger');
+    return;
+  }
+  state.autoEdit = { file };
+  document.getElementById('autoedit-filename').textContent = file.name;
+  autoEditUploadZone.classList.add('hidden');
+  document.getElementById('autoedit-setup-container').classList.remove('hidden');
+}
+
+autoEditSubmitBtn.addEventListener('click', async () => {
+  if (!state.autoEdit || !state.autoEdit.file) return;
+  const promptText = document.getElementById('autoedit-prompt').value.trim();
+  if (!promptText) {
+    showToast('Please enter what you want the AI to change.', 'danger');
+    return;
+  }
+
+  showLoader('AI is rewriting your document... This may take up to 30 seconds.');
+  
+  const formData = new FormData();
+  formData.append('document', state.autoEdit.file);
+  formData.append('prompt', promptText);
+
+  try {
+    const response = await fetch('/.netlify/functions/auto-edit', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Server responded with an error');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AI_Edited_${state.autoEdit.file.name}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+    
+    showToast('Document magically rewritten and downloaded!', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast(`AI Edit failed: ${err.message}`, 'danger');
+  } finally {
+    hideLoader();
+  }
+});
