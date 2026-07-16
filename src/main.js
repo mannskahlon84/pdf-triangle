@@ -420,11 +420,32 @@ function setupEditorWorkspace() {
 
   // Edit Existing PDF Text click handler (Triggers Ad Sponsored Unlock Modal)
   const editPdfTextBtn = document.getElementById('editor-edit-pdf-text-btn');
+  const premiumConvertBtn = document.getElementById('editor-premium-convert-btn');
   const appDownloadModal = document.getElementById('app-download-modal');
   const appDownloadCloseBtn = document.getElementById('app-download-close-btn');
   const appDownloadDemoBtn = document.getElementById('app-download-demo-btn');
   
   let adCountdownInterval = null;
+
+  if (premiumConvertBtn) {
+    premiumConvertBtn.addEventListener('click', async () => {
+      if (!state.editor || !state.editor.file) {
+        showToast('Please open a PDF file first.', 'danger');
+        return;
+      }
+      showLoader('Converting to Word (PRO) via Adobe API... This takes about 10-20 seconds.');
+      try {
+        const wordBlob = await convertPdfToWord(state.editor.file);
+        downloadBlob(wordBlob, state.editor.file.name.replace(/\.pdf$/i, '.docx'));
+        showToast('Successfully converted to Word format using Adobe API!', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast(`Premium Conversion Failed: ${err.message}`, 'danger');
+      } finally {
+        hideLoader();
+      }
+    });
+  }
 
   editPdfTextBtn.addEventListener('click', () => {
     appDownloadModal.classList.remove('hidden');
@@ -7498,7 +7519,7 @@ function setupPdfToWordWorkspace() {
     showLoader('Extracting text and structural layers...');
     try {
       const wordBlob = await convertPdfToWord(state.pdfToWord.file);
-      downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.doc'));
+      downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.docx'));
       showToast('PDF converted to Word document successfully!');
     } catch (err) {
       console.error(err);
