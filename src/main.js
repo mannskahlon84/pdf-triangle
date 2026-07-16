@@ -698,11 +698,11 @@ function setupEditorWorkspace() {
   }
 
   // Toolbar Actions
-  document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => {
+  document.querySelectorAll('.workspace-tools-sidebar .tool-btn').forEach(btn => {
     const action = btn.dataset.action;
     if (action) {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.workspace-tools-sidebar .tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         setEditorTool(action);
       });
@@ -951,7 +951,7 @@ function setupEditorWorkspace() {
         state.editor.activeSignatureDataUrl = evt.target.result;
         state.editor.activeTool = 'signature';
         
-        document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.workspace-tools-sidebar .tool-btn').forEach(b => b.classList.remove('active'));
         const sigBtn = document.querySelector('[data-action="signature"]');
         if (sigBtn) sigBtn.classList.add('active');
         
@@ -1186,8 +1186,8 @@ function resetEditor() {
   
   document.getElementById('options-metadata-panel').classList.remove('hidden');
   
-  document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
-  const panBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="pan"]');
+  document.querySelectorAll('.workspace-tools-sidebar .tool-btn').forEach(btn => btn.classList.remove('active'));
+  const panBtn = document.querySelector('.workspace-tools-sidebar .tool-btn[data-action="pan"]');
   if (panBtn) panBtn.classList.add('active');
   state.editor.activeTool = 'pan';
   
@@ -1265,8 +1265,8 @@ function resetInactiveTools(activeViewName) {
     safeDOM.hide('options-image-tool');
     safeDOM.show('options-metadata-panel');
     
-    document.querySelectorAll('.workspace-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
-    const panBtn = document.querySelector('.workspace-toolbar .tool-btn[data-action="pan"]');
+    document.querySelectorAll('.workspace-tools-sidebar .tool-btn').forEach(btn => btn.classList.remove('active'));
+    const panBtn = document.querySelector('.workspace-tools-sidebar .tool-btn[data-action="pan"]');
     if (panBtn) panBtn.classList.add('active');
     state.editor.activeTool = 'pan';
   }

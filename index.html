@@ -350,13 +350,6 @@
               <button class="btn btn-primary">Open Tool</button>
             </div>
 
-            <!-- PDF to Word -->
-            <div class="tool-card" data-tool="pdf-to-word">
-              <div class="card-icon blue"><i data-lucide="file-text"></i></div>
-              <h3>PDF to Word</h3>
-              <p>Convert PDF documents to editable Microsoft Word files.</p>
-              <button class="btn btn-primary">Open Tool</button>
-            </div>
 
             <!-- PDF to PowerPoint -->
             <div class="tool-card" data-tool="pdf-to-powerpoint">
@@ -448,109 +441,108 @@
               </div>
             </aside>
 
+            <!-- NEW: Photoshop-style Vertical Tool Palette -->
+            <aside class="workspace-tools-sidebar" style="display: flex; flex-direction: column; width: 60px; background: var(--bg-secondary); border-right: 1px solid var(--border-color); padding: 1rem 0; align-items: center; gap: 0.75rem; z-index: 10; flex-shrink: 0; overflow-y: auto;">
+              <button class="tool-btn active" data-action="pan" title="Select / Move">
+                <i data-lucide="mouse-pointer" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="text" title="Add Text">
+                <i data-lucide="type" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" id="editor-edit-pdf-text-btn" disabled title="Edit Existing PDF Text">
+                <i data-lucide="edit" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="signature" title="Insert Signature">
+                <i data-lucide="signature" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="draw" title="Freehand Draw">
+                <i data-lucide="pencil" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="erase" title="Eraser">
+                <i data-lucide="eraser" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="shape" title="Draw Shapes">
+                <i data-lucide="shapes" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="stamp" title="Check & Cross">
+                <i data-lucide="check-square" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="image" title="Insert Image">
+                <i data-lucide="image" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="formfield" title="Interactive Form Fields">
+                <i data-lucide="text-cursor-input" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" id="ocr-page-btn" title="Extract Text (OCR)" disabled>
+                <i data-lucide="scan-text" style="width: 20px; height: 20px;"></i>
+              </button>
+              <button class="tool-btn" data-action="fontdetect" title="Detect Document Font">
+                <i data-lucide="eye-dropper" style="width: 20px; height: 20px;"></i>
+              </button>
+            </aside>
+
             <!-- Main Render Area -->
             <div class="workspace-main">
-              <div class="workspace-toolbar" style="display: flex; flex-direction: column; gap: 0.35rem; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-secondary); width: 100%;">
-                <!-- Row 1: Mode Switcher & Tool Buttons -->
-                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; height: 38px;">
+              <!-- Slim Global Topbar -->
+              <div class="workspace-toolbar" style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-secondary); width: 100%; height: 48px; overflow-x: auto;">
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
                   <!-- Annotate vs Edit Mode Switcher -->
-                  <div class="mode-toggles" style="display: flex; background: var(--bg-tertiary); padding: 0.2rem; border-radius: 30px; border: 1px solid var(--border-color); margin-right: 0.5rem; flex-shrink: 0; height: 34px; align-items: center;">
+                  <div class="mode-toggles" style="display: flex; background: var(--bg-tertiary); padding: 0.2rem; border-radius: 30px; border: 1px solid var(--border-color); align-items: center;">
                     <button class="mode-toggle-btn active" id="mode-annotate-btn" style="border: none; background: transparent; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-primary); transition: all var(--transition-fast);">Annotate</button>
                     <button class="mode-toggle-btn" id="mode-edit-btn" style="border: none; background: transparent; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 0.25rem; transition: all var(--transition-fast);">Edit <i data-lucide="crown" style="width: 11px; height: 11px; color: #f59e0b;"></i></button>
                   </div>
-                  
-                  <button class="tool-btn active" data-action="pan" title="Select / Move">
-                    <i data-lucide="mouse-pointer" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="text" title="Add Text">
-                    <i data-lucide="type" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" id="editor-edit-pdf-text-btn" disabled title="Edit Existing PDF Text">
-                    <i data-lucide="edit" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="signature" title="Insert Signature">
-                    <i data-lucide="signature" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" id="editor-premium-convert-btn" title="Convert to Word (Premium)" style="margin-left: auto; border: 1px solid var(--accent-purple); color: var(--accent-purple); padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
-                    <i data-lucide="file-text" style="width: 16px; height: 16px;"></i> Convert to Word <span style="background: var(--accent-purple); color: white; padding: 2px 4px; font-size: 0.6rem; border-radius: 3px; line-height: 1;">PRO</span>
-                  </button>
-                  <button class="tool-btn" data-action="draw" title="Freehand Draw">
-                    <i data-lucide="pencil" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="erase" title="Eraser">
-                    <i data-lucide="eraser" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="shape" title="Draw Shapes">
-                    <i data-lucide="shapes" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="stamp" title="Check & Cross">
-                    <i data-lucide="check-square" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="image" title="Insert Image">
-                    <i data-lucide="image" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="formfield" title="Interactive Form Fields">
-                    <i data-lucide="text-cursor-input" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" id="ocr-page-btn" title="Extract Text (OCR)" disabled>
-                    <i data-lucide="scan-text" style="width: 18px; height: 18px;"></i>
-                  </button>
-                  <button class="tool-btn" data-action="fontdetect" title="Detect Document Font">
-                    <i data-lucide="eye-dropper" style="width: 18px; height: 18px;"></i>
-                  </button>
-                </div>
-                
-                <!-- Row 2: File Actions & Zoom Controls -->
-                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; height: 38px;">
-                  <!-- Mobile Pages Toggle -->
-                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-thumbnails" title="Toggle Pages" style="display: none; height: 34px; width: 34px; align-items: center; justify-content: center; padding: 0;">
+
+                  <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 0.5rem;"></div>
+
+                  <!-- File Actions & Zoom Controls -->
+                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-thumbnails" title="Toggle Pages" style="display: none; height: 32px; width: 32px; align-items: center; justify-content: center; padding: 0;">
                     <i data-lucide="book-open" style="width: 16px; height: 16px;"></i>
                   </button>
-                  
-                  <button class="btn btn-secondary" id="editor-undo-btn" disabled title="Undo (Ctrl+Z)" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;">
+                  <button class="btn btn-secondary" id="editor-undo-btn" disabled title="Undo (Ctrl+Z)" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;">
                     <i data-lucide="undo" style="width: 16px; height: 16px;"></i>
                   </button>
-                  <button class="btn btn-secondary" id="editor-redo-btn" disabled title="Redo (Ctrl+Y)" style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;">
+                  <button class="btn btn-secondary" id="editor-redo-btn" disabled title="Redo (Ctrl+Y)" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;">
                     <i data-lucide="redo" style="width: 16px; height: 16px;"></i>
                   </button>
-                  
-                  <div style="width: 1px; height: 18px; background: var(--border-color); flex-shrink: 0; margin: 0 0.15rem;"></div>
 
-                  <!-- Zoom Controls -->
-                  <div class="zoom-controls" style="display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 0.125rem 0.35rem; height: 34px; box-sizing: border-box; flex-shrink: 0;">
-                    <button class="btn-icon" id="editor-zoom-out" title="Zoom Out" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);">
-                      <i data-lucide="zoom-out" style="width: 14px; height: 14px;"></i>
-                    </button>
+                  <div class="zoom-controls" style="display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 0.125rem 0.35rem; height: 32px; box-sizing: border-box;">
+                    <button class="btn-icon" id="editor-zoom-out" title="Zoom Out" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);"><i data-lucide="zoom-out" style="width: 14px; height: 14px;"></i></button>
                     <span id="editor-zoom-val" style="font-size: 0.75rem; font-weight: 600; min-width: 36px; text-align: center; color: var(--text-primary);">100%</span>
-                    <button class="btn-icon" id="editor-zoom-in" title="Zoom In" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);">
-                      <i data-lucide="zoom-in" style="width: 14px; height: 14px;"></i>
-                    </button>
+                    <button class="btn-icon" id="editor-zoom-in" title="Zoom In" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; cursor: pointer; color: var(--text-secondary);"><i data-lucide="zoom-in" style="width: 14px; height: 14px;"></i></button>
                   </div>
+                </div>
 
-                  <div style="width: 1px; height: 18px; background: var(--border-color); flex-shrink: 0; margin: 0 0.15rem;"></div>
+                <!-- Right Side Topbar Actions -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                  <button class="tool-btn" id="editor-premium-convert-btn" title="Convert to Word (Premium)" style="border: 1px solid var(--accent-purple); color: var(--accent-purple); padding: 0.2rem 0.65rem; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; height: 32px; cursor: pointer;">
+                    <i data-lucide="file-text" style="width: 16px; height: 16px;"></i> Word <span style="background: var(--accent-purple); color: white; padding: 2px 4px; font-size: 0.6rem; border-radius: 3px; line-height: 1;">PRO</span>
+                  </button>
 
-                  <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
+                  <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 0.5rem;"></div>
+
+                  <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.65rem; font-size: 0.75rem;">
                     <i data-lucide="print" style="width: 14px; height: 14px;"></i> <span>Print</span>
                   </button>
-                  <button class="btn btn-secondary" id="editor-rotate-btn" disabled title="Rotate Page" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
+                  <button class="btn btn-secondary" id="editor-rotate-btn" disabled title="Rotate Page" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.65rem; font-size: 0.75rem;">
                     <i data-lucide="rotate-cw" style="width: 14px; height: 14px;"></i> <span>Rotate</span>
                   </button>
-                  <button class="btn btn-secondary" id="editor-upload-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
+                  <button class="btn btn-secondary" id="editor-upload-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.65rem; font-size: 0.75rem;">
                     <i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i> <span>Upload</span>
                   </button>
                   <input type="file" id="editor-file-input" accept=".pdf" class="hidden" />
                   
-                  <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.75rem; font-size: 0.75rem; font-weight: 600; flex-shrink: 0;">
-                    <i data-lucide="download" style="width: 14px; height: 14px;"></i> <span>Download PDF</span>
+                  <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.75rem; font-size: 0.75rem; font-weight: 600;">
+                    <i data-lucide="download" style="width: 14px; height: 14px;"></i> <span>Download</span>
                   </button>
 
                   <!-- Mobile Settings/Options Toggle -->
-                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-options" title="Toggle Options" style="display: none; height: 34px; width: 34px; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;">
+                  <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-options" title="Toggle Options" style="display: none; height: 32px; width: 32px; align-items: center; justify-content: center; padding: 0;">
                     <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
                   </button>
 
-                  <button class="btn btn-danger" id="editor-close-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 34px; padding: 0 0.65rem; font-size: 0.75rem; flex-shrink: 0;">
-                    <i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> <span>Clear File</span>
+                  <button class="btn btn-danger" id="editor-close-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.65rem; font-size: 0.75rem;">
+                    <i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> <span>Clear</span>
                   </button>
                 </div>
               </div>
