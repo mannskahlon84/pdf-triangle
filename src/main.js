@@ -429,14 +429,14 @@ function setupEditorWorkspace() {
 
   if (premiumConvertBtn) {
     premiumConvertBtn.addEventListener('click', async () => {
-      if (!state.editor || !state.editor.file) {
+      if (!state.editor || !state.editor.pdfManager.file) {
         showToast('Please open a PDF file first.', 'danger');
         return;
       }
       showLoader('Converting to Word (PRO) via Adobe API... This takes about 10-20 seconds.');
       try {
-        const wordBlob = await convertPdfToWord(state.editor.file);
-        downloadBlob(wordBlob, state.editor.file.name.replace(/\.pdf$/i, '.docx'));
+        const wordBlob = await convertPdfToWord(state.editor.pdfManager.file);
+        downloadBlob(wordBlob, state.editor.pdfManager.file.name.replace(/\.pdf$/i, '.docx'));
         showToast('Successfully converted to Word format using Adobe API!', 'success');
       } catch (err) {
         console.error(err);
