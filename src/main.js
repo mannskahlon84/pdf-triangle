@@ -3,7 +3,7 @@ import { PdfManager } from './pdfManager';
 import { SignaturePad } from './signatureManager';
 import { runOcrOnCanvas } from './ocrManager';
 import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf, encryptPdf, decryptPdf, addPageNumbersToPdf, removePagesFromPdf, extractPagesFromPdf, repairPdf, cropPdf, redactPdf, translatePdf } from './tools/manipulator';
-import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf, convertHtmlToPdf, convertPptxToPdf, convertPdfToWord, convertPdfToPowerpoint, convertPdfToExcel, convertPdfToPdfA, convertPdfToMarkdown } from './tools/converters';
+import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf, convertHtmlToPdf, convertPptxToPdf, convertPdfToWordFree, convertPdfToWordPro, convertPdfToPowerpoint, convertPdfToExcel, convertPdfToPdfA, convertPdfToMarkdown } from './tools/converters';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees } from 'pdf-lib';
 import * as XLSX from 'xlsx';
@@ -435,7 +435,7 @@ function setupEditorWorkspace() {
       }
       showLoader('Converting to Word (PRO) via Adobe API... This takes about 10-20 seconds.');
       try {
-        const wordBlob = await convertPdfToWord(state.editor.pdfManager.file);
+        const wordBlob = await convertPdfToWordPro(state.editor.pdfManager.file);
         downloadBlob(wordBlob, state.editor.pdfManager.file.name.replace(/\.pdf$/i, '.docx'));
         showToast('Successfully converted to Word format using Adobe API!', 'success');
       } catch (err) {
@@ -447,10 +447,12 @@ function setupEditorWorkspace() {
     });
   }
 
-  editPdfTextBtn.addEventListener('click', () => {
+  let adUnlockCallback = null;
+
+  window.showAdUnlockModal = function(buttonText, callback) {
     appDownloadModal.classList.remove('hidden');
+    adUnlockCallback = callback;
     
-    // Reset ad countdown state
     let timeLeft = 30;
     const adTimerBadge = document.getElementById('ad-timer-badge');
     const adProgressBar = document.getElementById('ad-progress-bar');
@@ -502,10 +504,16 @@ function setupEditorWorkspace() {
         appDownloadDemoBtn.style.background = 'var(--accent-purple)';
         appDownloadDemoBtn.style.color = 'white';
         appDownloadDemoBtn.style.cursor = 'pointer';
-        appDownloadDemoBtn.innerHTML = `<i data-lucide="unlock" style="width: 14px; height: 14px; vertical-align: middle;"></i> <span>Skip Ad & Edit Text</span>`;
+        appDownloadDemoBtn.innerHTML = `<i data-lucide="unlock" style="width: 14px; height: 14px; vertical-align: middle;"></i> <span>${buttonText}</span>`;
         if (window.lucide) window.lucide.createIcons();
       }
     }, 1000);
+  };
+
+  editPdfTextBtn.addEventListener('click', () => {
+    window.showAdUnlockModal('Skip Ad & Edit Text', async () => {
+      await runEditPdfTextExtraction();
+    });
   });
 
   appDownloadCloseBtn.addEventListener('click', () => {
@@ -523,7 +531,11 @@ function setupEditorWorkspace() {
       clearInterval(adCountdownInterval);
       adCountdownInterval = null;
     }
-    await runEditPdfTextExtraction();
+    if (adUnlockCallback) {
+      const cb = adUnlockCallback;
+      adUnlockCallback = null;
+      await cb();
+    }
   });
 
   // Sidebar Save Button Click (Redirects to main saveBtn)
@@ -7506,6 +7518,7 @@ function setupPdfToWordWorkspace() {
   const uploadZone = document.getElementById('pdf-to-word-upload-zone');
   const fileInput = document.getElementById('pdf-to-word-file-input');
   const submitBtn = document.getElementById('pdf-to-word-submit-btn');
+  const proBtn = document.getElementById('pdf-to-word-pro-btn');
   
   uploadZone.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', (e) => {
@@ -7518,8 +7531,8 @@ function setupPdfToWordWorkspace() {
   submitBtn.addEventListener('click', async () => {
     showLoader('Extracting text and structural layers...');
     try {
-      const wordBlob = await convertPdfToWord(state.pdfToWord.file);
-      downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.docx'));
+      const wordBlob = await convertPdfToWordFree(state.pdfToWord.file);
+      downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.doc'));
       showToast('PDF converted to Word document successfully!');
     } catch (err) {
       console.error(err);
@@ -7528,6 +7541,24 @@ function setupPdfToWordWorkspace() {
       hideLoader();
     }
   });
+
+  if (proBtn) {
+    proBtn.addEventListener('click', () => {
+      window.showAdUnlockModal('Skip Ad & Convert PRO', async () => {
+        showLoader('Converting to Word (PRO) via Adobe API... This takes about 10-20 seconds.');
+        try {
+          const wordBlob = await convertPdfToWordPro(state.pdfToWord.file);
+          downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.docx'));
+          showToast('Successfully converted to Word format using Adobe API!', 'success');
+        } catch (err) {
+          console.error(err);
+          showToast(`Premium Conversion Failed: ${err.message}`, 'danger');
+        } finally {
+          hideLoader();
+        }
+      });
+    });
+  }
 }
 
 async function handlePdfToWordFile(file) {

@@ -373,7 +373,7 @@ export async function convertPptxToPdf(file) {
  * @param {File} file 
  * @returns {Promise<Blob>} Word file Blob
  */
-export async function convertPdfToWord(file) {
+export async function convertPdfToWordPro(file) {
   // Use the new Adobe PDF Services Serverless Backend
   const formData = new FormData();
   formData.append('document', file);
@@ -390,6 +390,102 @@ export async function convertPdfToWord(file) {
 
   // The backend returns a binary DOCX stream
   return await response.blob();
+}
+
+/**
+ * Converts PDF to editable Word doc (.doc)
+ * @param {File} file 
+ * @returns {Promise<Blob>} Word file Blob
+ */
+export async function convertPdfToWordFree(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdf = await loadingTask.promise;
+  
+  let htmlContent = '';
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const items = textContent.items;
+    
+    if (items && items.length > 0) {
+      // Sort text items in reading order (top-to-bottom, left-to-right)
+      items.sort((a, b) => {
+        if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
+          return a.transform[4] - b.transform[4];
+        }
+        return b.transform[5] - a.transform[5];
+      });
+      
+      let pageText = '';
+      let lastY = null;
+      for (const item of items) {
+        const currentY = item.transform[5];
+        if (lastY !== null && Math.abs(currentY - lastY) > 8) {
+          pageText += '<br/>';
+        }
+        pageText += escapeHtml(item.str) + ' ';
+        lastY = currentY;
+      }
+      
+      htmlContent += `<div class="page" style="page-break-after:always; margin-bottom:20px;">`;
+      htmlContent += `<p style="font-family:Arial, sans-serif; font-size:11pt; line-height:1.6; color:#333333;">${pageText}</p>`;
+      htmlContent += `</div>`;
+    } else {
+      // Scanned PDF / Image-only page fallback: Render page to canvas and embed as image in Word
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const viewport = page.getViewport({ scale: 1.5 });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      
+      await page.render({ canvasContext: context, viewport }).promise;
+      const imgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      
+      const width = page.getViewport({ scale: 1.0 }).width;
+      const height = page.getViewport({ scale: 1.0 }).height;
+      
+      // Limit dimensions to standard Word printable margins (540pt x 700pt max) to prevent image splits
+      const maxWidth = 540;
+      const maxHeight = 700;
+      let renderWidth = width;
+      let renderHeight = height;
+      
+      if (renderWidth > maxWidth) {
+        const ratio = maxWidth / renderWidth;
+        renderWidth = maxWidth;
+        renderHeight = renderHeight * ratio;
+      }
+      if (renderHeight > maxHeight) {
+        const ratio = maxHeight / renderHeight;
+        renderHeight = maxHeight;
+        renderWidth = renderWidth * ratio;
+      }
+      
+      htmlContent += `<div class="page" style="page-break-after:always; page-break-inside:avoid; margin:10px auto; text-align:center;">`;
+      htmlContent += `<img src="${imgDataUrl}" width="${Math.round(renderWidth)}" height="${Math.round(renderHeight)}" style="width:${Math.round(renderWidth)}px; height:${Math.round(renderHeight)}px; display:block; margin:0 auto;" />`;
+      htmlContent += `</div>`;
+    }
+  }
+  
+  const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Document</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]--></head><body>";
+  const footer = "</body></html>";
+  const source = header + htmlContent + footer;
+  
+  return new Blob(['\ufeff' + source], {
+    type: 'application/msword'
+  });
 }
 
 /**
