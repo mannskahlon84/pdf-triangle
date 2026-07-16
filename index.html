@@ -482,16 +482,9 @@
 
               <div style="width: 30px; height: 1px; background: var(--border-color); margin: 0.25rem 0;"></div>
 
-              <button class="tool-btn" id="editor-print-btn" disabled title="Print PDF">
-                <i data-lucide="printer" style="width: 20px; height: 20px;"></i>
-              </button>
               <button class="tool-btn" id="editor-rotate-btn" disabled title="Rotate Page">
                 <i data-lucide="rotate-cw" style="width: 20px; height: 20px;"></i>
               </button>
-              <button class="tool-btn" id="editor-upload-btn" title="Upload New PDF">
-                <i data-lucide="upload-cloud" style="width: 20px; height: 20px;"></i>
-              </button>
-              <input type="file" id="editor-file-input" accept=".pdf" class="hidden" />
 
               <button class="tool-btn" id="editor-close-btn" disabled title="Clear File" style="color: var(--danger-color);">
                 <i data-lucide="x-circle" style="width: 20px; height: 20px;"></i>
@@ -537,6 +530,14 @@
                   </button>
 
                   <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 0.5rem;"></div>
+
+                  <button class="btn btn-secondary" id="editor-print-btn" disabled title="Print PDF" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.65rem; font-size: 0.75rem;">
+                    <i data-lucide="print" style="width: 14px; height: 14px;"></i> <span>Print</span>
+                  </button>
+                  <button class="btn btn-secondary" id="editor-upload-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.65rem; font-size: 0.75rem;">
+                    <i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i> <span>Upload</span>
+                  </button>
+                  <input type="file" id="editor-file-input" accept=".pdf" class="hidden" />
                   
                   <button class="btn btn-success" id="editor-save-btn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 32px; padding: 0 0.75rem; font-size: 0.75rem; font-weight: 600;">
                     <i data-lucide="download" style="width: 14px; height: 14px;"></i> <span>Download</span>
