@@ -198,6 +198,14 @@
               <button class="btn btn-primary">Open Tool</button>
             </div>
 
+            <!-- AI Document Copilot -->
+            <div class="tool-card" data-tool="copilot">
+              <div class="card-icon purple"><i data-lucide="sparkles"></i></div>
+              <h3>AI Summary & Chat <span class="badge" style="background-color: var(--accent-purple); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">PRO</span></h3>
+              <p>Chat with your documents, extract data, and generate summaries using AI.</p>
+              <button class="btn btn-primary">Open Tool</button>
+            </div>
+
             <!-- PDF to Word -->
             <div class="tool-card" data-tool="pdf-to-word">
               <div class="card-icon blue"><i data-lucide="file-text"></i></div>
@@ -449,9 +457,6 @@
               <button class="tool-btn" data-action="text" title="Add Text">
                 <i data-lucide="type" style="width: 20px; height: 20px;"></i>
               </button>
-              <button class="tool-btn" id="editor-edit-pdf-text-btn" disabled title="Edit Existing PDF Text">
-                <i data-lucide="edit" style="width: 20px; height: 20px;"></i>
-              </button>
               <button class="tool-btn" data-action="signature" title="Insert Signature">
                 <i data-lucide="signature" style="width: 20px; height: 20px;"></i>
               </button>
@@ -497,14 +502,6 @@
               <div class="workspace-toolbar" style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-secondary); width: 100%; height: 48px; overflow-x: auto;">
                 
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-                  <!-- Annotate vs Edit Mode Switcher -->
-                  <div class="mode-toggles" style="display: flex; background: var(--bg-tertiary); padding: 0.2rem; border-radius: 30px; border: 1px solid var(--border-color); align-items: center;">
-                    <button class="mode-toggle-btn active" id="mode-annotate-btn" style="border: none; background: transparent; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-primary); transition: all var(--transition-fast);">Annotate</button>
-                    <button class="mode-toggle-btn" id="mode-edit-btn" style="border: none; background: transparent; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 0.25rem; transition: all var(--transition-fast);">Edit <i data-lucide="crown" style="width: 11px; height: 11px; color: #f59e0b;"></i></button>
-                  </div>
-
-                  <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 0.5rem;"></div>
-
                   <!-- File Actions & Zoom Controls -->
                   <button class="btn btn-secondary mobile-toggle-btn" id="mobile-toggle-thumbnails" title="Toggle Pages" style="display: none; height: 32px; width: 32px; align-items: center; justify-content: center; padding: 0;">
                     <i data-lucide="book-open" style="width: 16px; height: 16px;"></i>

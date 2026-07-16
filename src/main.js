@@ -405,7 +405,6 @@ function setupEditorWorkspace() {
       rotateBtn.disabled = false;
       closeBtn.disabled = false;
       document.getElementById('ocr-page-btn').disabled = false;
-      document.getElementById('editor-edit-pdf-text-btn').disabled = false;
       
       await loadEditorPage(0);
       await generateEditorThumbnails();
@@ -418,8 +417,6 @@ function setupEditorWorkspace() {
     }
   });
 
-  // Edit Existing PDF Text click handler (Triggers Ad Sponsored Unlock Modal)
-  const editPdfTextBtn = document.getElementById('editor-edit-pdf-text-btn');
   const premiumConvertBtn = document.getElementById('editor-premium-convert-btn');
   const appDownloadModal = document.getElementById('app-download-modal');
   const appDownloadCloseBtn = document.getElementById('app-download-close-btn');
@@ -433,7 +430,7 @@ function setupEditorWorkspace() {
         showToast('Please open a PDF file first.', 'danger');
         return;
       }
-      showLoader('Converting to Word (PRO) via Adobe API... This takes about 10-20 seconds.');
+      showLoader('Please wait, while your document is getting ready...');
       try {
         const wordBlob = await convertPdfToWordPro(state.editor.pdfManager.file);
         downloadBlob(wordBlob, state.editor.pdfManager.file.name.replace(/\.pdf$/i, '.docx'));
@@ -510,12 +507,6 @@ function setupEditorWorkspace() {
     }, 1000);
   };
 
-  editPdfTextBtn.addEventListener('click', () => {
-    window.showAdUnlockModal('Skip Ad & Edit Text', async () => {
-      await runEditPdfTextExtraction();
-    });
-  });
-
   appDownloadCloseBtn.addEventListener('click', () => {
     appDownloadModal.classList.add('hidden');
     if (adCountdownInterval) {
@@ -546,36 +537,6 @@ function setupEditorWorkspace() {
     });
   }
 
-  // Annotate vs Edit Mode Switcher Controls (iLovePDF Style)
-  const modeAnnotateBtn = document.getElementById('mode-annotate-btn');
-  const modeEditBtn = document.getElementById('mode-edit-btn');
-
-  if (modeAnnotateBtn && modeEditBtn) {
-    modeAnnotateBtn.addEventListener('click', async () => {
-      if (modeAnnotateBtn.classList.contains('active')) return;
-      
-      modeAnnotateBtn.classList.add('active');
-      modeEditBtn.classList.remove('active');
-      
-      // Set to Select/Pan tool
-      setEditorTool('pan');
-      
-      // Reload current page to wipe out temporary editable text block divs
-      const pageIdx = state.editor.activePage?.pageIndex;
-      if (pageIdx !== undefined) {
-        showLoader('Exiting Edit mode...');
-        await loadEditorPage(pageIdx);
-        hideLoader();
-      }
-    });
-
-    modeEditBtn.addEventListener('click', () => {
-      if (modeEditBtn.classList.contains('active')) return;
-      // Trigger the ad unlock modal countdown!
-      editPdfTextBtn.click();
-    });
-  }
-
   // Floating Navigator Page Up/Down Buttons
   const floatPrevPage = document.getElementById('float-prev-page');
   const floatNextPage = document.getElementById('float-next-page');
@@ -593,120 +554,6 @@ function setupEditorWorkspace() {
         loadEditorPage(pageIdx + 1);
       }
     });
-  }
-
-  async function runEditPdfTextExtraction() {
-    const activePageIdx = state.editor.activePage?.pageIndex;
-    if (activePageIdx === undefined) return;
-    
-    // Avoid double text extraction if text has already been loaded across the document
-    if (state.editor.hasExtractedText) {
-      if (modeEditBtn && modeAnnotateBtn) {
-        modeEditBtn.classList.add('active');
-        modeAnnotateBtn.classList.remove('active');
-      }
-      document.getElementById('options-text-tool').classList.remove('hidden');
-      document.getElementById('options-metadata-panel').classList.add('hidden');
-      return;
-    }
-    
-    showLoader('Extracting document text layers for all pages...');
-    try {
-      const numPages = state.editor.pdfManager.numPages;
-      let totalBlocks = 0;
-      
-      for (let pIdx = 0; pIdx < numPages; pIdx++) {
-        // Skip page if it already has text overlays to avoid doubling
-        if (state.editor.pdfManager.additions[pIdx].text.length > 0) continue;
-        
-        document.getElementById('spinner-text').textContent = `Extracting text layers: page ${pIdx + 1} of ${numPages}...`;
-        
-        const blocks = await state.editor.pdfManager.extractNativeTextBlocks(pIdx);
-        if (blocks.length === 0) continue;
-        
-        // Render PDF page to an offscreen canvas to detect text backgrounds correctly
-        const page = await state.editor.pdfManager.pdfJsDoc.getPage(pIdx + 1);
-        const viewport = page.getViewport({ scale: 1.5 }); // Match renderPageToContainer scale
-        
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = viewport.width;
-        tempCanvas.height = viewport.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        await page.render({ canvasContext: tempCtx, viewport }).promise;
-        
-        const coveredRects = [];
-        
-        blocks.forEach(block => {
-          const bboxX = block.percentX * tempCanvas.width;
-          const bboxY = block.percentY * tempCanvas.height;
-          const bboxW = block.percentW * tempCanvas.width;
-          const bboxH = block.percentH * tempCanvas.height;
-          
-          const pixel = tempCtx.getImageData(
-            Math.max(0, Math.min(tempCanvas.width - 1, bboxX - 2)),
-            Math.max(0, Math.min(tempCanvas.height - 1, bboxY - 2)),
-            1, 1
-          ).data;
-          const r = pixel[0];
-          const g = pixel[1];
-          const b = pixel[2];
-          const a = pixel[3];
-          
-          // Default to white background color if the extracted pixel is near white/light grey, dark, or transparent
-          let finalBgColor = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-          if ((r > 200 && g > 200 && b > 200) || a === 0) {
-            finalBgColor = '#ffffff';
-          }
-          
-          const fontSize = Math.max(8, Math.round(block.fontSize));
-          
-          const txtObj = {
-            percentX: block.percentX,
-            percentY: block.percentY,
-            percentW: block.percentW,
-            percentH: block.percentH,
-            text: block.text,
-            originalText: block.text, // Store original text to check if edited later
-            size: fontSize,
-            color: '#000000',
-            fontFamily: block.fontFamily || "'Inter', sans-serif",
-            isBold: false,
-            isItalic: false,
-            bgEnable: false,
-            bgColor: finalBgColor,
-            coverRect: {
-              percentX: block.percentX,
-              percentY: block.percentY,
-              percentW: block.percentW,
-              percentH: block.percentH,
-              bgColor: finalBgColor
-            }
-          };
-          
-          state.editor.pdfManager.additions[pIdx].text.push(txtObj);
-          totalBlocks++;
-        });
-        
-        window.saveHistoryState(pIdx);
-      }
-      
-      state.editor.hasExtractedText = true;
-      
-      // Reload current editor page to apply local DOM text elements and draw coveredRects canvas
-      await loadEditorPage(activePageIdx);
-      
-      if (modeEditBtn && modeAnnotateBtn) {
-        modeEditBtn.classList.add('active');
-        modeAnnotateBtn.classList.remove('active');
-      }
-      setEditorTool('text');
-      showToast(`Document-wide editing prepared! Converted ${totalBlocks} text blocks into editable overlays.`, 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to extract document text layers.', 'danger');
-    } finally {
-      hideLoader();
-    }
   }
 
   // Toolbar Actions
@@ -1185,7 +1032,6 @@ function resetEditor() {
   document.getElementById('editor-rotate-btn').disabled = true;
   document.getElementById('editor-close-btn').disabled = true;
   document.getElementById('ocr-page-btn').disabled = true;
-  document.getElementById('editor-edit-pdf-text-btn').disabled = true;
   
   document.getElementById('form-field-editor-properties').classList.add('hidden');
   document.getElementById('options-form-field-tool').classList.add('hidden');
@@ -1265,7 +1111,6 @@ function resetInactiveTools(activeViewName) {
     safeDOM.disable('editor-rotate-btn', true);
     safeDOM.disable('editor-close-btn', true);
     safeDOM.disable('ocr-page-btn', true);
-    safeDOM.disable('editor-edit-pdf-text-btn', true);
     
     safeDOM.hide('form-field-editor-properties');
     safeDOM.hide('options-form-field-tool');
@@ -6958,12 +6803,12 @@ function setupCopilotWorkspace() {
         if (loader) loader.remove();
         
         // Hide the initial visualization loading modal if active
+        let errorMsg = `I apologize, but I am currently experiencing technical difficulties connecting to my AI core. Please try again in a moment.`;
         if (state.copilot.isInitialAnalyzing) {
           state.copilot.isInitialAnalyzing = false;
           hideLoader();
+          errorMsg = `I apologize, but I was unable to complete the initial analysis of your document due to a technical issue.`;
         }
-        
-        let errorMsg = `⚠️ **AI Summary/Gemini Disconnected**\n\nI couldn't process your request because the proxy backend encountered an error: ${err.message}`;
         
         appendMessage('copilot', errorMsg);
         state.copilot.lastResponse = errorMsg;
@@ -6987,7 +6832,7 @@ function setupCopilotWorkspace() {
     const fileBase64 = state.copilot.base64Data || '';
     const ext = filename ? filename.split('.').pop().toLowerCase() : '';
 
-    let systemInstruction = `You are an AI Document Assistant for the AI Gemini platform. You analyze files (PDF, Word, Excel, Images) and provide detailed, professional summaries, table extracts, or answers based ONLY on the user's explicit formatting instructions. Do NOT use generic or hardcoded summary rules. Dynamically mold your response to exactly what the user asks (e.g., bullet points, email format, markdown tables).\n\n`;
+    let systemInstruction = `You are a professional AI Document Assistant. You analyze files (PDF, Word, Excel, Images) and provide detailed, professional summaries, table extracts, or answers based ONLY on the user's explicit formatting instructions. If the user asks a question that is completely unrelated to the provided document or document editing, politely respond with: "I apologize, but that is out of my scope. I am a dedicated Document Assistant designed to help you analyze and edit your files." Do NOT use generic or hardcoded summary rules.\n\n`;
 
     if (ext === 'docx') {
       systemInstruction += `If the user asks to edit or modify the text in the Word document, you must generate a JSON object with a "replacements" array containing "search" and "replace" keys. For example: {"replacements": [{"search": "old name", "replace": "new name"}]}. Output ONLY the JSON block wrapped in \`\`\`json ... \`\`\` and a brief summary of what you did outside the block.`;
@@ -7545,7 +7390,7 @@ function setupPdfToWordWorkspace() {
   if (proBtn) {
     proBtn.addEventListener('click', () => {
       window.showAdUnlockModal('Skip Ad & Convert PRO', async () => {
-        showLoader('Converting to Word (PRO) via Adobe API... This takes about 10-20 seconds.');
+        showLoader('Please wait, while your document is getting ready...');
         try {
           const wordBlob = await convertPdfToWordPro(state.pdfToWord.file);
           downloadBlob(wordBlob, state.pdfToWord.file.name.replace(/\.pdf$/i, '.docx'));
