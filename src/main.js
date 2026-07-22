@@ -3019,10 +3019,20 @@ function setupPdfToJpgWorkspace() {
     showLoader('Rendering and downloading images...');
     try {
       const images = await convertPdfToImages(state.pdfToJpg.file, format, scale);
-      for (const img of images) {
-        downloadBlob(img.blob, img.filename);
-        await new Promise(r => setTimeout(r, 100)); // small delay to prevent browser throttling
+      
+      if (images.length === 1) {
+        // Only 1 page: directly download the image
+        downloadBlob(images[0].blob, images[0].filename);
+      } else {
+        // Multiple pages: automatically create a ZIP file
+        const zip = new JSZip();
+        for (const img of images) {
+          zip.file(img.filename, img.blob);
+        }
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        downloadBlob(zipBlob, 'extracted_pdf_images.zip');
       }
+      
       showToast('Images converted and downloaded!');
     } catch (err) {
       console.error(err);
