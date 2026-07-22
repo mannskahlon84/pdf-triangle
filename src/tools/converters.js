@@ -110,7 +110,7 @@ export async function convertPdfToImages(file, format = 'jpeg', scale = 2) {
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;
-  const zip = new JSZip();
+  const images = [];
   
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -124,13 +124,12 @@ export async function convertPdfToImages(file, format = 'jpeg', scale = 2) {
     
     const imgType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
     const ext = format === 'jpeg' ? 'jpg' : 'png';
-    const imgDataUrl = canvas.toDataURL(imgType, 0.9);
-    const base64Data = imgDataUrl.split(',')[1];
     
-    zip.file(`page_${i}.${ext}`, base64Data, { base64: true });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, imgType, 0.9));
+    images.push({ blob, filename: `page_${i}.${ext}` });
   }
   
-  return await zip.generateAsync({ type: 'blob' });
+  return images;
 }
 
 /**

@@ -3015,10 +3015,13 @@ function setupPdfToJpgWorkspace() {
     const format = document.getElementById('pdf-to-jpg-format').value;
     const scale = parseFloat(document.getElementById('pdf-to-jpg-scale').value);
     
-    showLoader('Rendering images and building ZIP archive...');
+    showLoader('Rendering and downloading images...');
     try {
-      const zipBlob = await convertPdfToImages(state.pdfToJpg.file, format, scale);
-      downloadBlob(zipBlob, 'extracted_pdf_images.zip');
+      const images = await convertPdfToImages(state.pdfToJpg.file, format, scale);
+      for (const img of images) {
+        downloadBlob(img.blob, img.filename);
+        await new Promise(r => setTimeout(r, 100)); // small delay to prevent browser throttling
+      }
       showToast('Images converted and downloaded!');
     } catch (err) {
       console.error(err);
