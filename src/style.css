@@ -1018,7 +1018,8 @@ body.fixed-viewport .view-panel.active {
 }
 
 .split-details {
-  flex: 1;
+  width: 350px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1040,17 +1041,18 @@ body.fixed-viewport .view-panel.active {
   font-weight: 600;
 }
 
-.split-preview-sidebar {
-  width: 260px;
-  height: 380px;
+.split-preview-area {
+  flex: 1;
+  min-height: 400px;
+  max-height: 650px;
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   overflow-y: auto;
-  padding: 1rem;
+  padding: 1.5rem;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
 }
 
 .split-page-thumb {

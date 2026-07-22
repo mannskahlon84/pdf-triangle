@@ -1145,7 +1145,7 @@ function resetInactiveTools(activeViewName) {
     safeDOM.hide('split-setup-container');
     safeDOM.val('split-single-pages', '');
     safeDOM.val('split-range-pages', '');
-    safeDOM.html('split-preview-sidebar', '');
+    safeDOM.html('split-preview-area', '');
   }
 
   // 4. Reset Organize
@@ -2626,7 +2626,7 @@ async function handleSplitFile(file) {
     document.getElementById('split-setup-container').classList.remove('hidden');
     
     // Generate split preview thumbnails
-    const sidebar = document.getElementById('split-preview-sidebar');
+    const sidebar = document.getElementById('split-preview-area');
     sidebar.innerHTML = '';
     
     for (let i = 1; i <= pdfJs.numPages; i++) {
