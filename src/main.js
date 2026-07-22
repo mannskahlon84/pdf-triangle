@@ -2504,10 +2504,11 @@ function setupSplitWorkspace() {
 
   // 1. Separate Pages Button (comma-separated list of individual pages)
   singleBtn.addEventListener('click', async () => {
-    const input = document.getElementById('split-single-pages').value.trim();
+    let input = document.getElementById('split-single-pages').value.trim();
     if (!input) {
-      showToast('Please enter page numbers to extract.', 'danger');
-      return;
+      // Default to splitting all pages
+      const allPages = Array.from({ length: state.split.pageCount }, (_, i) => i + 1);
+      input = allPages.join(',');
     }
     
     showLoader('Extracting separate pages...');
