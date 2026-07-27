@@ -1,5 +1,6 @@
-// Dynamic Affiliate Ad Rotator
-// Randomizes affiliate banners across all ad slots on page load, view navigation, and timed interval.
+// Dynamic Partner & Affiliate Ad Rotator
+// Randomizes partner banners across all showcase slots on page load, view navigation, and timed interval.
+// Designed with adblocker-resilient class names and always-visible CTA buttons so offers display even if image ads are filtered.
 
 const AFFILIATE_ADS = [
   {
@@ -43,6 +44,12 @@ const AFFILIATE_ADS = [
     href: 'https://www.awin1.com/cread.php?s=2437229&v=17940&q=368341&r=2988755',
     img: 'https://www.awin1.com/cshow.php?s=2437229&v=17940&q=368341&r=2988755',
     alt: 'Alibaba US - Banner 1'
+  },
+  {
+    advertiser: 'Alibaba US',
+    href: 'https://www.awin1.com/cread.php?s=2503042&v=17940&q=375248&r=2988755',
+    img: 'https://www.awin1.com/cshow.php?s=2503042&v=17940&q=375248&r=2988755',
+    alt: 'Alibaba US - Banner 2'
   }
 ];
 
@@ -59,11 +66,12 @@ function shuffleArray(array) {
 }
 
 /**
- * Rotates ads randomly across all .ad-banner-slot elements on the page.
+ * Rotates ads randomly across all partner showcase / ad slots on the page.
  * Each slot receives a different random subset of banners in random order.
  */
 export function rotateAffiliateAds() {
-  const adSlots = document.querySelectorAll('.ad-banner-slot');
+  // Support both adblocker-resilient class name and legacy class name
+  const adSlots = document.querySelectorAll('.partner-showcase-grid, .ad-banner-slot');
   if (!adSlots || adSlots.length === 0) return;
 
   adSlots.forEach((slot, idx) => {
@@ -74,23 +82,26 @@ export function rotateAffiliateAds() {
     const count = Math.floor(Math.random() * 2) + 2; // 2 or 3 ads
     const selectedAds = shuffled.slice(0, count);
 
-    // Build responsive HTML for this slot
-    const adsHtml = selectedAds.map(ad => `
-      <!-- START ADVERTISER: ${ad.advertiser} from awin.com -->
-      <a rel="sponsored" href="${ad.href}" target="_blank" class="affiliate-ad-card" style="display: inline-block; transition: transform 0.2s ease, opacity 0.3s ease; text-decoration: none;">
-        <img src="${ad.img}" border="0" alt="${ad.alt}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); box-shadow: var(--shadow-sm); display: block;">
-      </a>
-      <!-- END ADVERTISER: ${ad.advertiser} from awin.com -->
-    `).join('');
+    // Build responsive HTML with both image and CTA text badge so it never disappears
+    const adsHtml = `
+      <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; width: 100%; margin-bottom: 0.5rem; font-weight: 600; text-align: center;">Sponsored Partner Offers & Featured Deals</div>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1.25rem; width: 100%;">
+        ${selectedAds.map(ad => `
+          <!-- START ADVERTISER: ${ad.advertiser} from awin.com -->
+          <a rel="sponsored" href="${ad.href}" target="_blank" class="partner-showcase-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.2s ease, box-shadow: 0.2s ease; text-decoration: none; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 8px; border: 1px solid #e2e8f0; max-width: 100%;">
+            <img src="${ad.img}" border="0" alt="${ad.alt}" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin-bottom: 6px;">
+            <span style="display: inline-block; padding: 0.35rem 0.75rem; font-weight: 600; color: #2563eb; font-size: 0.75rem; background: #eff6ff; border-radius: 4px; width: 100%; text-align: center; white-space: nowrap;">✨ Featured Deal: ${ad.advertiser} &rarr;</span>
+          </a>
+          <!-- END ADVERTISER: ${ad.advertiser} from awin.com -->
+        `).join('')}
+      </div>
+    `;
 
-    // Apply smooth fade effect when rotating
-    slot.style.transition = 'opacity 0.25s ease-in-out';
-    slot.style.opacity = '0';
-    
-    setTimeout(() => {
-      slot.innerHTML = adsHtml;
-      slot.style.opacity = '1';
-    }, 200);
+    // Synchronous immediate render to avoid any opacity/transition lockups
+    slot.innerHTML = adsHtml;
+    slot.style.display = 'flex';
+    slot.style.flexDirection = 'column';
+    slot.style.alignItems = 'center';
   });
 }
 
@@ -101,8 +112,8 @@ export function initAdRotator() {
   // Rotate immediately on startup
   rotateAffiliateAds();
 
-  // Automatically rotate ads every 30 seconds so visitors see fresh ads dynamically
+  // Automatically rotate ads every 25 seconds so visitors see fresh ads dynamically
   setInterval(() => {
     rotateAffiliateAds();
-  }, 30000);
+  }, 25000);
 }
