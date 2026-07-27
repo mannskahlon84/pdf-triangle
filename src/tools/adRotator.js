@@ -37,6 +37,12 @@ const AFFILIATE_ADS = [
     href: 'https://www.awin1.com/cread.php?s=4547850&v=90759&q=554223&r=2988755',
     img: 'https://www.awin1.com/cshow.php?s=4547850&v=90759&q=554223&r=2988755',
     alt: 'Bonheur Jewelry - Banner 4'
+  },
+  {
+    advertiser: 'Alibaba US',
+    href: 'https://www.awin1.com/cread.php?s=2437229&v=17940&q=368341&r=2988755',
+    img: 'https://www.awin1.com/cshow.php?s=2437229&v=17940&q=368341&r=2988755',
+    alt: 'Alibaba US - Banner 1'
   }
 ];
 
