@@ -4,6 +4,7 @@ import { SignaturePad } from './signatureManager';
 import { runOcrOnCanvas } from './ocrManager';
 import { mergePdfs, splitPdf, parseRanges, organizePdfPages, addWatermarkToPdf, compressPdf, encryptPdf, decryptPdf, addPageNumbersToPdf, removePagesFromPdf, extractPagesFromPdf, repairPdf, cropPdf, redactPdf, translatePdf } from './tools/manipulator';
 import { convertImagesToPdf, convertPdfToImages, convertWordToPdf, convertExcelToPdf, convertHtmlToPdf, convertPptxToPdf, convertPdfToWordFree, convertPdfToWordPro, convertPdfToPowerpoint, convertPdfToExcel, convertPdfToPdfA, convertPdfToMarkdown } from './tools/converters';
+import { initAdRotator, rotateAffiliateAds } from './tools/adRotator';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees } from 'pdf-lib';
 import * as XLSX from 'xlsx';
@@ -181,6 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide Icons
   lucide.createIcons();
   
+  // Initialize dynamic affiliate ad rotator
+  initAdRotator();
+  
   // Inject Cancel/Discard buttons into all workspace setup panels
   injectWorkspaceCancelButtons();
   
@@ -273,6 +277,9 @@ function handleRouting() {
 
 function switchView(viewName) {
   state.activeTool = viewName;
+  
+  // Rotate affiliate ads randomly on every navigation
+  rotateAffiliateAds();
   
   // Toggle fixed body viewport to lock screen scrollbars and keep tools sticky
   if (viewName === 'editor' || viewName === 'copilot') {
