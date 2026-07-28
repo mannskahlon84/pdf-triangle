@@ -15,6 +15,9 @@ import PizZip from 'pizzip';
 // Configure pdf.js worker globally from the local public folder (prevents CORS and CDN loading issues)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
+// Initialize dynamic affiliate ad rotator immediately at script evaluation
+initAdRotator();
+
 // Application State
 const state = {
   activeTool: 'dashboard', // dashboard, editor, merge, split, organize, jpg-to-pdf, pdf-to-jpg, word-to-pdf, excel-to-pdf, watermark

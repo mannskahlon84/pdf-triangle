@@ -89,7 +89,7 @@ export function rotateAffiliateAds() {
         ${selectedAds.map(ad => `
           <!-- START ADVERTISER: ${ad.advertiser} from awin.com -->
           <a rel="sponsored" href="${ad.href}" target="_blank" class="partner-showcase-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.2s ease, box-shadow: 0.2s ease; text-decoration: none; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 8px; border: 1px solid #e2e8f0; max-width: 100%;">
-            <img src="${ad.img}" border="0" alt="${ad.alt}" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin-bottom: 6px;">
+            <img src="${ad.img}" border="0" alt="${ad.alt}" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin-bottom: 6px;" onerror="this.style.display='none'">
             <span style="display: inline-block; padding: 0.35rem 0.75rem; font-weight: 600; color: #2563eb; font-size: 0.75rem; background: #eff6ff; border-radius: 4px; width: 100%; text-align: center; white-space: nowrap;">✨ Featured Deal: ${ad.advertiser} &rarr;</span>
           </a>
           <!-- END ADVERTISER: ${ad.advertiser} from awin.com -->
@@ -116,4 +116,11 @@ export function initAdRotator() {
   setInterval(() => {
     rotateAffiliateAds();
   }, 25000);
+}
+
+// Auto-run immediately when script is imported in case DOM is already ready
+if (typeof window !== 'undefined') {
+  setTimeout(() => rotateAffiliateAds(), 10);
+  setTimeout(() => rotateAffiliateAds(), 500);
+  setTimeout(() => rotateAffiliateAds(), 1500);
 }
