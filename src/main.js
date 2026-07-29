@@ -378,11 +378,18 @@ function setupEditorWorkspace() {
   const rotateBtn = document.getElementById('editor-rotate-btn');
   const closeBtn = document.getElementById('editor-close-btn');
   const viewport = document.getElementById('canvas-viewport');
+  const emptyStateBox = document.getElementById('editor-empty-state');
   
-  uploadBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  if (emptyStateBox) {
+    emptyStateBox.style.cursor = 'pointer';
+    emptyStateBox.addEventListener('click', () => fileInput.click());
+  }
+
+  const handleEditorFileUpload = async (file) => {
+    if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('Please upload a PDF file.', 'danger');
+      return;
+    }
     
     state.editor.hasInitializedZoom = false;
     state.editor.hasExtractedText = false; // Reset text extraction flag for new document
@@ -415,6 +422,10 @@ function setupEditorWorkspace() {
       rotateBtn.disabled = false;
       closeBtn.disabled = false;
       document.getElementById('ocr-page-btn').disabled = false;
+      const editPageTextBtn = document.getElementById('editor-edit-page-text-btn');
+      if (editPageTextBtn) editPageTextBtn.disabled = false;
+      const sidebarEditPageTextBtn = document.getElementById('sidebar-edit-page-text-btn');
+      if (sidebarEditPageTextBtn) sidebarEditPageTextBtn.disabled = false;
       
       await loadEditorPage(0);
       await generateEditorThumbnails();
@@ -425,7 +436,78 @@ function setupEditorWorkspace() {
     } finally {
       hideLoader();
     }
+  };
+
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleEditorFileUpload(file);
   });
+
+  if (viewport) setupDragAndDrop(viewport, handleEditorFileUpload);
+  if (emptyStateBox) setupDragAndDrop(emptyStateBox, handleEditorFileUpload);
+
+  const triggerEditPageText = async () => {
+    const pageIndex = state.editor.activePage?.pageIndex;
+    if (pageIndex === undefined) {
+      showToast('Please open a PDF file first.', 'danger');
+      return;
+    }
+    const overlay = state.editor.activePage.annotationOverlay;
+    if (!overlay) return;
+
+    showLoader('Converting PDF text into editable blocks...');
+    try {
+      const blocks = await state.editor.pdfManager.extractNativeTextBlocks(pageIndex);
+      if (!blocks || blocks.length === 0) {
+        showToast('No selectable text found on this page. Try using OCR Extract Text.', 'warning');
+        return;
+      }
+
+      let addedCount = 0;
+      blocks.forEach(block => {
+        const txtObj = {
+          percentX: block.percentX,
+          percentY: block.percentY,
+          percentW: Math.min(0.95 - block.percentX, block.percentW * 1.05),
+          percentH: block.percentH * 1.2,
+          text: block.text,
+          size: block.fontSize || 14,
+          color: '#000000',
+          fontFamily: block.fontFamily || "'Inter', sans-serif",
+          isBold: false,
+          isItalic: false,
+          bgEnable: true,
+          bgColor: '#ffffff',
+          coverRect: {
+            percentX: block.percentX,
+            percentY: block.percentY,
+            percentW: block.percentW,
+            percentH: block.percentH
+          }
+        };
+
+        state.editor.pdfManager.additions[pageIndex].text.push(txtObj);
+        state.editor.pdfManager.renderTextElement(txtObj, overlay, pageIndex);
+        addedCount++;
+      });
+
+      if (addedCount > 0) {
+        window.saveHistoryState(pageIndex);
+        showToast(`✨ Converted ${addedCount} text blocks to editable fields! Double-click any block to edit.`, 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to convert text blocks.', 'danger');
+    } finally {
+      hideLoader();
+    }
+  };
+
+  const topEditBtn = document.getElementById('editor-edit-page-text-btn');
+  const sideEditBtn = document.getElementById('sidebar-edit-page-text-btn');
+  if (topEditBtn) topEditBtn.addEventListener('click', triggerEditPageText);
+  if (sideEditBtn) sideEditBtn.addEventListener('click', triggerEditPageText);
 
   const premiumConvertBtn = document.getElementById('editor-premium-convert-btn');
   const appDownloadModal = document.getElementById('app-download-modal');
@@ -1042,6 +1124,10 @@ function resetEditor() {
   document.getElementById('editor-rotate-btn').disabled = true;
   document.getElementById('editor-close-btn').disabled = true;
   document.getElementById('ocr-page-btn').disabled = true;
+  const editPageTextBtn = document.getElementById('editor-edit-page-text-btn');
+  if (editPageTextBtn) editPageTextBtn.disabled = true;
+  const sidebarEditPageTextBtn = document.getElementById('sidebar-edit-page-text-btn');
+  if (sidebarEditPageTextBtn) sidebarEditPageTextBtn.disabled = true;
   
   document.getElementById('form-field-editor-properties').classList.add('hidden');
   document.getElementById('options-form-field-tool').classList.add('hidden');
@@ -1121,6 +1207,8 @@ function resetInactiveTools(activeViewName) {
     safeDOM.disable('editor-rotate-btn', true);
     safeDOM.disable('editor-close-btn', true);
     safeDOM.disable('ocr-page-btn', true);
+    safeDOM.disable('editor-edit-page-text-btn', true);
+    safeDOM.disable('sidebar-edit-page-text-btn', true);
     
     safeDOM.hide('form-field-editor-properties');
     safeDOM.hide('options-form-field-tool');
@@ -2659,6 +2747,16 @@ async function handleSplitFile(file) {
       span.textContent = `Page ${i}`;
       div.appendChild(span);
       
+      div.dataset.page = i;
+      div.addEventListener('click', () => {
+        div.classList.toggle('selected');
+        const selected = Array.from(sidebar.querySelectorAll('.split-page-thumb.selected')).map(el => el.dataset.page);
+        const singleInput = document.getElementById('split-single-pages');
+        if (singleInput) {
+          singleInput.value = selected.join(', ');
+        }
+      });
+
       sidebar.appendChild(div);
     }
   } catch (err) {

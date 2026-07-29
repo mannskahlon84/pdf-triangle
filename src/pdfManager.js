@@ -315,8 +315,17 @@ export class PdfManager {
       }
     });
 
-    // Single click to trigger edit mode
+    // Single click selects and focuses without entering edit mode
     el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.activeTextElement = { el, txtObj, pageIndex };
+      if (window.updateTextInspector) {
+        window.updateTextInspector(txtObj);
+      }
+    });
+
+    // Double click to trigger edit mode
+    el.addEventListener('dblclick', (e) => {
       e.stopPropagation();
       if (el.contentEditable !== 'true') {
         el.contentEditable = 'true';
@@ -332,18 +341,17 @@ export class PdfManager {
     });
 
     // Dragging wrapper logic (bound to wrapper, using dynamic doc listeners)
-    wrapper.addEventListener('mousedown', (e) => {
-      if (e.target === delBtn || e.target.classList.contains('resize-handle')) return;
+    const onStartDrag = (clientX, clientY) => {
       if (el.contentEditable === 'true') return; // type instead of drag if actively editing
-      
-      const startX = e.clientX - wrapper.offsetLeft;
-      const startY = e.clientY - wrapper.offsetTop;
-      e.preventDefault(); // prevents highlighting while dragging
-      
-      const onMouseMove = (moveEvent) => {
+      const startX = clientX - wrapper.offsetLeft;
+      const startY = clientY - wrapper.offsetTop;
+
+      const onMove = (moveEvent) => {
+        const currX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const currY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
         const overlayRect = overlay.getBoundingClientRect();
-        let x = moveEvent.clientX - startX;
-        let y = moveEvent.clientY - startY;
+        let x = currX - startX;
+        let y = currY - startY;
         
         // Keep boundaries
         x = Math.max(0, Math.min(x, overlayRect.width - wrapper.offsetWidth));
@@ -355,16 +363,33 @@ export class PdfManager {
         txtObj.percentX = x / overlayRect.width;
         txtObj.percentY = y / overlayRect.height;
       };
-      
-      const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+
+      const onEnd = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
         window.saveHistoryState(pageIndex);
       };
-      
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchmove', onMove, { passive: true });
+      document.addEventListener('touchend', onEnd);
+    };
+
+    wrapper.addEventListener('mousedown', (e) => {
+      if (e.target === delBtn || e.target.classList.contains('resize-handle')) return;
+      if (el.contentEditable === 'true') return;
+      e.preventDefault();
+      onStartDrag(e.clientX, e.clientY);
     });
+
+    wrapper.addEventListener('touchstart', (e) => {
+      if (e.target === delBtn || e.target.classList.contains('resize-handle')) return;
+      if (el.contentEditable === 'true') return;
+      onStartDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
     
     // 4. Setup Corner Resizing (TL, TR, BL, BR handles)
     const handles = ['tl', 'tr', 'bl', 'br'];

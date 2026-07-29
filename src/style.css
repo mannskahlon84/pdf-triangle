@@ -1062,6 +1062,19 @@ body.fixed-viewport .view-panel.active {
   padding: 0.25rem;
   text-align: center;
   position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.split-page-thumb:hover {
+  border-color: var(--accent-purple);
+  transform: translateY(-2px);
+}
+
+.split-page-thumb.selected {
+  border: 2px solid var(--accent-purple);
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
 }
 
 .split-page-thumb canvas {
