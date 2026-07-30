@@ -804,8 +804,8 @@ function setupEditorWorkspace() {
     if (window.activeTextElement) {
       const { el, txtObj } = window.activeTextElement;
       txtObj.size = val;
-      const currentZoom = window.state?.editor?.zoomLevel || 1.2;
-      el.style.fontSize = `${val * currentZoom}px`;
+      const baseScale = 1.5;
+      el.style.fontSize = `${val * baseScale}px`;
     }
   });
   
@@ -2031,14 +2031,8 @@ function setupDrawingLayer(canvas) {
         const pdfCanvas = canvas.parentElement.querySelector('.pdf-render-canvas');
         if (pdfCanvas) {
           const pdfCtx = pdfCanvas.getContext('2d');
-          const rect = canvas.getBoundingClientRect();
-          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-          
-          const x = Math.max(0, Math.min(pdfCanvas.width - 1, (clientX - rect.left) * (pdfCanvas.width / rect.width)));
-          const y = Math.max(0, Math.min(pdfCanvas.height - 1, (clientY - rect.top) * (pdfCanvas.height / rect.height)));
-          
-          const pixel = pdfCtx.getImageData(x, y, 1, 1).data;
+          // Sample corner pixel (10, 10) which represents true page background color rather than text foreground
+          const pixel = pdfCtx.getImageData(Math.min(10, pdfCanvas.width - 1), Math.min(10, pdfCanvas.height - 1), 1, 1).data;
           const r = pixel[0];
           const g = pixel[1];
           const b = pixel[2];
@@ -8012,3 +8006,47 @@ autoEditSubmitBtn.addEventListener('click', async () => {
     hideLoader();
   }
 });
+
+// Dynamic Ad Placement & Rotation
+function initDynamicAdRotation() {
+  try {
+    const adLinks = Array.from(document.querySelectorAll('a[rel="sponsored"]'));
+    if (!adLinks || adLinks.length < 2) return;
+    
+    // Extract banner configs
+    const adConfigs = adLinks.map(link => {
+      const img = link.querySelector('img');
+      return {
+        href: link.getAttribute('href'),
+        src: img ? img.getAttribute('src') : null,
+        alt: img ? img.getAttribute('alt') : 'Partner Ad'
+      };
+    }).filter(cfg => cfg.href && cfg.src);
+    
+    // Shuffle using Fisher-Yates
+    for (let i = adConfigs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [adConfigs[i], adConfigs[j]] = [adConfigs[j], adConfigs[i]];
+    }
+    
+    // Apply shuffled banners across ad positions
+    adLinks.forEach((link, index) => {
+      const cfg = adConfigs[index % adConfigs.length];
+      link.setAttribute('href', cfg.href);
+      const img = link.querySelector('img');
+      if (img) {
+        img.setAttribute('src', cfg.src);
+        img.setAttribute('alt', cfg.alt);
+      }
+    });
+  } catch (err) {
+    console.warn('Ad rotation initialization notice:', err);
+  }
+}
+
+// Run rotation on startup and DOM load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDynamicAdRotation);
+} else {
+  initDynamicAdRotation();
+}

@@ -208,8 +208,9 @@ export class PdfManager {
     el.style.width = '100%';
     el.style.height = '100%';
     el.style.boxSizing = 'border-box';
-    const currentZoom = window.state?.editor?.zoomLevel || 1.2;
-    el.style.fontSize = `${txtObj.size * currentZoom}px`;
+    const baseScale = 1.5; // matches PDF.js render scale 1.5
+    el.style.fontSize = `${txtObj.size * baseScale}px`;
+    el.style.lineHeight = '1.35';
     el.style.color = txtObj.color;
     el.style.fontFamily = txtObj.fontFamily || "'Inter', sans-serif";
     el.style.fontWeight = txtObj.isBold ? 'bold' : 'normal';
