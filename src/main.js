@@ -471,6 +471,7 @@ function setupEditorWorkspace() {
           percentY: block.percentY,
           percentW: Math.min(0.95 - block.percentX, block.percentW * 1.05),
           percentH: block.percentH * 1.2,
+          originalText: block.text,
           text: block.text,
           size: block.fontSize || 14,
           color: '#000000',
@@ -2278,17 +2279,19 @@ function commitDrawingCanvas() {
   const d = imgData.data;
   let isEmpty = true;
 
-  // Eliminate antialiasing grey edge halos around white/light eraser strokes
+  // Eliminate antialiasing grey edge halos around white/light/camouflage eraser strokes
   for (let i = 0; i < d.length; i += 4) {
     const a = d[i + 3];
     if (a > 0) {
       isEmpty = false;
       const r = d[i], g = d[i + 1], b = d[i + 2];
-      if (r > 180 && g > 180 && b > 180) {
+      // Detect any white/light grey or desaturated antialiasing edge of an eraser stroke
+      const isGreyOrWhite = (r > 35 && g > 35 && b > 35 && Math.abs(r - g) < 40 && Math.abs(g - b) < 40);
+      if (isGreyOrWhite) {
         d[i] = 255;
         d[i + 1] = 255;
         d[i + 2] = 255;
-        d[i + 3] = a > 10 ? 255 : 0;
+        d[i + 3] = a > 12 ? 255 : 0;
       }
     }
   }

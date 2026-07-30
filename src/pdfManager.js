@@ -188,6 +188,146 @@ export class PdfManager {
   }
 
   /**
+   * Helper to attach full 8-point resize handles and a rotation handle to an element wrapper
+   */
+  addTransformBox(wrapper, obj, overlay, pageIndex, options = {}) {
+    const rot = obj.rotation || 0;
+    wrapper.style.transform = `rotate(${rot}deg)`;
+    wrapper.style.transformOrigin = 'center center';
+
+    // 1. Create Rotation Handle at the Top
+    const rotHandle = document.createElement('div');
+    rotHandle.className = 'rotation-handle';
+    rotHandle.innerHTML = '&#8635;'; // clockwise circular arrow
+    rotHandle.title = 'Click and drag to rotate';
+    wrapper.appendChild(rotHandle);
+
+    let isRotating = false;
+    const onStartRotate = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      isRotating = true;
+      const rect = wrapper.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const onMoveRotate = (moveEvt) => {
+        const clientX = moveEvt.touches ? moveEvt.touches[0].clientX : moveEvt.clientX;
+        const clientY = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
+        const rad = Math.atan2(clientY - centerY, clientX - centerX);
+        let deg = rad * (180 / Math.PI) + 90;
+        deg = Math.round((deg + 360) % 360);
+        obj.rotation = deg;
+        wrapper.style.transform = `rotate(${deg}deg)`;
+      };
+
+      const onEndRotate = () => {
+        window.removeEventListener('mousemove', onMoveRotate);
+        window.removeEventListener('mouseup', onEndRotate);
+        window.removeEventListener('touchmove', onMoveRotate);
+        window.removeEventListener('touchend', onEndRotate);
+        window.saveHistoryState(pageIndex);
+        isRotating = false;
+      };
+
+      window.addEventListener('mousemove', onMoveRotate);
+      window.addEventListener('mouseup', onEndRotate);
+      window.addEventListener('touchmove', onMoveRotate, { passive: true });
+      window.addEventListener('touchend', onEndRotate);
+    };
+
+    rotHandle.addEventListener('mousedown', onStartRotate);
+    rotHandle.addEventListener('touchstart', (e) => onStartRotate(e.touches[0]), { passive: true });
+
+    // 2. Create 8 Resize Handles: 4 corners + 4 edges
+    const handlePositions = ['tl', 'tr', 'bl', 'br', 'n', 's', 'e', 'w'];
+    handlePositions.forEach((pos) => {
+      const h = document.createElement('div');
+      h.className = `transform-handle ${pos}`;
+      wrapper.appendChild(h);
+
+      const onStartResize = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const startX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        const startY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+        const startW = wrapper.offsetWidth;
+        const startH = wrapper.offsetHeight;
+        const startSize = obj.size || 16;
+        const aspectRatio = startH > 0 ? startW / startH : 1;
+
+        const onMoveResize = (moveEvt) => {
+          const currX = moveEvt.touches ? moveEvt.touches[0].clientX : moveEvt.clientX;
+          const currY = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
+          const deltaX = currX - startX;
+          const deltaY = currY - startY;
+
+          let newW = startW;
+          let newH = startH;
+
+          if (pos === 'e' || pos === 'tr' || pos === 'br') {
+            newW = Math.max(5, startW + deltaX);
+          } else if (pos === 'w' || pos === 'tl' || pos === 'bl') {
+            newW = Math.max(5, startW - deltaX);
+          }
+
+          if (pos === 's' || pos === 'bl' || pos === 'br') {
+            newH = Math.max(5, startH + deltaY);
+          } else if (pos === 'n' || pos === 'tl' || pos === 'tr') {
+            newH = Math.max(5, startH - deltaY);
+          }
+
+          const isCorner = ['tl', 'tr', 'bl', 'br'].includes(pos);
+
+          if (options.isText && isCorner) {
+            // Proportional font size scaling for text boxes from any corner (no min limit!)
+            const scale = newW / Math.max(1, startW);
+            const newSize = Math.max(4, Math.min(250, Math.round(startSize * scale)));
+            obj.size = newSize;
+            const textEl = wrapper.querySelector('.text-element');
+            if (textEl) {
+              textEl.style.fontSize = `${newSize * 1.5}px`;
+            }
+            const textSizeInput = document.getElementById('text-size-input');
+            if (textSizeInput && window.activeTextElement && window.activeTextElement.txtObj === obj) {
+              textSizeInput.value = newSize;
+            }
+          } else if (options.isImage && isCorner) {
+            if (aspectRatio > 0) {
+              newH = newW / aspectRatio;
+            }
+          }
+
+          const overlayWidth = overlay.clientWidth || 1;
+          const overlayHeight = overlay.clientHeight || 1;
+
+          obj.percentW = newW / overlayWidth;
+          obj.percentH = newH / overlayHeight;
+
+          wrapper.style.width = `${obj.percentW * 100}%`;
+          wrapper.style.height = `${obj.percentH * 100}%`;
+        };
+
+        const onEndResize = () => {
+          window.removeEventListener('mousemove', onMoveResize);
+          window.removeEventListener('mouseup', onEndResize);
+          window.removeEventListener('touchmove', onMoveResize);
+          window.removeEventListener('touchend', onEndResize);
+          window.saveHistoryState(pageIndex);
+        };
+
+        window.addEventListener('mousemove', onMoveResize);
+        window.addEventListener('mouseup', onEndResize);
+        window.addEventListener('touchmove', onMoveResize, { passive: true });
+        window.addEventListener('touchend', onEndResize);
+      };
+
+      h.addEventListener('mousedown', onStartResize);
+      h.addEventListener('touchstart', (e) => onStartResize(e.touches[0]), { passive: true });
+    });
+  }
+
+  /**
    * Helper to draw text element in the DOM
    */
   renderTextElement(txtObj, overlay, pageIndex) {
@@ -226,108 +366,8 @@ export class PdfManager {
       txtObj.overlayHeight = overlayRect.height;
     }
 
-    // 2.5 Add Right-Side Resize Handle (for horizontal expansion)
-    const resizeHandle = document.createElement('div');
-    resizeHandle.className = 'text-resize-handle';
-    wrapper.appendChild(resizeHandle);
-
-    const onStartResize = (clientX) => {
-      const startWidth = wrapper.offsetWidth;
-      const startX = clientX;
-      
-      const onMoveResize = (moveEvent) => {
-        const currX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
-        const deltaX = currX - startX;
-        const newWidth = Math.max(30, startWidth + deltaX);
-        
-        // Convert to percentage of overlay width
-        const overlayWidth = overlay.clientWidth || 1;
-        txtObj.percentW = newWidth / overlayWidth;
-        wrapper.style.width = `${txtObj.percentW * 100}%`;
-      };
-      
-      const onEndResize = () => {
-        window.removeEventListener('mousemove', onMoveResize);
-        window.removeEventListener('mouseup', onEndResize);
-        window.removeEventListener('touchmove', onMoveResize);
-        window.removeEventListener('touchend', onEndResize);
-        window.saveHistoryState(pageIndex);
-      };
-      
-      window.addEventListener('mousemove', onMoveResize);
-      window.addEventListener('mouseup', onEndResize);
-      window.addEventListener('touchmove', onMoveResize, { passive: true });
-      window.addEventListener('touchend', onEndResize);
-    };
-
-    resizeHandle.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      onStartResize(e.clientX);
-    });
-
-    resizeHandle.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
-      onStartResize(e.touches[0].clientX);
-    }, { passive: true });
-
-    // 2.6 Add Bottom-Right Corner Resize Handle (for scaling font size & box size proportionally)
-    const cornerHandle = document.createElement('div');
-    cornerHandle.className = 'resize-handle br';
-    wrapper.appendChild(cornerHandle);
-
-    const onStartCornerResize = (clientX, clientY) => {
-      const startWidth = wrapper.offsetWidth;
-      const startFontSize = txtObj.fontSize || 16;
-      const startX = clientX;
-      
-      const onMoveCornerResize = (moveEvent) => {
-        const currX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
-        const deltaX = currX - startX;
-        const newWidth = Math.max(30, startWidth + deltaX);
-        const scale = newWidth / Math.max(1, startWidth);
-        
-        // Scale font size proportionally
-        const newFontSize = Math.max(6, Math.min(150, Math.round(startFontSize * scale)));
-        txtObj.fontSize = newFontSize;
-        el.style.fontSize = `${newFontSize * 1.5}px`;
-        
-        // Scale wrapper width
-        const overlayWidth = overlay.clientWidth || 1;
-        txtObj.percentW = newWidth / overlayWidth;
-        wrapper.style.width = `${txtObj.percentW * 100}%`;
-        
-        // Sync top toolbar input if this element is selected
-        const textSizeInput = document.getElementById('text-size-input');
-        if (textSizeInput && window.activeTextElement && window.activeTextElement.txtObj === txtObj) {
-          textSizeInput.value = newFontSize;
-        }
-      };
-      
-      const onEndCornerResize = () => {
-        window.removeEventListener('mousemove', onMoveCornerResize);
-        window.removeEventListener('mouseup', onEndCornerResize);
-        window.removeEventListener('touchmove', onMoveCornerResize);
-        window.removeEventListener('touchend', onEndCornerResize);
-        window.saveHistoryState(pageIndex);
-      };
-      
-      window.addEventListener('mousemove', onMoveCornerResize);
-      window.addEventListener('mouseup', onEndCornerResize);
-      window.addEventListener('touchmove', onMoveCornerResize, { passive: true });
-      window.addEventListener('touchend', onEndCornerResize);
-    };
-
-    cornerHandle.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      onStartCornerResize(e.clientX, e.clientY);
-    });
-
-    cornerHandle.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
-      onStartCornerResize(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: true });
+    // Attach 8 transform handles and rotation handle
+    this.addTransformBox(wrapper, txtObj, overlay, pageIndex, { isText: true });
     
     // 3. Explicit Delete Button (placed on wrapper, avoiding overflow hidden clipping)
     const delBtn = document.createElement('button');
@@ -402,25 +442,32 @@ export class PdfManager {
     // Dragging wrapper logic (bound to wrapper, using dynamic doc listeners)
     const onStartDrag = (clientX, clientY) => {
       if (el.contentEditable === 'true') return; // type instead of drag if actively editing
-      const startX = clientX - wrapper.offsetLeft;
-      const startY = clientY - wrapper.offsetTop;
+      const overlayRect = overlay.getBoundingClientRect();
+      const startMouseX = clientX - overlayRect.left;
+      const startMouseY = clientY - overlayRect.top;
+      const dragOffsetX = startMouseX - wrapper.offsetLeft;
+      const dragOffsetY = startMouseY - wrapper.offsetTop;
 
       const onMove = (moveEvent) => {
         const currX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
         const currY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
-        const overlayRect = overlay.getBoundingClientRect();
-        let x = currX - startX;
-        let y = currY - startY;
+        const currentOverlayRect = overlay.getBoundingClientRect();
+        
+        const mouseXInOverlay = currX - currentOverlayRect.left;
+        const mouseYInOverlay = currY - currentOverlayRect.top;
+        
+        let x = mouseXInOverlay - dragOffsetX;
+        let y = mouseYInOverlay - dragOffsetY;
         
         // Keep boundaries
-        x = Math.max(0, Math.min(x, overlayRect.width - wrapper.offsetWidth));
-        y = Math.max(0, Math.min(y, overlayRect.height - wrapper.offsetHeight));
+        x = Math.max(0, Math.min(x, currentOverlayRect.width - wrapper.offsetWidth));
+        y = Math.max(0, Math.min(y, currentOverlayRect.height - wrapper.offsetHeight));
         
         wrapper.style.left = `${x}px`;
         wrapper.style.top = `${y}px`;
         
-        txtObj.percentX = x / overlayRect.width;
-        txtObj.percentY = y / overlayRect.height;
+        txtObj.percentX = x / currentOverlayRect.width;
+        txtObj.percentY = y / currentOverlayRect.height;
       };
 
       const onEnd = () => {
@@ -584,11 +631,15 @@ export class PdfManager {
       }
     };
     
+    let dragOffsetX = 0, dragOffsetY = 0;
     el.addEventListener('mousedown', (e) => {
       if (e.target === delBtn || e.target === resizeHandle || isResizing) return;
       isDragging = true;
-      startX = e.clientX - el.offsetLeft;
-      startY = e.clientY - el.offsetTop;
+      const overlayRect = overlay.getBoundingClientRect();
+      const startMouseX = e.clientX - overlayRect.left;
+      const startMouseY = e.clientY - overlayRect.top;
+      dragOffsetX = startMouseX - el.offsetLeft;
+      dragOffsetY = startMouseY - el.offsetTop;
       e.preventDefault();
     });
 
@@ -621,14 +672,17 @@ export class PdfManager {
       if (!isResizing) return;
       const deltaX = clientX - startClientX;
       const newWidth = Math.max(30, startW + deltaX);
-      const newHeight = aspectRatio > 0 ? newWidth / aspectRatio : Math.max(30, startH + deltaX);
-      
-      const overlayRect = overlay.getBoundingClientRect() || { width: 1, height: 1 };
-      sigObj.percentW = newWidth / overlayRect.width;
-      sigObj.percentH = newHeight / overlayRect.height;
-      
-      el.style.width = `${sigObj.percentW * 100}%`;
-      el.style.height = `${sigObj.percentH * 100}%`;
+      const newHeight = newWidth / aspectRatio;
+      const overlayRect = overlay.getBoundingClientRect();
+      const maxW = overlayRect.width - el.offsetLeft;
+      const maxH = overlayRect.height - el.offsetTop;
+
+      if (newWidth <= maxW && newHeight <= maxH) {
+        el.style.width = `${newWidth}px`;
+        el.style.height = `${newHeight}px`;
+        sigObj.percentW = newWidth / overlayRect.width;
+        sigObj.percentH = newHeight / overlayRect.height;
+      }
     };
 
     document.addEventListener('mousemove', (e) => {
@@ -636,8 +690,10 @@ export class PdfManager {
         onMoveResize(e.clientX);
       } else if (isDragging) {
         const overlayRect = overlay.getBoundingClientRect();
-        let x = e.clientX - startX;
-        let y = e.clientY - startY;
+        const mouseXInOverlay = e.clientX - overlayRect.left;
+        const mouseYInOverlay = e.clientY - overlayRect.top;
+        let x = mouseXInOverlay - dragOffsetX;
+        let y = mouseYInOverlay - dragOffsetY;
         
         x = Math.max(0, Math.min(x, overlayRect.width - el.offsetWidth));
         y = Math.max(0, Math.min(y, overlayRect.height - el.offsetHeight));
@@ -1173,7 +1229,7 @@ export class PdfManager {
           }
           
           const gap = item.x - (currentBlock.x + currentBlock.w);
-          const maxAllowedGap = Math.max(18, currentBlock.fontSize * 1.5);
+          const maxAllowedGap = Math.max(10, currentBlock.fontSize * 0.75);
           
           // Merge if the gap is small and font sizes are close (prevents mixing fonts/columns)
           if (gap < maxAllowedGap && Math.abs(currentBlock.fontSize - item.fontSize) < 4) {
