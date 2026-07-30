@@ -2273,13 +2273,29 @@ function commitDrawingCanvas() {
   const canvas = document.querySelector('.drawing-canvas');
   if (!canvas) return;
   
-  // Check if anything is drawn
   const ctx = canvas.getContext('2d');
-  const buffer = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
-  const isEmpty = !buffer.some(color => color !== 0);
-  
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  let isEmpty = true;
+
+  // Eliminate antialiasing grey edge halos around white/light eraser strokes
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    if (a > 0) {
+      isEmpty = false;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      if (r > 180 && g > 180 && b > 180) {
+        d[i] = 255;
+        d[i + 1] = 255;
+        d[i + 2] = 255;
+        d[i + 3] = a > 10 ? 255 : 0;
+      }
+    }
+  }
+
   const pageIndex = state.editor.pdfManager.currentPageIndex;
   if (!isEmpty) {
+    ctx.putImageData(imgData, 0, 0);
     state.editor.pdfManager.additions[pageIndex].drawingBlob = canvas.toDataURL('image/png');
   } else {
     state.editor.pdfManager.additions[pageIndex].drawingBlob = null;
