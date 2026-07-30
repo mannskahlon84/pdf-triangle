@@ -659,6 +659,24 @@ body.fixed-viewport .view-panel.active {
 .resize-handle.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
 .resize-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
 
+.text-element-wrapper .resize-handle.br {
+  width: 14px;
+  height: 14px;
+  bottom: -7px;
+  right: -7px;
+  background-color: var(--accent-purple);
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  cursor: nwse-resize;
+  z-index: 45;
+  display: none;
+}
+
+.text-element-wrapper:hover .resize-handle.br,
+.text-element-wrapper:focus-within .resize-handle.br {
+  display: block;
+}
+
 /* Draggable Signature Element */
 .signature-element {
   position: absolute;

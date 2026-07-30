@@ -270,6 +270,64 @@ export class PdfManager {
       e.stopPropagation();
       onStartResize(e.touches[0].clientX);
     }, { passive: true });
+
+    // 2.6 Add Bottom-Right Corner Resize Handle (for scaling font size & box size proportionally)
+    const cornerHandle = document.createElement('div');
+    cornerHandle.className = 'resize-handle br';
+    wrapper.appendChild(cornerHandle);
+
+    const onStartCornerResize = (clientX, clientY) => {
+      const startWidth = wrapper.offsetWidth;
+      const startFontSize = txtObj.fontSize || 16;
+      const startX = clientX;
+      
+      const onMoveCornerResize = (moveEvent) => {
+        const currX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const deltaX = currX - startX;
+        const newWidth = Math.max(30, startWidth + deltaX);
+        const scale = newWidth / Math.max(1, startWidth);
+        
+        // Scale font size proportionally
+        const newFontSize = Math.max(6, Math.min(150, Math.round(startFontSize * scale)));
+        txtObj.fontSize = newFontSize;
+        el.style.fontSize = `${newFontSize * 1.5}px`;
+        
+        // Scale wrapper width
+        const overlayWidth = overlay.clientWidth || 1;
+        txtObj.percentW = newWidth / overlayWidth;
+        wrapper.style.width = `${txtObj.percentW * 100}%`;
+        
+        // Sync top toolbar input if this element is selected
+        const textSizeInput = document.getElementById('text-size-input');
+        if (textSizeInput && window.activeTextElement && window.activeTextElement.txtObj === txtObj) {
+          textSizeInput.value = newFontSize;
+        }
+      };
+      
+      const onEndCornerResize = () => {
+        window.removeEventListener('mousemove', onMoveCornerResize);
+        window.removeEventListener('mouseup', onEndCornerResize);
+        window.removeEventListener('touchmove', onMoveCornerResize);
+        window.removeEventListener('touchend', onEndCornerResize);
+        window.saveHistoryState(pageIndex);
+      };
+      
+      window.addEventListener('mousemove', onMoveCornerResize);
+      window.addEventListener('mouseup', onEndCornerResize);
+      window.addEventListener('touchmove', onMoveCornerResize, { passive: true });
+      window.addEventListener('touchend', onEndCornerResize);
+    };
+
+    cornerHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onStartCornerResize(e.clientX, e.clientY);
+    });
+
+    cornerHandle.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      onStartCornerResize(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
     
     // 3. Explicit Delete Button (placed on wrapper, avoiding overflow hidden clipping)
     const delBtn = document.createElement('button');
