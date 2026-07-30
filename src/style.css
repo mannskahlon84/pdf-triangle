@@ -667,6 +667,18 @@ body.fixed-viewport .view-panel.active {
   user-select: none;
 }
 
+.signature-element .resize-handle.br {
+  width: 14px;
+  height: 14px;
+  bottom: -7px;
+  right: -7px;
+  background-color: var(--accent-purple);
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  cursor: nwse-resize;
+  z-index: 40;
+}
+
 .signature-element img {
   width: 100%;
   height: 100%;

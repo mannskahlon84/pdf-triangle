@@ -506,39 +506,112 @@ export class PdfManager {
       e.stopPropagation();
       el.remove();
       this.additions[pageIndex].signatures = this.additions[pageIndex].signatures.filter(s => s !== sigObj);
+      window.saveHistoryState(pageIndex);
     });
     el.appendChild(delBtn);
+
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'resize-handle br';
+    el.appendChild(resizeHandle);
     
-    // Dragging signatures
     let isDragging = false;
+    let isResizing = false;
     let startX, startY;
+    let startW = 0, startH = 0, startClientX = 0, startClientY = 0;
+    let aspectRatio = 1;
+
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        aspectRatio = img.naturalWidth / img.naturalHeight;
+      }
+    };
     
     el.addEventListener('mousedown', (e) => {
-      if (e.target === delBtn) return;
+      if (e.target === delBtn || e.target === resizeHandle || isResizing) return;
       isDragging = true;
       startX = e.clientX - el.offsetLeft;
       startY = e.clientY - el.offsetTop;
       e.preventDefault();
     });
-    
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const overlayRect = overlay.getBoundingClientRect();
-      let x = e.clientX - startX;
-      let y = e.clientY - startY;
-      
-      x = Math.max(0, Math.min(x, overlayRect.width - el.offsetWidth));
-      y = Math.max(0, Math.min(y, overlayRect.height - el.offsetHeight));
-      
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
-      
-      sigObj.percentX = x / overlayRect.width;
-      sigObj.percentY = y / overlayRect.height;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      isResizing = true;
+      startW = el.offsetWidth;
+      startH = el.offsetHeight;
+      startClientX = e.clientX;
+      startClientY = e.clientY;
+      if (startH > 0) {
+        aspectRatio = startW / startH;
+      }
     });
+
+    resizeHandle.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      isResizing = true;
+      startW = el.offsetWidth;
+      startH = el.offsetHeight;
+      startClientX = e.touches[0].clientX;
+      startClientY = e.touches[0].clientY;
+      if (startH > 0) {
+        aspectRatio = startW / startH;
+      }
+    }, { passive: true });
+    
+    const onMoveResize = (clientX) => {
+      if (!isResizing) return;
+      const deltaX = clientX - startClientX;
+      const newWidth = Math.max(30, startW + deltaX);
+      const newHeight = aspectRatio > 0 ? newWidth / aspectRatio : Math.max(30, startH + deltaX);
+      
+      const overlayRect = overlay.getBoundingClientRect() || { width: 1, height: 1 };
+      sigObj.percentW = newWidth / overlayRect.width;
+      sigObj.percentH = newHeight / overlayRect.height;
+      
+      el.style.width = `${sigObj.percentW * 100}%`;
+      el.style.height = `${sigObj.percentH * 100}%`;
+    };
+
+    document.addEventListener('mousemove', (e) => {
+      if (isResizing) {
+        onMoveResize(e.clientX);
+      } else if (isDragging) {
+        const overlayRect = overlay.getBoundingClientRect();
+        let x = e.clientX - startX;
+        let y = e.clientY - startY;
+        
+        x = Math.max(0, Math.min(x, overlayRect.width - el.offsetWidth));
+        y = Math.max(0, Math.min(y, overlayRect.height - el.offsetHeight));
+        
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        
+        sigObj.percentX = x / overlayRect.width;
+        sigObj.percentY = y / overlayRect.height;
+      }
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (isResizing && e.touches && e.touches[0]) {
+        onMoveResize(e.touches[0].clientX);
+      }
+    }, { passive: true });
     
     document.addEventListener('mouseup', () => {
+      if (isDragging || isResizing) {
+        window.saveHistoryState(pageIndex);
+      }
       isDragging = false;
+      isResizing = false;
+    });
+
+    document.addEventListener('touchend', () => {
+      if (isDragging || isResizing) {
+        window.saveHistoryState(pageIndex);
+      }
+      isDragging = false;
+      isResizing = false;
     });
     
     overlay.appendChild(el);
