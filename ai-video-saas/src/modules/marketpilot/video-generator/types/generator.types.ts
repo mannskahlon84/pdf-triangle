@@ -51,7 +51,7 @@ export interface MarketPilotVideoResult {
   videoId: string;
   videoPlanId: string;
   status: RenderProgressState;
-  previewUrl: string;
+  previewUrl?: string;
   timeline: RenderTimeline;
   error?: string;
 }

@@ -12,6 +12,21 @@ export async function POST(req: Request) {
       mediaAssetId: mediaAssetId || "asset_default",
       duration: duration || "15s",
       mockMode: mockMode ?? true,
+      renderTimeline: {
+        id: "dummy",
+        videoPlanId: "dummy",
+        duration: "15s",
+        aspectRatio: "9:16",
+        scenes: [],
+        audioTrack: {
+          totalDurationSec: 15,
+          provider: "mock",
+          segments: [],
+          masterAudioUrl: "mock"
+        },
+        captions: [],
+        createdAt: new Date().toISOString()
+      }
     });
 
     return NextResponse.json({

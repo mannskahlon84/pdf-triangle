@@ -1,5 +1,6 @@
 import { VideoScene } from "../video-planner/types/planner.types";
 import { SceneAssetSpecification } from "./types/generator.types";
+import { MotionStyleRegistry } from "../video-planner/motionDirector/motionStyleRegistry";
 
 /**
  * High-quality commercial visual asset pools mapped by scene purpose / theme.
@@ -44,27 +45,72 @@ const PRODUCT_IMAGE_POOL: string[] = [
 export class AssetGenerator {
   /**
    * Generates or maps high-fidelity visual assets for each scene in the VideoPlan.
-   * Leverages existing AI Image/Media routers.
+   * Uses real uploaded user assets when available, removing fallback demo images.
    */
   public static async generateSceneAssets(
     scenes: VideoScene[],
-    aspectRatio: string = "9:16"
+    aspectRatio: string = "9:16",
+    mediaUrls?: string[]
   ): Promise<SceneAssetSpecification[]> {
+    const validMedia = (mediaUrls || []).filter((url) => Boolean(url));
+
     return scenes.map((scene, index) => {
       const purposeKey = scene.purpose.toLowerCase();
+
+      if (validMedia.length > 0) {
+        const bgImage = scene.backgroundImageUrl || validMedia[index % validMedia.length];
+        const prodImage = scene.productImageUrl || validMedia[(index + 1) % validMedia.length];
+        const supportingVisuals = scene.supportingVisualUrls || [
+          validMedia[(index + 2) % validMedia.length],
+        ];
+
+        let animationStyle = scene.animationStyle || "ken-burns-in";
+        let transition = scene.transition || "cut";
+        
+        if (scene.motionMetadata) {
+          const styleDef = MotionStyleRegistry.getStyleByMovement(scene.motionMetadata.movement);
+          if (styleDef) {
+            animationStyle = styleDef.renderMapping.animationStyle;
+            transition = styleDef.renderMapping.transition;
+          }
+        }
+
+        return {
+          sceneNumber: scene.sceneNumber,
+          backgroundImageUrl: bgImage,
+          productImageUrl: prodImage,
+          supportingVisualUrls: supportingVisuals,
+          textOverlay: scene.textOverlay || `Scene ${scene.sceneNumber}`,
+          animationStyle,
+          transition,
+        };
+      }
+
       const pool =
         SCENE_BACKGROUND_POOLS[purposeKey] || SCENE_BACKGROUND_POOLS.default;
 
       // Select deterministic visual based on scene number
-      const bgImage = pool[index % pool.length];
-      const prodImage =
+      const bgImage = scene.backgroundImageUrl || pool[index % pool.length];
+      const prodImage = scene.productImageUrl || (
         index === 1 || purposeKey === "showcase"
           ? PRODUCT_IMAGE_POOL[index % PRODUCT_IMAGE_POOL.length]
-          : undefined;
+          : undefined
+      );
 
       const supportingVisuals = [
         "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80",
       ];
+
+      let animationStyle = scene.animationStyle || "ken-burns-in";
+      let transition = scene.transition || "cut";
+      
+      if (scene.motionMetadata) {
+        const styleDef = MotionStyleRegistry.getStyleByMovement(scene.motionMetadata.movement);
+        if (styleDef) {
+          animationStyle = styleDef.renderMapping.animationStyle;
+          transition = styleDef.renderMapping.transition;
+        }
+      }
 
       return {
         sceneNumber: scene.sceneNumber,
@@ -72,8 +118,8 @@ export class AssetGenerator {
         productImageUrl: prodImage,
         supportingVisualUrls: supportingVisuals,
         textOverlay: scene.textOverlay || `Scene ${scene.sceneNumber}`,
-        animationStyle: scene.animationStyle || "ken-burns-in",
-        transition: scene.transition || "cut",
+        animationStyle,
+        transition,
       };
     });
   }

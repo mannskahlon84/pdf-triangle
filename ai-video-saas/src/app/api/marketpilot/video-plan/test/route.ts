@@ -3,7 +3,7 @@ import { runScenePlannerTestSuite } from "@/modules/marketpilot/video-planner/__
 
 export async function GET() {
   try {
-    const report = runScenePlannerTestSuite();
+    const report = await runScenePlannerTestSuite();
     return NextResponse.json({
       success: report.failed === 0,
       report,

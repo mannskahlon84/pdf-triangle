@@ -11,10 +11,14 @@ import { TransitionPlanner } from "./transitionPlanner";
 import { VisualPlanner } from "./visualPlanner";
 import { VoicePlanner } from "./voicePlanner";
 
+import { HybridCreativePlanner } from "./hybridCreativePlanner";
+
 export interface CreateVideoPlanOptions {
   duration?: VideoDuration;
   aspectRatio?: AspectRatio;
   customTitle?: string;
+  mediaUrls?: string[];
+  hybridAiMode?: boolean;
 }
 
 export class ScenePlanner {
@@ -22,10 +26,22 @@ export class ScenePlanner {
    * Converts a MarketPilot Campaign object into a structured VideoPlan.
    * Works as the bridge between Campaign Strategy -> Video Script -> Production Plan -> Hybrid Rendering.
    */
-  public static generateVideoPlanFromCampaign(
+  public static async generateVideoPlanFromCampaign(
     campaign: Campaign,
     options: CreateVideoPlanOptions = {}
-  ): VideoPlan {
+  ): Promise<VideoPlan> {
+    // Check feature flag HYBRID_AI_MODE
+    const isHybridAiMode =
+      process.env.HYBRID_AI_MODE === "true" || options.hybridAiMode === true;
+
+    if (isHybridAiMode) {
+      return await HybridCreativePlanner.createCreativePlan(
+        campaign,
+        options,
+        options.mediaUrls || []
+      );
+    }
+
     const duration: VideoDuration = options.duration || "30s";
     const aspectRatio: AspectRatio = options.aspectRatio || "9:16";
     const brandName = campaign.brandName || campaign.campaignName.split(" ")[0] || "Brand";

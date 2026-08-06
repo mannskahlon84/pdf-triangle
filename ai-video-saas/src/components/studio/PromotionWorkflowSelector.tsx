@@ -185,36 +185,36 @@ export const PromotionWorkflowSelector: React.FC = () => {
       : PROMOTION_OPTIONS.filter((opt) => opt.category === activeCategory);
 
   return (
-    <div className="rounded-3xl border border-indigo-500/30 bg-gradient-to-r from-obsidian-950 via-obsidian-900 to-obsidian-950 p-6 shadow-2xl space-y-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
       {/* Top Title & Category Filter Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
         <div className="flex items-center space-x-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
             <Sparkles className="h-5 w-5 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-sm font-extrabold text-white tracking-wide">
+              <h3 className="text-sm font-extrabold text-slate-900 tracking-wide">
                 What do you want to promote?
               </h3>
-              <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-extrabold text-emerald-300">
+              <span className="rounded-full bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700">
                 15 INDUSTRIES SUPPORTED
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 font-medium">
               Universal AI Promotion Engine — Template-driven video ads & social campaigns
             </p>
           </div>
         </div>
 
         {/* Category Pills */}
-        <div className="flex items-center space-x-1 rounded-xl bg-obsidian-950 p-1 border border-white/10 self-start sm:self-auto">
+        <div className="flex items-center space-x-1 rounded-xl bg-slate-100 p-1 border border-slate-200 self-start sm:self-auto">
           <button
             onClick={() => setActiveCategory("all")}
             className={`rounded-lg px-3 py-1 text-xs font-extrabold transition-all ${
               activeCategory === "all"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             All (16)
@@ -223,8 +223,8 @@ export const PromotionWorkflowSelector: React.FC = () => {
             onClick={() => setActiveCategory("core")}
             className={`rounded-lg px-3 py-1 text-xs font-extrabold transition-all ${
               activeCategory === "core"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Core SaaS (4)
@@ -233,8 +233,8 @@ export const PromotionWorkflowSelector: React.FC = () => {
             onClick={() => setActiveCategory("industry")}
             className={`rounded-lg px-3 py-1 text-xs font-extrabold transition-all ${
               activeCategory === "industry"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Industries (9)
@@ -243,8 +243,8 @@ export const PromotionWorkflowSelector: React.FC = () => {
             onClick={() => setActiveCategory("creator")}
             className={`rounded-lg px-3 py-1 text-xs font-extrabold transition-all ${
               activeCategory === "creator"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Creators & Pros (3)
@@ -263,7 +263,7 @@ export const PromotionWorkflowSelector: React.FC = () => {
               className={`group relative flex flex-col items-start justify-between rounded-2xl p-3.5 text-left transition-all border ${
                 isSelected
                   ? "bg-gradient-to-br from-indigo-600 to-purple-600 border-indigo-400 text-white shadow-lg shadow-indigo-600/30 scale-[1.02]"
-                  : "bg-obsidian-950/80 border-white/10 text-slate-300 hover:bg-obsidian-900 hover:border-white/20 hover:text-white"
+                  : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 hover:shadow-sm"
               }`}
             >
               <div className="flex items-center justify-between w-full mb-2">
@@ -271,7 +271,7 @@ export const PromotionWorkflowSelector: React.FC = () => {
                   className={`flex h-8 w-8 items-center justify-center rounded-xl ${
                     isSelected
                       ? "bg-white/20 text-white"
-                      : "bg-white/5 text-indigo-400 group-hover:bg-white/10 group-hover:text-white"
+                      : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 group-hover:text-indigo-700"
                   }`}
                 >
                   {opt.icon}

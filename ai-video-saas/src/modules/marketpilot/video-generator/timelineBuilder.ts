@@ -15,13 +15,15 @@ export class TimelineBuilder {
     // 1. Generate / Map visual asset specifications for each scene
     const scenesAssets = await AssetGenerator.generateSceneAssets(
       videoPlan.scenes,
-      videoPlan.aspectRatio
+      videoPlan.aspectRatio,
+      videoPlan.mediaUrls
     );
 
     // 2. Generate synchronized audio track and subtitle words
     const audioTrackData = await VoiceGenerator.generateVoiceTimeline(
       videoPlan.scenes,
-      ttsProvider
+      ttsProvider,
+      videoPlan.voiceInstruction
     );
 
     // 3. Construct the RenderTimeline

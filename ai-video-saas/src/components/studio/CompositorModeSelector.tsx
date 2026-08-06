@@ -48,7 +48,7 @@ export const CompositorModeSelector: React.FC<CompositorModeSelectorProps> = ({
     <div className="space-y-6">
       {/* Smart Hybrid Video Compositor Mode Selector */}
       <div className="space-y-3">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
           <span className="flex items-center space-x-1.5">
             <Layers className="h-4 w-4 text-indigo-400" />
             <span>Smart Hybrid Video Compositor Engine</span>

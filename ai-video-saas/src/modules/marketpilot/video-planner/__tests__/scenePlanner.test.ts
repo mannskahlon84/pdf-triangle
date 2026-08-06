@@ -3,11 +3,11 @@ import { Campaign } from "../../types/promotion.types";
 import { SceneTemplatesService } from "../sceneTemplates";
 import { TimingCalculator } from "../timingCalculator";
 
-export function runScenePlannerTestSuite(): {
+export async function runScenePlannerTestSuite(): Promise<{
   passed: number;
   failed: number;
   results: { testName: string; passed: boolean; error?: string }[];
-} {
+}> {
   const results: { testName: string; passed: boolean; error?: string }[] = [];
   let passed = 0;
   let failed = 0;
@@ -93,7 +93,7 @@ export function runScenePlannerTestSuite(): {
 
   // 3. Scene ordering & continuity test
   try {
-    const plan = ScenePlanner.generateVideoPlanFromCampaign(mockCampaign, { duration: "30s" });
+    const plan = await ScenePlanner.generateVideoPlanFromCampaign(mockCampaign, { duration: "30s" });
     const isOrdered = plan.scenes.every((s, idx) => s.sceneNumber === idx + 1);
     const zeroGap = plan.scenes.every((s, idx) => {
       if (idx === 0) return true;
@@ -112,8 +112,10 @@ export function runScenePlannerTestSuite(): {
 
   // 4. Missing scene data & validation test
   try {
+    const videoPlanPromise = ScenePlanner.generateVideoPlanFromCampaign(mockCampaign);
+    const mockPlan = await videoPlanPromise;
     const invalidPlan = {
-      ...ScenePlanner.generateVideoPlanFromCampaign(mockCampaign),
+      ...mockPlan,
       scenes: [
         {
           sceneNumber: 2, // invalid order
@@ -148,7 +150,7 @@ export function runScenePlannerTestSuite(): {
 
   // 5. JSON schema validation test
   try {
-    const plan = ScenePlanner.generateVideoPlanFromCampaign(mockCampaign);
+    const plan = await ScenePlanner.generateVideoPlanFromCampaign(mockCampaign);
     assert(
       Boolean(
         plan.id &&

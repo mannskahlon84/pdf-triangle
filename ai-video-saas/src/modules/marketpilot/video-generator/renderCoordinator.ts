@@ -8,6 +8,16 @@ import {
 import { VideoRenderService } from "@/services/videoRenderService";
 import { TTSProviderType } from "./voiceGenerator";
 
+export interface CreateRenderJobRequest {
+  videoProjectId: string;
+  scriptVersionId: string;
+  outputUrl?: string;
+  mediaAssetId: string;
+  duration: "15s" | "30s" | "60s";
+  renderTimeline: RenderTimeline;
+  mockMode?: boolean;
+}
+
 /**
  * MarketPilot Render Adapter
  * Connects MarketPilot AI output directly to the existing Hybrid Video Engine
@@ -19,24 +29,26 @@ export class MarketPilotRenderAdapter {
    */
   public static async submitToExistingVideoEngine(
     timeline: RenderTimeline,
-    mockMode: boolean = true
-  ): Promise<{ jobId: string; status: string }> {
+    mockMode: boolean = false
+  ): Promise<{ jobId: string; status: string; outputUrl?: string }> {
+    const validDurations = ["60s", "30s", "15s"];
+    const duration = validDurations.includes(timeline.duration)
+      ? (timeline.duration as "60s" | "30s" | "15s")
+      : ("30s" as const);
+
     const job = await VideoRenderService.createRenderJob({
       videoProjectId: timeline.id,
       scriptVersionId: timeline.videoPlanId,
       mediaAssetId:
         timeline.scenes[0]?.backgroundImageUrl || "default_asset_id",
-      duration: (timeline.duration === "60s" ||
-      timeline.duration === "30s" ||
-      timeline.duration === "15s"
-        ? timeline.duration
-        : "30s") as any,
+      duration,
+      renderTimeline: timeline,
       mockMode,
     });
-
     return {
       jobId: job.id,
       status: job.status,
+      outputUrl: job.outputUrl,
     };
   }
 
@@ -45,11 +57,15 @@ export class MarketPilotRenderAdapter {
    */
   public static async getExistingEngineProgress(
     jobId: string
-  ): Promise<{ progress: number; status: string; outputUrl?: string } | null> {
+  ): Promise<{
+    jobId: string;
+    status: string;
+    outputUrl?: string;
+  } | null> {
     const job = await VideoRenderService.getRenderJobProgress(jobId);
     if (!job) return null;
     return {
-      progress: job.progress,
+      jobId: job.id,
       status: job.status,
       outputUrl: job.outputUrl,
     };
@@ -80,8 +96,7 @@ export class RenderCoordinator {
       videoId,
       videoPlanId: videoPlan.id,
       status: "CREATING_PLAN",
-      previewUrl:
-        "https://assets.mixkit.co/videos/preview/mixkit-technician-working-on-a-motherboard-41618-large.mp4",
+      previewUrl: "",
       timeline: null as any,
     };
 
@@ -131,14 +146,14 @@ export class RenderCoordinator {
       this.activeJobs.set(videoId, { ...job });
 
       // Connect via MarketPilot Render Adapter to existing VideoRenderService
-      await MarketPilotRenderAdapter.submitToExistingVideoEngine(
-        timeline,
-        false
-      );
+      const renderResult =
+        await MarketPilotRenderAdapter.submitToExistingVideoEngine(
+          timeline,
+          false
+        );
 
       job.status = "COMPLETED";
-      job.previewUrl =
-        "https://assets.mixkit.co/videos/preview/mixkit-technician-working-on-a-motherboard-41618-large.mp4";
+      job.previewUrl = renderResult.outputUrl;
       this.activeJobs.set(videoId, { ...job });
     } catch (e: any) {
       job.status = "FAILED";
@@ -190,23 +205,23 @@ export class RenderCoordinator {
           this.activeJobs.set(videoId, { ...j });
 
           // Submit to existing engine via adapter
-          await MarketPilotRenderAdapter.submitToExistingVideoEngine(
-            timeline,
-            true
-          );
+          const renderResult =
+            await MarketPilotRenderAdapter.submitToExistingVideoEngine(
+              timeline,
+              false
+            );
+
+          // Step 4: COMPLETED (after render submission resolves)
+          setTimeout(() => {
+            const jCompleted = this.activeJobs.get(videoId);
+            if (jCompleted) {
+              jCompleted.status = "COMPLETED";
+              jCompleted.previewUrl = renderResult.outputUrl;
+              this.activeJobs.set(videoId, { ...jCompleted });
+            }
+          }, 1200);
         }
       }, 2200);
-
-      // Step 4: COMPLETED (3400ms)
-      setTimeout(() => {
-        const j = this.activeJobs.get(videoId);
-        if (j) {
-          j.status = "COMPLETED";
-          j.previewUrl =
-            "https://assets.mixkit.co/videos/preview/mixkit-technician-working-on-a-motherboard-41618-large.mp4";
-          this.activeJobs.set(videoId, { ...j });
-        }
-      }, 3400);
     } catch (e: any) {
       job.status = "FAILED";
       job.error = e.message || "Async pipeline failed.";

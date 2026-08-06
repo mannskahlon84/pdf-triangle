@@ -16,6 +16,7 @@ const DEMO_AUDIO_TRACKS: Record<TTSProviderType, string> = {
     "https://assets.mixkit.co/active_storage/sfx/2871/2871-preview.mp3",
   mock: "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3",
 };
+import { VoiceInstruction } from "../../voice-personality/types/voice.types";
 
 export class VoiceGenerator {
   /**
@@ -24,7 +25,8 @@ export class VoiceGenerator {
    */
   public static async generateVoiceTimeline(
     scenes: VideoScene[],
-    provider: TTSProviderType = "ElevenLabs"
+    provider: TTSProviderType = "ElevenLabs",
+    voiceInstruction?: VoiceInstruction
   ): Promise<{
     totalDurationSec: number;
     provider: string;
@@ -49,6 +51,19 @@ export class VoiceGenerator {
 
     let totalSec = 0;
 
+    let activeProvider = (voiceInstruction?.ttsRouting || provider) as TTSProviderType;
+    
+    // Fallback chain: If requested TTS is unavailable, cascade down
+    // (Simulated for Phase 1 using standard checks)
+    if (!DEMO_AUDIO_TRACKS[activeProvider]) {
+      if (activeProvider === "ElevenLabs" || voiceInstruction?.mode === "premium_cinematic") {
+        activeProvider = "Google Neural"; // Fallback 1
+      }
+      if (!DEMO_AUDIO_TRACKS[activeProvider]) {
+        activeProvider = "mock"; // Default fallback
+      }
+    }
+
     scenes.forEach((scene) => {
       const startSec = parseFloat(scene.startTime);
       const endSec = parseFloat(scene.endTime);
@@ -59,8 +74,8 @@ export class VoiceGenerator {
         startTime: scene.startTime,
         endTime: scene.endTime,
         voiceText: scene.voiceText,
-        audioUrl: DEMO_AUDIO_TRACKS[provider] || DEMO_AUDIO_TRACKS.ElevenLabs,
-        provider,
+        audioUrl: DEMO_AUDIO_TRACKS[activeProvider] || DEMO_AUDIO_TRACKS.mock,
+        provider: activeProvider,
       });
 
       // Generate precise word-level subtitle timings for karaoke captioning
@@ -92,10 +107,10 @@ export class VoiceGenerator {
 
     return {
       totalDurationSec: totalSec,
-      provider,
+      provider: activeProvider,
       segments,
       masterAudioUrl:
-        DEMO_AUDIO_TRACKS[provider] || DEMO_AUDIO_TRACKS.ElevenLabs,
+        DEMO_AUDIO_TRACKS[activeProvider] || DEMO_AUDIO_TRACKS.mock,
       captions,
     };
   }

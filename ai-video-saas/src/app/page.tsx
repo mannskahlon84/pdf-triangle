@@ -1,223 +1,119 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useAppStore } from "@/store/useAppStore";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { BrandKitModal } from "@/components/brand/BrandKitModal";
-import { MultimodalDropzone } from "@/components/studio/MultimodalDropzone";
-import { VisionInspectorDrawer } from "@/components/studio/VisionInspectorDrawer";
-import { CompositorModeSelector } from "@/components/studio/CompositorModeSelector";
-import { SessionChatSidepanel } from "@/components/studio/SessionChatSidepanel";
-import { ProductVideoCreator } from "@/components/studio/ProductVideoCreator";
-import { PromotionWorkflowSelector } from "@/components/studio/PromotionWorkflowSelector";
-import { BrandPromotionCreator } from "@/components/studio/BrandPromotionCreator";
-import { RenderProgressModal } from "@/components/rendering/RenderProgressModal";
-import { HybridVideoPlayer } from "@/components/studio/HybridVideoPlayer";
-import { SocialPublisher } from "@/components/social/SocialPublisher";
-import {
-  Sparkles,
-  ShieldCheck,
-  Video,
-  Layers,
-  Calendar,
-  CheckCircle2,
-  Wand2,
-  Briefcase,
-  ShoppingBag,
-  Globe,
-  Smartphone,
-  Share2,
-} from "lucide-react";
-import { toast } from "sonner";
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Play, Sparkles, Video, BarChart, Settings, Users } from 'lucide-react';
+import ProductDemo from '../components/public/ProductDemo';
+import HowItWorks from '../components/public/HowItWorks';
 
-export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<string>("studio");
-  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
-  const [isRenderModalOpen, setIsRenderModalOpen] = useState(false);
-
-  const {
-    selectedMedia,
-    activeBrandId,
-    setActiveBrandId,
-    brands,
-    currentScript,
-    compositorMode,
-    activeCreatorTab,
-    setActiveCreatorTab,
-    workspaceMode,
-    setWorkspaceMode,
-    activePromotionType,
-  } = useAppStore();
-
-  const activeBrand =
-    brands.find((b) => b.id === activeBrandId) || brands[0];
-
-  const handleTriggerRender = () => {
-    if (!selectedMedia && activeCreatorTab === "business") {
-      toast.error("No workplace media selected!", {
-        description:
-          "Please upload an MP4/PNG or select a 1-click sample workplace video from the gallery.",
-      });
-      return;
+export default function LandingPage() {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.2 }
     }
-    setIsRenderModalOpen(true);
   };
 
-  const handleRenderComplete = () => {
-    setIsRenderModalOpen(false);
-    setActiveTab("player");
-    toast.success("Hybrid Video Reel Rendered!", {
-      description: `Loaded ${
-        compositorMode === "pip" ? "Picture-in-Picture" : "Alternating Cuts"
-      } mode with karaoke subtitles and ${activeBrand.name} logo overlay.`,
-    });
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* Top Header */}
-      <Header
-        onOpenBrandKit={() => setIsBrandModalOpen(true)}
-        activeTab={activeTab}
-        setActiveTab={(tab) => setActiveTab(tab)}
-      />
-
-      {/* Main Container: Sidebar + Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Navigation Sidebar */}
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={(tab) => setActiveTab(tab)}
-          onOpenBrandKit={() => setIsBrandModalOpen(true)}
-        />
-
-        {/* Right Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
-            {/* MODULE 7: All-in-One Promotion Workflow Selector Banner (When on Studio tab) */}
-            {activeTab === "studio" && <PromotionWorkflowSelector />}
-
-            {/* Top Status Notification Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center space-x-3">
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <p className="text-xs font-semibold text-slate-600">
-                  Active Brand Context:{" "}
-                  <span className="text-slate-900 font-bold">
-                    {activeBrand.name}
-                  </span>{" "}
-                  · Multimodal Action Recognition:{" "}
-                  <span className="text-emerald-600 font-bold">ONLINE</span>
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-2 text-xs">
-                <button
-                  onClick={() => setIsBrandModalOpen(true)}
-                  className="rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-1.5 font-bold text-indigo-700 border border-slate-200 transition-colors"
-                >
-                  Configure Persona & Brand Kit
-                </button>
-                <button
-                  onClick={handleTriggerRender}
-                  className="flex items-center space-x-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-600 px-3.5 py-1.5 font-bold text-white shadow-md hover:from-indigo-700 hover:to-emerald-700 transition-all"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Quick Render Reel</span>
-                </button>
-              </div>
-            </div>
-
-            {/* TAB 1: STUDIO (Business Enterprise vs Module 6 Product vs Module 7 Brand Promotion) */}
-            {activeTab === "studio" && (
-              <>
-                {activePromotionType === "business" ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left 2 columns: Multimodal Dropzone + Compositor Mode Switcher */}
-                    <div className="lg:col-span-2 space-y-6">
-                      <MultimodalDropzone
-                        onInspectVision={() => setActiveTab("vision")}
-                      />
-
-                      <div className="rounded-3xl border border-slate-700/80 bg-obsidian-900/90 p-6 shadow-xl">
-                        <CompositorModeSelector
-                          onTriggerRender={handleTriggerRender}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Right 1 column: Multi-turn Session Chat Sidepanel */}
-                    <div className="h-[740px] lg:h-auto">
-                      <SessionChatSidepanel
-                        onSelectScriptVersion={(script) => {
-                          toast.success(
-                            `Restored script version: "${script.title}"`
-                          );
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : activePromotionType === "product" ? (
-                  <ProductVideoCreator />
-                ) : (
-                  <BrandPromotionCreator />
-                )}
-              </>
-            )}
-
-            {/* TAB 2: VISION INSPECTOR (AI Video Scrubber & Action Detector) */}
-            {activeTab === "vision" && (
-              <div className="space-y-6">
-                <VisionInspectorDrawer
-                  onApplyToScript={(kf) => {
-                    toast.success(
-                      `Synchronized keyframe 0:0${kf.timestamp}s to active script!`
-                    );
-                  }}
-                />
-
-                {/* Return button */}
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setActiveTab("studio")}
-                    className="flex items-center space-x-2 rounded-xl bg-slate-800 border border-slate-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-700 transition-all"
-                  >
-                    <span>← Return to Studio & Compositor</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: HYBRID PLAYER (Simulated PiP/Alternating Cuts & Subtitle Studio) */}
-            {activeTab === "player" && (
-              <HybridVideoPlayer
-                onSchedulePost={() => setActiveTab("social")}
-                onBackToStudio={() => setActiveTab("studio")}
-              />
-            )}
-
-            {/* TAB 4: SOCIAL (Multi-Channel Publisher & Calendar) */}
-            {activeTab === "social" && <SocialPublisher />}
-          </div>
-        </main>
+    <div className="min-h-screen bg-slate-950 text-white font-sans overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 z-0 opacity-20">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600 rounded-full mix-blend-screen filter blur-[100px] animate-pulse-glow" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[100px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Brand Kit Modal */}
-      <BrandKitModal
-        isOpen={isBrandModalOpen}
-        onClose={() => setIsBrandModalOpen(false)}
-      />
+      <header className="relative z-10 flex justify-between items-center p-6 lg:px-12 glass-panel border-b-0 border-white/5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+            MarketPilot
+          </h1>
+        </div>
+        <div className="space-x-6 flex items-center">
+          <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Log in</Link>
+          <Link href="/login" className="text-sm font-medium px-5 py-2.5 rounded-full bg-white text-black hover:bg-slate-200 transition-all shadow-lg shadow-white/10">
+            Get Started
+          </Link>
+        </div>
+      </header>
 
-      {/* Asynchronous Rendering Progress Modal */}
-      <RenderProgressModal
-        isOpen={isRenderModalOpen}
-        onComplete={handleRenderComplete}
-        onClose={() => setIsRenderModalOpen(false)}
-      />
+      <main className="relative z-10 flex flex-col items-center justify-center text-center mt-20 lg:mt-32 px-4">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="max-w-4xl space-y-8"
+        >
+          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-sm mb-4">
+            <Sparkles className="w-4 h-4" />
+            <span>MarketPilot 2.0 is now live</span>
+          </motion.div>
+
+          <motion.h2 variants={itemVariants} className="text-5xl lg:text-7xl font-extrabold tracking-tight text-white leading-tight">
+            Cinematic AI Video <br className="hidden sm:block" /> 
+            <span className="text-gradient">At Enterprise Scale</span>
+          </motion.h2>
+
+          <motion.p variants={itemVariants} className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Generate highly targeted, on-brand video campaigns. MarketPilot adapts instantly to your industry and brand identity using advanced Hybrid AI Directors.
+          </motion.p>
+
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
+            <Link href="/login" className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-full text-lg font-bold shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2">
+              Start Creating Free
+            </Link>
+            <a href="#demo" className="px-8 py-4 glass-card hover:bg-white/10 rounded-full text-lg font-bold transition-all flex items-center justify-center gap-2 group">
+              <Play className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" />
+              Watch Demo
+            </a>
+          </motion.div>
+        </motion.div>
+      </main>
+      
+      <section id="demo" className="relative z-10 mt-32 pb-16 px-4">
+        <div className="max-w-6xl mx-auto space-y-16">
+           <div className="text-center space-y-4">
+             <h3 className="text-3xl lg:text-4xl font-bold">See MarketPilot in Action</h3>
+             <p className="text-slate-400">Experience the future of video generation</p>
+           </div>
+           
+           <ProductDemo />
+
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-16">
+             <FeatureCard icon={<BarChart />} title="Data-Driven" desc="Campaigns engineered for maximum engagement and ROI." />
+             <FeatureCard icon={<Settings />} title="On-Brand AI" desc="Hybrid Directors enforce your specific visual identity rules." />
+             <FeatureCard icon={<Users />} title="Multi-Tenant" desc="Secure workspaces for individuals, teams, and enterprises." />
+           </div>
+        </div>
+      </section>
+
+      <HowItWorks />
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-slate-800 py-12 text-center text-slate-500">
+         <p>© 2026 MarketPilot Inc. All rights reserved.</p>
+         <div className="mt-4 flex justify-center gap-4">
+           <Link href="/owner-login" className="hover:text-slate-300 text-sm">Owner Portal</Link>
+         </div>
+      </footer>
     </div>
   );
+}
+
+function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
+  return (
+    <div className="glass-card p-6 rounded-2xl text-left border border-slate-800 hover:border-indigo-500/50 group">
+      <div className="w-12 h-12 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
+        {icon}
+      </div>
+      <h4 className="text-xl font-bold mb-2 text-slate-200">{title}</h4>
+      <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+    </div>
+  )
 }

@@ -30,6 +30,17 @@ export type AnimationStyle =
   | "drone-glide"
   | "static-highlight";
 
+export interface MotionMetadata {
+  movement: string; // e.g. "slow_push_in"
+  emphasis: string; // e.g. "hero_product"
+  intensity: "low" | "medium" | "high";
+  duration: number; // in milliseconds
+  reason: string;
+}
+
+
+import { CinematicInstruction } from "../../cinematic-ai/types/cinematic.types";
+
 export interface VideoScene {
   sceneNumber: number;
   startTime: string; // e.g., "0s" or "00:00"
@@ -44,6 +55,11 @@ export interface VideoScene {
   transition: TransitionStyle | string;
   textOverlay: string;
   cta?: string;
+  backgroundImageUrl?: string;
+  productImageUrl?: string;
+  supportingVisualUrls?: string[];
+  motionMetadata?: MotionMetadata;
+  cinematicInstruction?: CinematicInstruction;
 }
 
 export interface VisualAssetSpecification {
@@ -54,6 +70,22 @@ export interface VisualAssetSpecification {
   aspectRatio: AspectRatio;
   styleKeywords: string[];
 }
+
+export interface AssetLineageRecord {
+  sceneNumber: number;
+  originalAssetUrl: string;
+  enhancedAssetUrl: string;
+  enhancementMode: "standard" | "hybrid_ai" | "cinematic_ai";
+  providerMetadata: {
+    providerName: string;
+    modelName?: string;
+    processingTimeMs: number;
+  };
+  createdAt: string;
+}
+
+import { VoiceInstruction } from "../../voice-personality/types/voice.types";
+import { AvatarInstruction } from "../../avatar-engine/types/avatar.types";
 
 export interface VideoPlan {
   id: string;
@@ -69,6 +101,10 @@ export interface VideoPlan {
   caption: string;
   hashtags: string[];
   createdAt: string;
+  mediaUrls?: string[];
+  assetLineage?: AssetLineageRecord[];
+  voiceInstruction?: VoiceInstruction;
+  avatarInstruction?: AvatarInstruction;
 }
 
 export interface SceneTemplateDefinition {

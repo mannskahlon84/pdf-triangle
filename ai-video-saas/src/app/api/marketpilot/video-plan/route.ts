@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const videoPlan = ScenePlanner.generateVideoPlanFromCampaign(
+    const videoPlan = await ScenePlanner.generateVideoPlanFromCampaign(
       campaign as Campaign,
       {
         duration: duration || "30s",

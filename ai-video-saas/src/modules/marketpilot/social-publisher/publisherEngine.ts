@@ -41,8 +41,8 @@ export class SocialPublisherEngine {
     return CampaignManager.createCampaign({
       userId: "user_enterprise",
       campaignName: campaign.campaignName,
-      industry: campaign.industry,
-      promotionType: campaign.promotionType,
+      industry: campaign.industry || "general",
+      promotionType: campaign.promotionType || "product",
       videoId,
       videoUrl: videoUrl || "/demo-reels/recruitment-tech.mp4",
       thumbnailUrl: "/placeholder-tech-recruitment.png",
@@ -51,7 +51,7 @@ export class SocialPublisherEngine {
       status: "READY",
       analytics: AnalyticsTracker.generateInitialAnalytics(
         "READY",
-        campaign.industry
+        campaign.industry || "general"
       ),
     });
   }

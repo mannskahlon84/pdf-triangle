@@ -47,7 +47,7 @@ export class VideoExporter {
   } {
     return {
       videoId: result.videoId,
-      videoUrl: result.previewUrl,
+      videoUrl: result.previewUrl || "",
       srtContent: result.timeline ? this.exportSRT(result.timeline) : "",
       duration: result.timeline?.duration || "30s",
       aspectRatio: result.timeline?.aspectRatio || "9:16",

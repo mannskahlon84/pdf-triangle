@@ -4,12 +4,15 @@
  */
 
 import { RenderJob, RenderJobStatus } from "@/types/database";
+import { RenderTimeline } from "@/modules/marketpilot/video-generator/types/generator.types";
+import { RendererFactory } from "./renderers/RendererFactory";
 
 export interface CreateRenderJobRequest {
   videoProjectId: string;
   scriptVersionId: string;
   mediaAssetId: string;
   duration: "15s" | "30s" | "60s";
+  renderTimeline: RenderTimeline;
   mockMode?: boolean;
 }
 
@@ -37,12 +40,14 @@ export class VideoRenderService {
 
     this.mockJobs.set(jobId, newJob);
 
-    // Simulate async background rendering steps in mock mode
-    if (request.mockMode ?? true) {
+    // Simulate async background rendering steps in mock mode, or use FFmpeg in production mode
+    if (request.mockMode === true) {
       this.simulateAsyncRenderSteps(jobId);
+    } else {
+      await this.executeProductionRender(jobId, request.renderTimeline);
     }
 
-    return newJob;
+    return this.mockJobs.get(jobId) || newJob;
   }
 
   /**
@@ -110,5 +115,46 @@ export class VideoRenderService {
         }
       }, step.delay);
     });
+  }
+
+  /**
+   * Executes real FFmpeg production render using RendererFactory
+   */
+  private static async executeProductionRender(
+    jobId: string,
+    renderTimeline: RenderTimeline
+  ): Promise<void> {
+    const job = this.mockJobs.get(jobId);
+    if (!job) return;
+
+    try {
+      job.status = "COMPOSITING";
+      job.progress = 50;
+      job.stepText = "Rendering video via FFmpeg engine...";
+      job.updatedAt = new Date().toISOString();
+      this.mockJobs.set(jobId, job);
+
+      const renderer = RendererFactory.getRenderer("ffmpeg");
+      const result = await renderer.render(renderTimeline);
+
+      const completedJob = this.mockJobs.get(jobId);
+      if (completedJob) {
+        completedJob.progress = 100;
+        completedJob.status = "COMPLETED";
+        completedJob.stepText = "Export MP4 (Production ready)";
+        completedJob.outputUrl = result.outputUrl;
+        completedJob.updatedAt = new Date().toISOString();
+        this.mockJobs.set(jobId, completedJob);
+      }
+    } catch (error: any) {
+      console.error("[VideoRenderService] Production render failed:", error);
+      const failedJob = this.mockJobs.get(jobId);
+      if (failedJob) {
+        failedJob.status = "FAILED" as any;
+        failedJob.stepText = `Rendering failed: ${error?.message || "Unknown FFmpeg error"}`;
+        failedJob.updatedAt = new Date().toISOString();
+        this.mockJobs.set(jobId, failedJob);
+      }
+    }
   }
 }

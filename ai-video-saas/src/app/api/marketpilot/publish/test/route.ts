@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+
 import {
   ContentFormatter,
   PlatformAdapterRegistry,
@@ -29,6 +32,7 @@ export async function GET() {
         platform: "instagram",
         text: "Automate technical screening with Manpower AI.",
         hashtags: ["#TechRecruiter", "#AIHiring"],
+        callToAction: "Request Demo Today"
       },
     ],
     hashtags: ["#TechRecruiter", "#AIHiring", "#ManpowerCorp"],

@@ -23,7 +23,7 @@ import {
   MarketPilotVideoResult,
   RenderTimeline,
 } from "@/modules/marketpilot/video-generator/types/generator.types";
-import HybridVideoPlayer from "./HybridVideoPlayer";
+import { HybridVideoPlayer } from "./HybridVideoPlayer";
 import { VideoExporter } from "@/modules/marketpilot/video-generator/videoExporter";
 import { toast } from "sonner";
 
@@ -384,7 +384,7 @@ export default function VideoCreationStudio({
           </div>
 
           {/* Embed Existing HybridVideoPlayer */}
-          <HybridVideoPlayer />
+          <HybridVideoPlayer onBackToStudio={() => {}} />
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import {
   ProductCatalogItem,
@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Eye,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,12 +54,38 @@ export const ProductVideoCreator: React.FC = () => {
     deleteProductFromCatalog,
     setIsRenderingVideo,
     isRenderingVideo,
+    renderProgress,
     setRenderProgress,
+    renderStepText,
     setRenderStepText,
     setFinishedVideoUrl,
   } = useAppStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isRenderingVideo) return;
+    const steps = [
+      "Analyzing uploaded product angles & aspect ratio...",
+      "Executing Hybrid AI Creative Planner rules...",
+      "Writing marketing script (Hook, Features, Benefit)...",
+      "Assigning visual B-Roll & AI image assets...",
+      "Composing 15s multi-scene timeline in FFmpeg...",
+      "Encoding 1080x1920 vertical MP4 video stream...",
+      "Finalizing audio sync & karaoke captions...",
+    ];
+    let idx = 0;
+    let progressVal = 15;
+    setRenderProgress(15);
+    setRenderStepText(steps[0]);
+    const interval = setInterval(() => {
+      idx = (idx + 1) % steps.length;
+      progressVal = Math.min(progressVal + 11, 94);
+      setRenderStepText(steps[idx]);
+      setRenderProgress(progressVal);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [isRenderingVideo, setRenderProgress, setRenderStepText]);
 
   const activeProduct =
     sellerProducts.find((p) => p.id === activeProductId) || sellerProducts[0];
@@ -189,35 +216,42 @@ export const ProductVideoCreator: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeProduct) return;
 
-    const uploadedList: ProductAngleImage[] = Array.from(files).map((file, idx) => {
-      const tempUrl = URL.createObjectURL(file);
-      const angleCount = activeProduct.angles.length + idx + 1;
-      const defaultLabels = [
-        "Front view",
-        "Side view",
-        "Inside view",
-        "Close-up stitching view",
-        "Lifestyle view",
-      ];
-      const label =
-        files.length === 1 && customAngleLabel
-          ? customAngleLabel
-          : defaultLabels[angleCount - 1] || `Angle ${angleCount}`;
-      return {
-        id: `ang-up-${Date.now()}-${idx}`,
-        label,
-        url: tempUrl,
-        timestamp: Math.min(2 + angleCount * 3, 14),
+    Array.from(files).forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (!dataUrl) return;
+        const angleCount = activeProduct.angles.length + idx + 1;
+        const defaultLabels = [
+          "Front view",
+          "Side view",
+          "Inside view",
+          "Close-up stitching view",
+          "Lifestyle view",
+        ];
+        const label =
+          files.length === 1 && customAngleLabel
+            ? customAngleLabel
+            : defaultLabels[angleCount - 1] || `Angle ${angleCount}`;
+        const newAngle: ProductAngleImage = {
+          id: `ang-up-${Date.now()}-${idx}`,
+          label,
+          url: dataUrl,
+          timestamp: Math.min(2 + angleCount * 3, 14),
+        };
+        const currentProduct =
+          useAppStore.getState().sellerProducts.find((p) => p.id === activeProduct.id) ||
+          activeProduct;
+        const newAngles = [...currentProduct.angles, newAngle];
+        updateProductInCatalog(activeProduct.id, {
+          angles: newAngles,
+        });
+        setSelectedAngleIndex(newAngles.length - 1);
+        toast.success(`Added photo angle to ${activeProduct.name}!`, {
+          description: "AI Product Understanding updated with new multi-angle visual data.",
+        });
       };
-    });
-
-    const newAngles = [...activeProduct.angles, ...uploadedList];
-    updateProductInCatalog(activeProduct.id, {
-      angles: newAngles,
-    });
-    setSelectedAngleIndex(newAngles.length - 1);
-    toast.success(`Added ${uploadedList.length} photo angle(s) to ${activeProduct.name}!`, {
-      description: "AI Product Understanding updated with new multi-angle visual data.",
+      reader.readAsDataURL(file);
     });
   };
 
@@ -246,40 +280,63 @@ export const ProductVideoCreator: React.FC = () => {
     }, 1200);
   };
 
-  // Simulate generating a 15-second social media reel
-  const handleGenerate15sReel = () => {
-    if (!activeProduct) return;
+  const handleGenerate15sReel = async () => {
+  if (!activeProduct) return;
+
+  try {
     setIsRenderingVideo(true);
     setRenderProgress(10);
-    setRenderStepText("Analyzing product angles & composing 0-3s hook...");
+    setRenderStepText("Sending product data to AI video engine...");
 
-    setTimeout(() => {
-      setRenderProgress(40);
-      setRenderStepText("Generating smooth image transitions & zoom effects (3-12s)...");
-    }, 900);
+    const mediaUrls = (activeProduct.angles?.map((a) => a.url) || []).filter(
+      Boolean
+    ) as string[];
 
-    setTimeout(() => {
-      setRenderProgress(75);
-      setRenderStepText(`Applying text overlays & CTA '${activeProduct.offerInfo}' (12-15s)...`);
-    }, 1800);
+    const response = await fetch("/api/marketpilot/generate-video", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        product: activeProduct,
+        mediaUrls,
+        useHybridAi: true,
+        ttsProvider: "ElevenLabs",
+      }),
+    });
 
-    setTimeout(() => {
-      setRenderProgress(100);
-      setRenderStepText("15s Product Reel Ready!");
-      setIsRenderingVideo(false);
-      const sampleReelUrl =
-        "https://assets.mixkit.co/videos/preview/mixkit-hands-holding-a-leather-bag-43407-large.mp4";
-      setFinishedVideoUrl(sampleReelUrl);
-      setVideoPreviewUrl(sampleReelUrl);
-      const existingVideos = activeProduct.generatedVideos || [];
-      updateProductInCatalog(activeProduct.id, {
-        generatedVideos: [sampleReelUrl, ...existingVideos],
-      });
-      toast.success(`15s Social Reel generated for "${activeProduct.name}"!`, {
-        description: "Ready to download or publish to Instagram, TikTok, and YouTube Shorts.",
-      });
-    }, 2600);
-  };
+    const data = await response.json();
+
+    const videoUrl = data.videoUrl ?? data.previewUrl;
+
+    if (!videoUrl) {
+      throw new Error("No video URL or preview URL returned");
+    }
+
+    setFinishedVideoUrl(videoUrl);
+    setVideoPreviewUrl(videoUrl);
+
+    updateProductInCatalog(activeProduct.id, {
+      generatedVideos: [
+        videoUrl,
+        ...(activeProduct.generatedVideos || []),
+      ],
+    });
+    toast.success(
+      `15s Social Reel generated for "${activeProduct.name}"!`
+    );
+
+  } catch (error) {
+    console.error("VIDEO GENERATION ERROR:", error);
+
+    toast.error(
+      "Failed to generate video. Check Render Coordinator."
+    );
+
+  } finally {
+    setIsRenderingVideo(false);
+  }
+};
 
   const handleCopyText = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -804,52 +861,98 @@ export const ProductVideoCreator: React.FC = () => {
             <button
               onClick={handleGenerate15sReel}
               disabled={isRenderingVideo}
-              className="w-full flex items-center justify-center space-x-2 rounded-xl bg-amber-500 py-3 px-4 text-sm font-black text-white hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60"
+              className={`w-full flex items-center justify-center space-x-2 rounded-xl py-3.5 px-4 text-sm font-black transition-all ${
+                isRenderingVideo
+                  ? "bg-slate-300 text-slate-600 cursor-not-allowed border border-slate-400/60 shadow-none pointer-events-none select-none"
+                  : "bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 active:scale-[0.99]"
+              }`}
             >
-              <Film className="h-4 w-4" />
+              {isRenderingVideo ? (
+                <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+              ) : (
+                <Film className="h-4 w-4" />
+              )}
               <span>
                 {isRenderingVideo
-                  ? "Rendering 15s Product Reel..."
+                  ? "🚫 Rendering 15s Product Reel... (Please wait)"
                   : `🎬 Generate 15s Product Reel (${activeProduct.category})`}
               </span>
             </button>
 
-            {/* Video Preview Box */}
-            {videoPreviewUrl && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-lg">
-                <div className="flex items-center justify-between bg-slate-800 px-4 py-2">
-                  <span className="text-xs font-bold text-white flex items-center">
-                    <Video className="h-3.5 w-3.5 text-amber-400 mr-1.5" />
-                    15s Generated Reel ({activeProduct.name})
-                  </span>
-                  <span className="rounded bg-emerald-500/20 text-emerald-400 px-2 py-0.5 text-[10px] font-bold">
-                    1080p HD • READY
-                  </span>
-                </div>
-                <div className="relative aspect-[9/16] w-full max-h-[380px] mx-auto bg-black flex items-center justify-center">
-                  <video
-                    src={videoPreviewUrl}
-                    controls
-                    autoPlay
-                    loop
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-                <div className="flex items-center justify-between bg-slate-800/80 px-4 py-2.5">
-                  <span className="text-[11px] font-bold text-slate-300">
-                    Publishing: Instagram Reels • TikTok • Shorts
-                  </span>
-                  <button
-                    onClick={() => {
-                      toast.success(
-                        "Reel published & scheduled to social channels!"
-                      );
-                    }}
-                    className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition-colors"
-                  >
-                    Publish Reel
-                  </button>
-                </div>
+            {/* Video Preview Box (Instantly shows progress while rendering, then MP4 player when done!) */}
+            {(isRenderingVideo || videoPreviewUrl) && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-lg transition-all duration-300">
+                {isRenderingVideo ? (
+                  <>
+                    <div className="flex items-center justify-between bg-slate-800 px-4 py-2.5 border-b border-white/10">
+                      <span className="text-xs font-bold text-white flex items-center">
+                        <Loader2 className="h-3.5 w-3.5 text-amber-400 mr-1.5 animate-spin" />
+                        AI Video Studio — Generating 15s Reel ({activeProduct.name})
+                      </span>
+                      <span className="rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-extrabold animate-pulse">
+                        IN PROGRESS • {renderProgress || 15}%
+                      </span>
+                    </div>
+                    <div className="relative aspect-[9/16] w-full max-h-[380px] mx-auto bg-slate-950 flex flex-col items-center justify-center p-6 text-center space-y-5">
+                      <div className="h-16 w-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                        <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+                      </div>
+                      <div className="space-y-1.5 max-w-xs">
+                        <h4 className="text-sm font-extrabold text-white tracking-wide">
+                          Generating Reel...
+                        </h4>
+                        <p className="text-xs text-amber-300 font-semibold min-h-[32px] flex items-center justify-center transition-all duration-300">
+                          {renderStepText || "Analyzing product images & multi-angle B-Roll..."}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Please don&apos;t click again or close this tab
+                        </p>
+                      </div>
+                      <div className="w-full max-w-xs bg-slate-800/80 rounded-full h-2.5 overflow-hidden border border-white/10 p-0.5">
+                        <div
+                          className="bg-gradient-to-r from-amber-500 via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-700 shadow-sm"
+                          style={{ width: `${renderProgress || 15}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between bg-slate-800 px-4 py-2">
+                      <span className="text-xs font-bold text-white flex items-center">
+                        <Video className="h-3.5 w-3.5 text-amber-400 mr-1.5" />
+                        15s Generated Reel ({activeProduct.name})
+                      </span>
+                      <span className="rounded bg-emerald-500/20 text-emerald-400 px-2 py-0.5 text-[10px] font-bold">
+                        1080p HD • READY
+                      </span>
+                    </div>
+                    <div className="relative aspect-[9/16] w-full max-h-[380px] mx-auto bg-black flex items-center justify-center">
+                      <video
+                        src={videoPreviewUrl || undefined}
+                        controls
+                        autoPlay
+                        loop
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between bg-slate-800/80 px-4 py-2.5">
+                      <span className="text-[11px] font-bold text-slate-300">
+                        Publishing: Instagram Reels • TikTok • Shorts
+                      </span>
+                      <button
+                        onClick={() => {
+                          toast.success(
+                            "Reel published & scheduled to social channels!"
+                          );
+                        }}
+                        className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition-colors"
+                      >
+                        Publish Reel
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
